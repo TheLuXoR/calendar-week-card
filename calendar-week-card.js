@@ -491,4 +491,6 @@ class CalendarWeekCard extends HTMLElement {
     }
 }
 
-customElements.define("calendar-week-card", CalendarWeekCard);
+if (!customElements.get("calendar-week-card")) {
+    customElements.define("calendar-week-card", CalendarWeekCard);
+}
