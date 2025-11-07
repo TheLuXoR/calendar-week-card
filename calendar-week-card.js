@@ -3,11 +3,16 @@ class CalendarWeekCard extends HTMLElement {
         super();
         this.weekOffset = 0;
         this.lastEvents = [];
+        this.dynamicEntities = [];
+        this.availableCalendars = [];
     }
 
     setConfig(config) {
         this.config = structuredClone(config) || {};
         this.config.colors = this.config.colors || {};
+        this.dynamicEntities = [];
+        this.availableCalendars = [];
+        this._entitiesPromise = undefined;
 
         // Load saved colors
         const savedColors = localStorage.getItem("calendar-week-card-colors");
@@ -17,14 +22,7 @@ class CalendarWeekCard extends HTMLElement {
 
         // Assign distinct pastel colors if missing
         if (this.config.entities) {
-            const distinctHues = [0, 35, 70, 140, 210, 275, 320];
-            this.config.entities.forEach((entity, i) => {
-                if (!this.config.colors[entity]) {
-                    const hue = distinctHues[i % distinctHues.length];
-                    this.config.colors[entity] = `hsl(${hue}, 70%, 70%)`;
-                }
-            });
-            localStorage.setItem("calendar-week-card-colors", JSON.stringify(this.config.colors));
+            this.assignDefaultColors(this.config.entities);
         }
 
         this.attachShadow({mode: "open"});
@@ -160,13 +158,17 @@ class CalendarWeekCard extends HTMLElement {
 
     set hass(hass) {
         this._hass = hass;
-        if (!this.config?.entities) return;
         this.loadEvents(hass);
     }
 
     async loadEvents(hass) {
-        const entities = this.config.entities || [];
-        if (!entities.length) return;
+        await this.ensureEntities(hass);
+
+        const entities = this.getActiveEntities();
+        if (!entities.length) {
+            this.renderList([]);
+            return;
+        }
 
         const [start, end] = this.getWeekRange();
         let allEvents = [];
@@ -255,6 +257,70 @@ class CalendarWeekCard extends HTMLElement {
     }
 
 
+    async ensureEntities(hass) {
+        if (!hass) return;
+
+        if (this.config?.entities?.length) {
+            this.assignDefaultColors(this.config.entities);
+            return;
+        }
+
+        if (this.dynamicEntities.length) {
+            return;
+        }
+
+        if (this._entitiesPromise) {
+            await this._entitiesPromise;
+            return;
+        }
+
+        this._entitiesPromise = (async () => {
+            try {
+                const calendars = await hass.callApi("get", "calendars");
+                const list = Array.isArray(calendars) ? calendars : [];
+                this.availableCalendars = list.filter(cal => cal?.entity_id);
+                this.dynamicEntities = this.availableCalendars.map(cal => cal.entity_id);
+                this.assignDefaultColors(this.dynamicEntities);
+            } catch (err) {
+                console.error("calendar-week-card: Failed to load calendars", err);
+                this.availableCalendars = [];
+                this.dynamicEntities = [];
+            }
+        })();
+
+        try {
+            await this._entitiesPromise;
+        } finally {
+            this._entitiesPromise = undefined;
+        }
+    }
+
+    getActiveEntities() {
+        if (this.config?.entities?.length) {
+            return this.config.entities;
+        }
+        return this.dynamicEntities;
+    }
+
+    getCalendarName(entityId) {
+        const calendar = this.availableCalendars?.find(cal => cal.entity_id === entityId);
+        if (calendar?.name) return calendar.name;
+        return entityId?.replace(/^calendar\./, "").replace(/_/g, " ") || "";
+    }
+
+    assignDefaultColors(entities = []) {
+        if (!Array.isArray(entities)) return;
+        const distinctHues = [0, 35, 70, 140, 210, 275, 320];
+        entities.forEach((entity, i) => {
+            if (!this.config.colors[entity]) {
+                const hue = distinctHues[i % distinctHues.length];
+                this.config.colors[entity] = `hsl(${hue}, 70%, 70%)`;
+            }
+        });
+        localStorage.setItem("calendar-week-card-colors", JSON.stringify(this.config.colors));
+    }
+
+    
 
     updateTimeLine() {
         this.grid.querySelectorAll(".time-line").forEach(el => el.remove());
@@ -275,6 +341,11 @@ class CalendarWeekCard extends HTMLElement {
     showSettingsDialog() {
         const existing = document.querySelector("#calendar-settings-dialog");
         if (existing) existing.remove();
+
+        if (!this.getActiveEntities().length && this._hass) {
+            this.ensureEntities(this._hass).then(() => this.showSettingsDialog());
+            return;
+        }
 
         const dialog = document.createElement("div");
         dialog.id = "calendar-settings-dialog";
@@ -304,21 +375,21 @@ class CalendarWeekCard extends HTMLElement {
         list.style.flexDirection = "column";
         list.style.gap = "12px";
 
-        (this.config.entities || []).forEach(entity => {
+        this.getActiveEntities().forEach(entity => {
             const row = document.createElement("div");
             row.style.display = "flex";
             row.style.alignItems = "center";
             row.style.gap = "12px";
 
             const label = document.createElement("span");
-            label.textContent = entity.replace(/^calendar\./, "").replace(/_/g, " ");
+            label.textContent = this.getCalendarName(entity);
             label.style.flex = "1";
             label.style.fontWeight = "500";
             label.style.color = "#555";
 
             const picker = document.createElement("input");
             picker.type = "color";
-            picker.value = this.config.colors[entity];
+            picker.value = this.config.colors[entity] || "#4287f5";
             picker.style.width = "40px";
             picker.style.height = "30px";
             picker.style.border = "none";
@@ -392,7 +463,7 @@ class CalendarWeekCard extends HTMLElement {
 
         const details = document.createElement("div");
         details.innerHTML = `
-        <p style="margin:0; color:#555;"><b>Calendar:</b> ${ev.calendar.replace(/^calendar\./, "").replace(/_/g," ")}</p>
+        <p style="margin:0; color:#555;"><b>Calendar:</b> ${this.getCalendarName(ev.calendar)}</p>
         <p style="margin:0; color:#555;"><b>Start:</b> ${startDate}</p>
         <p style="margin:0; color:#555;"><b>End:</b> ${endDate}</p>
     `;
@@ -421,4 +492,6 @@ class CalendarWeekCard extends HTMLElement {
     }
 }
 
-customElements.define("calendar-week-card", CalendarWeekCard);
+if (!customElements.get("calendar-week-card")) {
+    customElements.define("calendar-week-card", CalendarWeekCard);
+}
