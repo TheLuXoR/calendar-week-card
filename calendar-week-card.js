@@ -276,8 +276,9 @@ class CalendarWeekCard extends HTMLElement {
 
         this._entitiesPromise = (async () => {
             try {
-                const calendars = await hass.callWS({ type: "calendars/list" });
-                this.availableCalendars = Array.isArray(calendars) ? calendars : [];
+                const calendars = await hass.callApi("get", "calendars");
+                const list = Array.isArray(calendars) ? calendars : [];
+                this.availableCalendars = list.filter(cal => cal?.entity_id);
                 this.dynamicEntities = this.availableCalendars.map(cal => cal.entity_id);
                 this.assignDefaultColors(this.dynamicEntities);
             } catch (err) {
