@@ -1,3 +1,99 @@
+const CALENDAR_WEEK_CARD_TRANSLATIONS = {
+    en: {
+        today: "Today",
+        calendarColors: "Calendar Colors",
+        supportViaPaypal: "Like it? Support me via PayPal:",
+        saveAndClose: "Save & Close",
+        close: "Close",
+        calendar: "Calendar",
+        start: "Start",
+        end: "End",
+        noTitle: "(no title)",
+        languageLabel: "Language",
+        systemDefault: "System default",
+        donateWithPaypal: "Donate with PayPal"
+    },
+    de: {
+        today: "Heute",
+        calendarColors: "Kalenderfarben",
+        supportViaPaypal: "Gefällt dir die Karte? Unterstütze mich via PayPal:",
+        saveAndClose: "Speichern & Schließen",
+        close: "Schließen",
+        calendar: "Kalender",
+        start: "Beginn",
+        end: "Ende",
+        noTitle: "(kein Titel)",
+        languageLabel: "Sprache",
+        systemDefault: "Systemstandard",
+        donateWithPaypal: "Mit PayPal spenden"
+    },
+    fr: {
+        today: "Aujourd'hui",
+        calendarColors: "Couleurs du calendrier",
+        supportViaPaypal: "Vous aimez ? Soutenez-moi via PayPal :",
+        saveAndClose: "Enregistrer et fermer",
+        close: "Fermer",
+        calendar: "Calendrier",
+        start: "Début",
+        end: "Fin",
+        noTitle: "(sans titre)",
+        languageLabel: "Langue",
+        systemDefault: "Langue du système",
+        donateWithPaypal: "Faire un don avec PayPal"
+    },
+    es: {
+        today: "Hoy",
+        calendarColors: "Colores del calendario",
+        supportViaPaypal: "¿Te gusta? Apóyame vía PayPal:",
+        saveAndClose: "Guardar y cerrar",
+        close: "Cerrar",
+        calendar: "Calendario",
+        start: "Inicio",
+        end: "Fin",
+        noTitle: "(sin título)",
+        languageLabel: "Idioma",
+        systemDefault: "Predeterminado del sistema",
+        donateWithPaypal: "Donar con PayPal"
+    },
+    it: {
+        today: "Oggi",
+        calendarColors: "Colori del calendario",
+        supportViaPaypal: "Ti piace? Sostienimi tramite PayPal:",
+        saveAndClose: "Salva e chiudi",
+        close: "Chiudi",
+        calendar: "Calendario",
+        start: "Inizio",
+        end: "Fine",
+        noTitle: "(senza titolo)",
+        languageLabel: "Lingua",
+        systemDefault: "Predefinito di sistema",
+        donateWithPaypal: "Dona con PayPal"
+    },
+    nl: {
+        today: "Vandaag",
+        calendarColors: "Kalenderkleuren",
+        supportViaPaypal: "Vind je het leuk? Steun me via PayPal:",
+        saveAndClose: "Opslaan en sluiten",
+        close: "Sluiten",
+        calendar: "Agenda",
+        start: "Start",
+        end: "Einde",
+        noTitle: "(geen titel)",
+        languageLabel: "Taal",
+        systemDefault: "Systeemstandaard",
+        donateWithPaypal: "Doneren met PayPal"
+    }
+};
+
+const CALENDAR_WEEK_CARD_LANGUAGE_NAMES = {
+    en: "English",
+    de: "Deutsch",
+    fr: "Français",
+    es: "Español",
+    it: "Italiano",
+    nl: "Nederlands"
+};
+
 class CalendarWeekCard extends HTMLElement {
     constructor() {
         super();
@@ -13,12 +109,105 @@ class CalendarWeekCard extends HTMLElement {
         this.columnPaddingBottom = 12;
         this.allDayRowHeight = 22;
         this.allDayRowOverlap = 8;
+        this.languagePreference = "system";
+        this.language = "en";
+    }
+    resolveLanguage(preference) {
+        const normalize = lang => (lang || "").toString().toLowerCase().split("-")[0];
+        const supported = Object.keys(CALENDAR_WEEK_CARD_TRANSLATIONS);
+
+        if (preference && preference !== "system") {
+            const normalizedPreference = normalize(preference);
+            if (supported.includes(normalizedPreference)) {
+                return normalizedPreference;
+            }
+        }
+
+        const navigatorLanguages = [];
+        if (typeof navigator !== "undefined") {
+            if (navigator.language) {
+                navigatorLanguages.push(navigator.language);
+            }
+            if (Array.isArray(navigator.languages)) {
+                navigator.languages.forEach(lang => {
+                    if (!navigatorLanguages.includes(lang)) {
+                        navigatorLanguages.push(lang);
+                    }
+                });
+            }
+        }
+
+        for (const lang of navigatorLanguages) {
+            const normalized = normalize(lang);
+            if (supported.includes(normalized)) {
+                return normalized;
+            }
+        }
+
+        return "en";
+    }
+
+    getLocale() {
+        return this.language || "en";
+    }
+
+    t(key) {
+        const locale = this.getLocale();
+        const translations = CALENDAR_WEEK_CARD_TRANSLATIONS[locale] || CALENDAR_WEEK_CARD_TRANSLATIONS.en;
+        return translations[key] || CALENDAR_WEEK_CARD_TRANSLATIONS.en[key] || key;
+    }
+
+    applyTranslations() {
+        if (!this.shadowRoot) return;
+        const todayButton = this.shadowRoot.querySelector(".today");
+        if (todayButton) {
+            const todayText = this.t("today");
+            todayButton.textContent = todayText;
+            todayButton.setAttribute("title", todayText);
+            todayButton.setAttribute("aria-label", todayText);
+        }
+
+        const settingsIcon = this.shadowRoot.querySelector(".settings-icon");
+        if (settingsIcon) {
+            settingsIcon.setAttribute("title", this.t("calendarColors"));
+            settingsIcon.setAttribute("aria-label", this.t("calendarColors"));
+        }
+    }
+
+    setLanguagePreference(preference) {
+        const normalize = lang => (lang || "").toString().toLowerCase().split("-")[0];
+        const supported = Object.keys(CALENDAR_WEEK_CARD_TRANSLATIONS);
+        if (preference !== "system") {
+            const normalizedPreference = normalize(preference);
+            this.languagePreference = supported.includes(normalizedPreference) ? normalizedPreference : "system";
+        } else {
+            this.languagePreference = "system";
+        }
+
+        this.language = this.resolveLanguage(this.languagePreference);
+        this.config.language = this.languagePreference;
+        localStorage.setItem("calendar-week-card-language", this.languagePreference);
+
+        this.applyTranslations();
+        this.updateHeader();
+        const events = Array.isArray(this.lastEvents) ? [...this.lastEvents] : [];
+        this.renderList(events);
     }
 
     setConfig(config) {
         this.config = structuredClone(config) || {};
         this.config.colors = this.config.colors || {};
         this.config.hidden_entities = Array.isArray(this.config.hidden_entities) ? this.config.hidden_entities : [];
+        const storedLanguagePreference = localStorage.getItem("calendar-week-card-language");
+        const configLanguage = typeof this.config.language === "string" ? this.config.language : null;
+        this.languagePreference = configLanguage || storedLanguagePreference || "system";
+        if (this.languagePreference !== "system") {
+            const normalize = lang => (lang || "").toString().toLowerCase().split("-")[0];
+            const normalized = normalize(this.languagePreference);
+            this.languagePreference = Object.keys(CALENDAR_WEEK_CARD_TRANSLATIONS).includes(normalized) ? normalized : "system";
+        }
+        this.language = this.resolveLanguage(this.languagePreference);
+        this.config.language = this.languagePreference;
         this.dynamicEntities = [];
         this.availableCalendars = [];
         this._entitiesPromise = undefined;
@@ -293,7 +482,7 @@ class CalendarWeekCard extends HTMLElement {
         <div class="header-bar">
           <div class="nav-buttons">
             <button class="prev-week">◀</button>
-            <button class="today">Today</button>
+            <button class="today"></button>
             <button class="next-week">▶</button>
           </div>
           <h3 class="title-line"></h3>
@@ -325,6 +514,7 @@ class CalendarWeekCard extends HTMLElement {
         this.shadowRoot.querySelector(".today").addEventListener("click", () => this.resetToCurrentWeek());
         this.shadowRoot.querySelector(".settings-icon").addEventListener("click", () => this.showSettingsDialog());
 
+        this.applyTranslations();
         this.buildTimeLabels();
         this.updateHeader();
         this.updateTimeLine();
@@ -355,8 +545,9 @@ class CalendarWeekCard extends HTMLElement {
 
     updateHeader() {
         const [start, end] = this.getWeekRange();
-        const monthStart = start.toLocaleDateString(undefined, {month: "long", year: "numeric"});
-        const monthEnd = end.toLocaleDateString(undefined, {month: "long", year: "numeric"});
+        const locale = this.getLocale();
+        const monthStart = start.toLocaleDateString(locale, {month: "long", year: "numeric"});
+        const monthEnd = end.toLocaleDateString(locale, {month: "long", year: "numeric"});
         this.titleLine.textContent = monthStart === monthEnd ? monthStart : `${monthStart} – ${monthEnd}`;
 
         const todayOffset = ((new Date().getDay() + 6) % 7);
@@ -364,7 +555,7 @@ class CalendarWeekCard extends HTMLElement {
             const d = new Date(start);
             d.setDate(start.getDate() + i);
             return {
-                name: d.toLocaleDateString(undefined, {weekday: "short"}),
+                name: d.toLocaleDateString(locale, {weekday: "short"}),
                 num: d.getDate(),
                 isToday: i === todayOffset && this.weekOffset === 0
             };
@@ -440,9 +631,11 @@ class CalendarWeekCard extends HTMLElement {
                         }
                     }
 
+                    const hasSummary = typeof ev.summary === "string" && ev.summary.trim().length > 0;
                     allEvents.push({
                         calendar: entity,
-                        title: ev.summary || "(no title)",
+                        title: hasSummary ? ev.summary : "",
+                        isUntitled: !hasSummary,
                         start: startDate,
                         end: endDate,
                         color: ev.color,
@@ -528,7 +721,7 @@ class CalendarWeekCard extends HTMLElement {
 
                 const titleEl = document.createElement("div");
                 titleEl.className = "event-title";
-                titleEl.textContent = ev.title;
+                titleEl.textContent = ev.isUntitled ? this.t("noTitle") : ev.title;
 
                 const timeEl = document.createElement("div");
                 timeEl.className = "event-tag event-all-day-tag";
@@ -573,13 +766,15 @@ class CalendarWeekCard extends HTMLElement {
                 eventDiv.style.borderColor = this.mixColor(baseColor, "#ffffff", 0.25) || "rgba(255,255,255,0.35)";
                 eventDiv.style.color = this.getReadableTextColor(gradientStart);
 
+                const locale = this.getLocale();
                 const eventSurface = document.createElement("div");
+
                 eventSurface.className = "event-surface";
-                const startStr = ev.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                const endStr = ev.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                const startStr = ev.start.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+                const endStr = ev.end.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
                 const titleEl = document.createElement("div");
                 titleEl.className = "event-title";
-                titleEl.textContent = ev.title;
+                titleEl.textContent = ev.isUntitled ? this.t("noTitle") : ev.title;
 
                 const timeEl = document.createElement("div");
                 timeEl.className = "event-time";
@@ -885,8 +1080,53 @@ class CalendarWeekCard extends HTMLElement {
         });
         content.addEventListener("click", e => e.stopPropagation());
 
+        const languageRow = document.createElement("div");
+        Object.assign(languageRow.style, {
+            display: "flex",
+            alignItems: "center",
+            gap: "12px"
+        });
+
+        const languageLabel = document.createElement("label");
+        Object.assign(languageLabel.style, {
+            flex: "1",
+            fontWeight: "600",
+            color: "#333"
+        });
+
+        const languageSelect = document.createElement("select");
+        Object.assign(languageSelect.style, {
+            padding: "6px 10px",
+            borderRadius: "6px",
+            border: "1px solid var(--divider-color, #ccc)",
+            fontSize: "0.95em",
+            cursor: "pointer",
+            background: "var(--card-background-color, #fff)",
+            color: "var(--primary-text-color, #111)"
+        });
+
+        const systemOption = document.createElement("option");
+        systemOption.value = "system";
+        languageSelect.appendChild(systemOption);
+
+        Object.entries(CALENDAR_WEEK_CARD_LANGUAGE_NAMES).forEach(([code, name]) => {
+            const option = document.createElement("option");
+            option.value = code;
+            option.textContent = name;
+            languageSelect.appendChild(option);
+        });
+
+        const languageSelectId = `calendar-week-card-language-${Math.random().toString(36).slice(2, 8)}`;
+        languageSelect.id = languageSelectId;
+        languageLabel.setAttribute("for", languageSelectId);
+
+        languageSelect.value = this.languagePreference;
+
+        languageRow.appendChild(languageLabel);
+        languageRow.appendChild(languageSelect);
+        content.appendChild(languageRow);
+
         const title = document.createElement("h3");
-        title.textContent = "Calendar Colors";
         Object.assign(title.style, { margin: 0, fontSize: "1.3em", color: "#333" });
         content.appendChild(title);
 
@@ -972,7 +1212,6 @@ class CalendarWeekCard extends HTMLElement {
         });
 
         const supportText = document.createElement("span");
-        supportText.textContent = "Like it? Support me via PayPal:";
         supportText.style.color = "#555";
         supportText.style.fontSize = "0.9em";
         donateSection.appendChild(supportText);
@@ -986,7 +1225,6 @@ class CalendarWeekCard extends HTMLElement {
 
         const donateImage = document.createElement("img");
         donateImage.src = "https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif";
-        donateImage.alt = "Donate with PayPal";
         donateImage.style.border = "0";
 
         donateLink.appendChild(donateImage);
@@ -994,7 +1232,6 @@ class CalendarWeekCard extends HTMLElement {
         content.appendChild(donateSection);
 
         const closeBtn = document.createElement("button");
-        closeBtn.textContent = "Save & Close";
         Object.assign(closeBtn.style, {
             marginTop: "16px", padding: "10px 18px", fontSize: "1em",
             borderRadius: "8px", border: "none", cursor: "pointer",
@@ -1011,6 +1248,26 @@ class CalendarWeekCard extends HTMLElement {
         });
         closeBtn.addEventListener("click", () => dialog.remove());
         content.appendChild(closeBtn);
+
+        const updateDialogText = () => {
+            title.textContent = this.t("calendarColors");
+            const languageLabelText = this.t("languageLabel");
+            languageLabel.textContent = languageLabelText;
+            systemOption.textContent = this.t("systemDefault");
+            languageSelect.setAttribute("aria-label", languageLabelText);
+            languageSelect.setAttribute("title", languageLabelText);
+            supportText.textContent = this.t("supportViaPaypal");
+            donateImage.alt = this.t("donateWithPaypal");
+            closeBtn.textContent = this.t("saveAndClose");
+        };
+
+        languageSelect.addEventListener("change", e => {
+            this.setLanguagePreference(e.target.value);
+            languageSelect.value = this.languagePreference;
+            updateDialogText();
+        });
+
+        updateDialogText();
 
         dialog.appendChild(content);
         document.body.appendChild(dialog);
@@ -1039,23 +1296,25 @@ class CalendarWeekCard extends HTMLElement {
         content.addEventListener("click", e => e.stopPropagation());
 
         const title = document.createElement("h3");
-        title.textContent = ev.title;
+        const eventTitle = ev.isUntitled ? this.t("noTitle") : ev.title;
+        title.textContent = eventTitle;
         Object.assign(title.style, { margin: 0, fontSize: "1.3em", color: "#333" });
         content.appendChild(title);
 
-        const startDate = ev.start.toLocaleString(undefined, {weekday: "long", year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit"});
-        const endDate = ev.end.toLocaleString(undefined, {weekday: "long", year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit"});
+        const locale = this.getLocale();
+        const startDate = ev.start.toLocaleString(locale, {weekday: "long", year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit"});
+        const endDate = ev.end.toLocaleString(locale, {weekday: "long", year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit"});
 
         const details = document.createElement("div");
         details.innerHTML = `
-        <p style="margin:0; color:#555;"><b>Calendar:</b> ${this.getCalendarName(ev.calendar)}</p>
-        <p style="margin:0; color:#555;"><b>Start:</b> ${startDate}</p>
-        <p style="margin:0; color:#555;"><b>End:</b> ${endDate}</p>
+        <p style="margin:0; color:#555;"><b>${this.t("calendar")}:</b> ${this.getCalendarName(ev.calendar)}</p>
+        <p style="margin:0; color:#555;"><b>${this.t("start")}:</b> ${startDate}</p>
+        <p style="margin:0; color:#555;"><b>${this.t("end")}:</b> ${endDate}</p>
     `;
         content.appendChild(details);
 
         const closeBtn = document.createElement("button");
-        closeBtn.textContent = "Close";
+        closeBtn.textContent = this.t("close");
         Object.assign(closeBtn.style, {
             marginTop: "16px", padding: "10px 18px", fontSize: "1em",
             borderRadius: "8px", border: "none", cursor: "pointer",
