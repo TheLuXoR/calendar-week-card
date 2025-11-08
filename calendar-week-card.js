@@ -161,13 +161,18 @@ class CalendarWeekCard extends HTMLElement {
                 background: linear-gradient(to bottom, rgba(249,249,249,0.9) 0%, rgba(255,255,255,0.95) 65%, rgba(245,247,250,0.9) 100%);
             }
             .day-column {
+                --time-viewport-height: 1440px;
+                --all-day-height: 0px;
+                --section-gap: 0px;
                 position: relative;
                 border-left: 1px solid rgba(0, 0, 0, 0.04);
                 background: transparent;
-                display: flex;
-                flex-direction: column;
+                display: grid;
+                grid-template-rows: auto 1fr;
                 padding: 6px 6px 12px;
                 gap: 6px;
+                box-sizing: border-box;
+                min-height: calc(var(--all-day-height, 0px) + var(--time-viewport-height, 1440px) + var(--section-gap, 0px) + 18px);
             }
             .day-column:first-child {
                 border-left: none;
@@ -176,10 +181,17 @@ class CalendarWeekCard extends HTMLElement {
                 display: flex;
                 flex-direction: column;
                 gap: 6px;
+                min-height: var(--all-day-height, 0px);
+            }
+            .timed-viewport {
+                position: relative;
+                width: 100%;
+                height: var(--time-viewport-height, 1440px);
             }
             .timed-events {
                 position: relative;
-                flex: 1;
+                width: 100%;
+                height: 100%;
             }
             .event {
                 border-radius: 10px;
@@ -412,7 +424,9 @@ class CalendarWeekCard extends HTMLElement {
         this.dayColumns.forEach(col => {
             col.innerHTML = `
                 <div class="all-day-events"></div>
-                <div class="timed-events"></div>
+                <div class="timed-viewport">
+                    <div class="timed-events"></div>
+                </div>
             `;
         });
 
@@ -559,34 +573,47 @@ class CalendarWeekCard extends HTMLElement {
             container.style.minHeight = maxHeight ? `${maxHeight}px` : "";
         });
 
+        this.dayColumns.forEach(column => {
+            column.style.setProperty("--all-day-height", `${maxHeight || 0}px`);
+        });
+
         this.maxAllDayHeight = maxHeight;
         return maxHeight;
     }
 
     updateTimeMetrics() {
-        const fallbackHeight = this.grid?.clientHeight || 1440;
         const firstColumn = this.dayColumns?.[0];
-        const timedContainer = firstColumn?.querySelector(".timed-events");
+        const paddingTop = 6;
+        const paddingBottom = 12;
+        const sectionGap = 6;
+        const allDayHeight = this.maxAllDayHeight || 0;
+        const gapHeight = allDayHeight > 0 ? sectionGap : 0;
+        const fallbackViewport = 24 * 60; // default to 1px per minute
 
-        let offset = 0;
-        let viewportHeight = fallbackHeight;
+        let viewportHeight = fallbackViewport;
 
-        if (firstColumn && timedContainer) {
+        if (firstColumn) {
             const columnRect = firstColumn.getBoundingClientRect();
-            const timedRect = timedContainer.getBoundingClientRect();
-            if (columnRect && timedRect) {
-                offset = Math.max(0, timedRect.top - columnRect.top);
-                viewportHeight = timedRect.height || Math.max(0, fallbackHeight - offset);
+            if (columnRect?.height) {
+                const availableHeight = columnRect.height - paddingTop - paddingBottom - gapHeight - allDayHeight;
+                if (availableHeight > 0) {
+                    viewportHeight = availableHeight;
+                }
             }
+        } else if (this.grid?.clientHeight) {
+            viewportHeight = this.grid.clientHeight;
         }
 
-        if (!viewportHeight) {
-            viewportHeight = fallbackHeight;
-        }
-
-        this.timeAxisOffset = offset;
+        this.timeAxisOffset = paddingTop + allDayHeight + gapHeight;
         this.timeViewportHeight = viewportHeight;
         this.pixelsPerMinute = viewportHeight > 0 ? viewportHeight / (24 * 60) : this.pixelsPerMinute;
+
+        const viewportPx = `${this.timeViewportHeight}px`;
+        const gapPx = `${gapHeight}px`;
+        this.dayColumns.forEach(column => {
+            column.style.setProperty("--time-viewport-height", viewportPx);
+            column.style.setProperty("--section-gap", gapPx);
+        });
     }
 
 
