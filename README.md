@@ -45,6 +45,12 @@ colors:
 - `entities` (optional): Explicit list of calendar entities. When omitted, the card will display all available calendars.
 - `colors` (optional): Map of entity IDs to hex color values. Values can be adjusted from the built-in settings dialog.
 
+## Support the project
+
+If this card saves you time, please consider supporting the development with a small donation.
+
+[![Donate with PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4)
+
 ## Development
 
 The card is a single JavaScript module. To contribute, edit `calendar-week-card.js` and open a pull request.
