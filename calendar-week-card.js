@@ -59,6 +59,7 @@ class CalendarWeekCard extends HTMLElement {
             .week-body { flex: 1; display: flex; width: 100%; height: 100%; border: 1px solid #ccc; overflow: hidden; }
             .time-bar { position: relative; width: 60px; border-right: 1px solid #ccc; font-size: 11px; background: #fafafa; flex-shrink: 0; overflow-y: auto; }
             .hour-label { position: absolute; left: 2px; font-size: 11px; color: #666; transform: translateY(-50%); }
+            .hour-marker { position: absolute; left: 6px; width: 10px; height: 1px; background: rgba(0,0,0,0.6); transform: translateY(-0.5px); pointer-events: none; }
             .week-grid { position: relative; flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); height: 100%; width: 100%; overflow-y: auto; background: linear-gradient(to bottom,#e8e8e8 0%,#e8e8e8 25%,#f9f9f9 25%,#f9f9f9 91.6%,#e8e8e8 91.6%,#e8e8e8 100%); }
             .day-column { position: relative; border-left: 1px solid #ddd; overflow: hidden; background: transparent; display: flex; flex-direction: column; }
             .day-column:first-child { border-left: none; }
@@ -157,6 +158,12 @@ class CalendarWeekCard extends HTMLElement {
         const gridHeight = this.grid.clientHeight || 1440;
         this.pixelsPerMinute = gridHeight / (24 * 60);
         this.timeBar.innerHTML = "";
+        for (let h = 0; h <= 24; h++) {
+            const marker = document.createElement("div");
+            marker.className = "hour-marker";
+            marker.style.top = `${h * 60 * this.pixelsPerMinute}px`;
+            this.timeBar.appendChild(marker);
+        }
         for (let h = 1; h <= 23; h++) {
             const label = document.createElement("div");
             label.className = "hour-label";
