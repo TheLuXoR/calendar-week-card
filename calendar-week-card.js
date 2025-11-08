@@ -1,6 +1,9 @@
 const CALENDAR_WEEK_CARD_TRANSLATIONS = {
     en: {
         today: "Today",
+        allDay: "All day",
+        location: "Location",
+        description: "Description",
         calendarColors: "Calendar Colors",
         supportViaPaypal: "Like it? Support me via PayPal:",
         saveAndClose: "Save & Close",
@@ -15,6 +18,9 @@ const CALENDAR_WEEK_CARD_TRANSLATIONS = {
     },
     de: {
         today: "Heute",
+        allDay: "Ganztägig",
+        location: "Ort",
+        description: "Beschreibung",
         calendarColors: "Kalenderfarben",
         supportViaPaypal: "Gefällt dir die Karte? Unterstütze mich via PayPal:",
         saveAndClose: "Speichern & Schließen",
@@ -29,6 +35,9 @@ const CALENDAR_WEEK_CARD_TRANSLATIONS = {
     },
     fr: {
         today: "Aujourd'hui",
+        allDay: "Toute la journée",
+        location: "Lieu",
+        description: "Description",
         calendarColors: "Couleurs du calendrier",
         supportViaPaypal: "Vous aimez ? Soutenez-moi via PayPal :",
         saveAndClose: "Enregistrer et fermer",
@@ -43,6 +52,9 @@ const CALENDAR_WEEK_CARD_TRANSLATIONS = {
     },
     es: {
         today: "Hoy",
+        allDay: "Todo el día",
+        location: "Ubicación",
+        description: "Descripción",
         calendarColors: "Colores del calendario",
         supportViaPaypal: "¿Te gusta? Apóyame vía PayPal:",
         saveAndClose: "Guardar y cerrar",
@@ -57,6 +69,9 @@ const CALENDAR_WEEK_CARD_TRANSLATIONS = {
     },
     it: {
         today: "Oggi",
+        allDay: "Tutto il giorno",
+        location: "Posizione",
+        description: "Descrizione",
         calendarColors: "Colori del calendario",
         supportViaPaypal: "Ti piace? Sostienimi tramite PayPal:",
         saveAndClose: "Salva e chiudi",
@@ -71,6 +86,9 @@ const CALENDAR_WEEK_CARD_TRANSLATIONS = {
     },
     nl: {
         today: "Vandaag",
+        allDay: "Hele dag",
+        location: "Locatie",
+        description: "Beschrijving",
         calendarColors: "Kalenderkleuren",
         supportViaPaypal: "Vind je het leuk? Steun me via PayPal:",
         saveAndClose: "Opslaan en sluiten",
@@ -413,10 +431,11 @@ class CalendarWeekCard extends HTMLElement {
                 gap: 2px;
             }
             .event-surface.all-day-surface {
-                padding: 3px 6px;
+                padding: 4px 10px;
                 flex-direction: row;
                 align-items: center;
-                gap: 4px;
+                gap: 6px;
+                flex-wrap: wrap;
             }
             .event.timed-event .event-surface {
                 padding: 4px 8px;
@@ -428,9 +447,9 @@ class CalendarWeekCard extends HTMLElement {
                 z-index: 3;
             }
             .event.all-day-event .event-title {
-                font-size: 0.8em;
+                font-size: 0.9em;
                 margin-bottom: 0;
-                letter-spacing: 0.01em;
+                letter-spacing: 0.005em;
                 flex: 1;
             }
             .event.all-day-event .event-title,
@@ -444,17 +463,27 @@ class CalendarWeekCard extends HTMLElement {
                 border-radius: 999px;
                 font-weight: 700;
                 text-transform: uppercase;
-                letter-spacing: 0.08em;
-                padding: 1px 6px 0;
-                line-height: 1.2;
-                background: rgba(255, 255, 255, 0.25);
+                letter-spacing: 0.05em;
+                padding: 2px 8px;
+                line-height: 1.3;
+                background: rgba(255, 255, 255, 0.3);
                 color: inherit;
                 white-space: nowrap;
+                font-size: 0.75em;
+            }
+            .event.event-light-text .event-tag {
+                background: rgba(0, 0, 0, 0.25);
+                color: #ffffff;
+            }
+            .event.event-dark-text .event-tag {
+                background: rgba(255, 255, 255, 0.55);
+                color: #1f1f1f;
             }
             .event-all-day-tag {
-                font-size: 0.6em;
+                font-size: 0.85em;
                 margin-left: auto;
-                opacity: 0.9;
+                opacity: 1;
+                letter-spacing: 0.03em;
             }
             .event-title {
                 font-weight: 600;
@@ -467,6 +496,20 @@ class CalendarWeekCard extends HTMLElement {
             .event-time {
                 font-size: 0.75em;
                 opacity: 0.9;
+            }
+            .event.timed-event.event-compact .event-surface {
+                padding: 4px 6px;
+                justify-content: center;
+                gap: 2px;
+            }
+            .event.timed-event.event-compact .event-title {
+                font-size: 0.85em;
+                white-space: normal;
+                line-height: 1.2;
+            }
+            .event.timed-event.event-compact .event-time {
+                font-size: 0.75em;
+                opacity: 1;
             }
             .time-line {
                 position: absolute;
@@ -632,6 +675,8 @@ class CalendarWeekCard extends HTMLElement {
                     }
 
                     const hasSummary = typeof ev.summary === "string" && ev.summary.trim().length > 0;
+                    const location = typeof ev.location === "string" ? ev.location.trim() : "";
+                    const description = typeof ev.description === "string" ? ev.description.trim() : "";
                     allEvents.push({
                         calendar: entity,
                         title: hasSummary ? ev.summary : "",
@@ -639,7 +684,9 @@ class CalendarWeekCard extends HTMLElement {
                         start: startDate,
                         end: endDate,
                         color: ev.color,
-                        isAllDay
+                        isAllDay,
+                        location,
+                        description
                     });
                 });
             } catch (e) {
@@ -714,7 +761,9 @@ class CalendarWeekCard extends HTMLElement {
                 eventDiv.style.right = "2px";
                 eventDiv.style.background = `linear-gradient(150deg, ${gradientStart}, ${gradientEnd})`;
                 eventDiv.style.borderColor = this.mixColor(baseColor, "#ffffff", 0.3) || "rgba(255,255,255,0.35)";
-                eventDiv.style.color = this.getReadableTextColor(gradientStart);
+                const allDayTextColor = this.getReadableTextColor(gradientStart);
+                eventDiv.style.color = allDayTextColor;
+                eventDiv.classList.add(allDayTextColor === "#ffffff" ? "event-light-text" : "event-dark-text");
 
                 const eventSurface = document.createElement("div");
                 eventSurface.className = "event-surface all-day-surface";
@@ -725,7 +774,7 @@ class CalendarWeekCard extends HTMLElement {
 
                 const timeEl = document.createElement("div");
                 timeEl.className = "event-tag event-all-day-tag";
-                timeEl.textContent = "All day";
+                timeEl.textContent = this.t("allDay");
 
                 eventSurface.appendChild(titleEl);
                 eventSurface.appendChild(timeEl);
@@ -748,7 +797,9 @@ class CalendarWeekCard extends HTMLElement {
                 const startMinutes = ev.start.getHours() * 60 + ev.start.getMinutes();
                 const endMinutes = ev.end.getHours() * 60 + ev.end.getMinutes();
                 const top = baseTopOffset + startMinutes * this.pixelsPerMinute;
-                const height = Math.max(endMinutes - startMinutes, 15) * this.pixelsPerMinute;
+                const durationMinutes = Math.max(endMinutes - startMinutes, 1);
+                const minHeight = 32 * this.pixelsPerMinute;
+                const height = Math.max(durationMinutes * this.pixelsPerMinute, minHeight);
 
                 const leftIndent = 2 + ev.column * 12;
                 const rightIndent = 2 + ev.column * 2;
@@ -764,7 +815,9 @@ class CalendarWeekCard extends HTMLElement {
                 const gradientEnd = this.mixColor(baseColor, "#ffffff", 0.3) || baseColor;
                 eventDiv.style.background = `linear-gradient(160deg, ${gradientStart}, ${gradientEnd})`;
                 eventDiv.style.borderColor = this.mixColor(baseColor, "#ffffff", 0.25) || "rgba(255,255,255,0.35)";
-                eventDiv.style.color = this.getReadableTextColor(gradientStart);
+                const timedTextColor = this.getReadableTextColor(gradientStart);
+                eventDiv.style.color = timedTextColor;
+                eventDiv.classList.add(timedTextColor === "#ffffff" ? "event-light-text" : "event-dark-text");
 
                 const locale = this.getLocale();
                 const eventSurface = document.createElement("div");
@@ -783,6 +836,10 @@ class CalendarWeekCard extends HTMLElement {
                 eventSurface.appendChild(titleEl);
                 eventSurface.appendChild(timeEl);
                 eventDiv.appendChild(eventSurface);
+
+                if (height <= 48) {
+                    eventDiv.classList.add("event-compact");
+                }
 
                 eventDiv.addEventListener("click", () => this.showEventDialog(ev));
 
@@ -1321,16 +1378,96 @@ class CalendarWeekCard extends HTMLElement {
         Object.assign(title.style, { margin: 0, fontSize: "1.3em", color: "#333" });
         content.appendChild(title);
 
+        const metaBar = document.createElement("div");
+        Object.assign(metaBar.style, {
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "8px",
+            alignItems: "center"
+        });
+
+        if (ev.isAllDay) {
+            const allDayChip = document.createElement("span");
+            allDayChip.textContent = this.t("allDay");
+            Object.assign(allDayChip.style, {
+                background: "#eef3ff",
+                color: "#1f3b73",
+                borderRadius: "999px",
+                padding: "4px 10px",
+                fontSize: "0.75em",
+                fontWeight: "600",
+                letterSpacing: "0.04em",
+                textTransform: "uppercase"
+            });
+            metaBar.appendChild(allDayChip);
+        }
+
+        if (metaBar.childElementCount) {
+            content.appendChild(metaBar);
+        }
+
         const locale = this.getLocale();
-        const startDate = ev.start.toLocaleString(locale, {weekday: "long", year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit"});
-        const endDate = ev.end.toLocaleString(locale, {weekday: "long", year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit"});
+        const dateFormat = { weekday: "long", year: "numeric", month: "long", day: "numeric" };
+        const dateTimeFormat = { ...dateFormat, hour: "2-digit", minute: "2-digit" };
+        const startDisplay = ev.isAllDay
+            ? ev.start.toLocaleDateString(locale, dateFormat)
+            : ev.start.toLocaleString(locale, dateTimeFormat);
+        const endDateForDisplay = new Date(ev.end.getTime());
+        if (ev.isAllDay) {
+            endDateForDisplay.setMilliseconds(endDateForDisplay.getMilliseconds() - 1);
+        }
+        const endDisplay = ev.isAllDay
+            ? endDateForDisplay.toLocaleDateString(locale, dateFormat)
+            : endDateForDisplay.toLocaleString(locale, dateTimeFormat);
 
         const details = document.createElement("div");
-        details.innerHTML = `
-        <p style="margin:0; color:#555;"><b>${this.t("calendar")}:</b> ${this.getCalendarName(ev.calendar)}</p>
-        <p style="margin:0; color:#555;"><b>${this.t("start")}:</b> ${startDate}</p>
-        <p style="margin:0; color:#555;"><b>${this.t("end")}:</b> ${endDate}</p>
-    `;
+        Object.assign(details.style, {
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px"
+        });
+
+        const addDetailRow = (label, value, options = {}) => {
+            if (!value) return;
+            const { isMultiline = false } = options;
+            const row = document.createElement("div");
+            Object.assign(row.style, {
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px"
+            });
+
+            const labelEl = document.createElement("span");
+            labelEl.textContent = label;
+            Object.assign(labelEl.style, {
+                fontSize: "0.75em",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                color: "#666"
+            });
+
+            const valueEl = document.createElement("span");
+            valueEl.textContent = value;
+            Object.assign(valueEl.style, {
+                color: "#333",
+                fontSize: "0.95em",
+                lineHeight: "1.4"
+            });
+            if (isMultiline) {
+                valueEl.style.whiteSpace = "pre-wrap";
+            }
+
+            row.appendChild(labelEl);
+            row.appendChild(valueEl);
+            details.appendChild(row);
+        };
+
+        addDetailRow(this.t("calendar"), this.getCalendarName(ev.calendar));
+        addDetailRow(this.t("start"), startDisplay);
+        addDetailRow(this.t("end"), endDisplay);
+        addDetailRow(this.t("location"), ev.location);
+        addDetailRow(this.t("description"), ev.description, { isMultiline: true });
+
         content.appendChild(details);
 
         const closeBtn = document.createElement("button");
