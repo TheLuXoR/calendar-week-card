@@ -6,6 +6,9 @@ class CalendarWeekCard extends HTMLElement {
         this.dynamicEntities = [];
         this.availableCalendars = [];
         this.configHiddenKey = "calendar-week-card-hidden";
+        this.pixelsPerMinute = 1;
+        this.timeAxisOffset = 0;
+        this.timeViewportHeight = 24 * 60;
     }
 
     setConfig(config) {
@@ -327,14 +330,15 @@ class CalendarWeekCard extends HTMLElement {
     }
 
     buildTimeLabels() {
-        const gridHeight = this.grid.clientHeight || 1440;
-        this.pixelsPerMinute = gridHeight / (24 * 60);
+        if (!this.timeBar) return;
+        const totalHeight = this.timeAxisOffset + (24 * 60 * this.pixelsPerMinute);
         this.timeBar.innerHTML = "";
+        this.timeBar.style.minHeight = `${totalHeight}px`;
         for (let h = 1; h <= 23; h++) {
             const label = document.createElement("div");
             label.className = "hour-label";
             label.textContent = `${h.toString().padStart(2, '0')}:00`;
-            label.style.top = `${h * 60 * this.pixelsPerMinute}px`;
+            label.style.top = `${this.timeAxisOffset + h * 60 * this.pixelsPerMinute}px`;
             this.timeBar.appendChild(label);
         }
 
@@ -346,7 +350,7 @@ class CalendarWeekCard extends HTMLElement {
             line.className = "time-line";
             line.style.left = "0";
             line.style.right = "0";
-            line.style.top = `${minutes * this.pixelsPerMinute}px`;
+            line.style.top = `${this.timeAxisOffset + minutes * this.pixelsPerMinute}px`;
             this.timeBar.appendChild(line);
         }
     }
@@ -418,6 +422,8 @@ class CalendarWeekCard extends HTMLElement {
             ? events.filter(ev => !this.isEntityHidden(ev.calendar))
             : [];
 
+        const dayRenderData = [];
+
         for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
             // Get all events for this day, sorted by start time
             const allDayEvents = visibleEvents
@@ -460,20 +466,24 @@ class CalendarWeekCard extends HTMLElement {
                 allDayContainer.appendChild(eventDiv);
             }
 
-            const activeStack = []; // currently overlapping events
+            dayRenderData.push({ dayEvents, timedContainer });
+        }
+
+        this.normalizeAllDayHeights();
+        this.updateTimeMetrics();
+
+        for (const { dayEvents, timedContainer } of dayRenderData) {
+            if (!timedContainer) continue;
+            const activeStack = [];
 
             for (const ev of dayEvents) {
-                // Remove ended events from the stack
                 for (let i = activeStack.length - 1; i >= 0; i--) {
                     if (activeStack[i].end <= ev.start) activeStack.splice(i, 1);
                 }
 
-                // Determine max column among overlapping events
                 let maxCol = -1;
                 activeStack.forEach(e => { if (e.column > maxCol) maxCol = e.column; });
                 ev.column = maxCol + 1;
-
-                // Add current event to stack
                 activeStack.push(ev);
 
                 const startMinutes = ev.start.getHours() * 60 + ev.start.getMinutes();
@@ -481,8 +491,8 @@ class CalendarWeekCard extends HTMLElement {
                 const top = startMinutes * this.pixelsPerMinute;
                 const height = Math.max(endMinutes - startMinutes, 15) * this.pixelsPerMinute;
 
-                const leftIndent = 2 + ev.column * 12;   // main left offset
-                const rightIndent = 2 + ev.column * 2;   // subtle right offset
+                const leftIndent = 2 + ev.column * 12;
+                const rightIndent = 2 + ev.column * 2;
 
                 const eventDiv = document.createElement("div");
                 eventDiv.className = "event timed-event";
@@ -519,8 +529,64 @@ class CalendarWeekCard extends HTMLElement {
             }
         }
 
-        this.updateTimeLine();
         this.buildTimeLabels();
+        this.updateTimeLine();
+    }
+
+
+    normalizeAllDayHeights() {
+        if (!this.dayColumns?.length) return 0;
+
+        // Reset any previous sizing to measure natural content height
+        this.dayColumns.forEach(column => {
+            const container = column.querySelector(".all-day-events");
+            if (container) container.style.minHeight = "";
+        });
+
+        let maxHeight = 0;
+        this.dayColumns.forEach(column => {
+            const container = column.querySelector(".all-day-events");
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            if (rect?.height > maxHeight) {
+                maxHeight = rect.height;
+            }
+        });
+
+        this.dayColumns.forEach(column => {
+            const container = column.querySelector(".all-day-events");
+            if (!container) return;
+            container.style.minHeight = maxHeight ? `${maxHeight}px` : "";
+        });
+
+        this.maxAllDayHeight = maxHeight;
+        return maxHeight;
+    }
+
+    updateTimeMetrics() {
+        const fallbackHeight = this.grid?.clientHeight || 1440;
+        const firstColumn = this.dayColumns?.[0];
+        const timedContainer = firstColumn?.querySelector(".timed-events");
+
+        let offset = 0;
+        let viewportHeight = fallbackHeight;
+
+        if (firstColumn && timedContainer) {
+            const columnRect = firstColumn.getBoundingClientRect();
+            const timedRect = timedContainer.getBoundingClientRect();
+            if (columnRect && timedRect) {
+                offset = Math.max(0, timedRect.top - columnRect.top);
+                viewportHeight = timedRect.height || Math.max(0, fallbackHeight - offset);
+            }
+        }
+
+        if (!viewportHeight) {
+            viewportHeight = fallbackHeight;
+        }
+
+        this.timeAxisOffset = offset;
+        this.timeViewportHeight = viewportHeight;
+        this.pixelsPerMinute = viewportHeight > 0 ? viewportHeight / (24 * 60) : this.pixelsPerMinute;
     }
 
 
@@ -747,7 +813,7 @@ class CalendarWeekCard extends HTMLElement {
         const minutes = now.getHours() * 60 + now.getMinutes();
         const line = document.createElement("div");
         line.className = "time-line";
-        line.style.top = `${minutes * this.pixelsPerMinute}px`;
+        line.style.top = `${this.timeAxisOffset + minutes * this.pixelsPerMinute}px`;
         this.dayColumns[todayOffset].appendChild(line);
     }
 
