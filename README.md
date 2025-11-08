@@ -1,13 +1,13 @@
 # Calendar Week Card
 
-A custom Lovelace card that renders a week-based calendar view in Home Assistant. It automatically loads calendar entities, lets you assign persistent colors per calendar, and provides dialogs for reviewing events.
+A custom Lovelace card that renders a week-based calendar view in Home Assistant. It can automatically load calendar entities known to your Home assitant. It lets you assign persistent colors per calendar, and provides dialogs for reviewing event details.
 
 ## Features
 
 - Weekly grid layout with current time indicator
 - Automatic calendar discovery with optional manual entity list
 - Persistent color picker for each calendar
-- Event detail dialog with start/end information
+- Event detail dialog
 
 ## Installation
 
@@ -45,9 +45,47 @@ colors:
 - `entities` (optional): Explicit list of calendar entities. When omitted, the card will display all available calendars.
 - `colors` (optional): Map of entity IDs to hex color values. Values can be adjusted from the built-in settings dialog.
 
+<<<<<<< HEAD
+## Support the project
+
+If this card saves you time, please consider supporting the development with a small donation.
+
+[![Donate with PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4)
+=======
+
+### minimalistic 
+- Automatic calendar discovery 
+- some predefined colors
+- works out of the box
+
+```yaml
+type: custom:calendar-week-card
+```
+>>>>>>> 9b62e7d (some small manual changes for the README.md)
+
 ## Development
 
-The card is a single JavaScript module. To contribute, edit `calendar-week-card.js` and open a pull request.
+The card is a single JavaScript module.  
+To contribute, edit `calendar-week-card.js` and feel free to open a pull request.
+
+## Support the project
+
+If this card saves you time, please consider supporting the development with a small donation.
+
+[![Donate with PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4)
+
+
+### minimalistic 
+- Automatic calendar discovery 
+- some predefined colors
+- works out of the box
+
+```yaml
+type: custom:calendar-week-card
+```
+
+The card is a single JavaScript module.  
+To contribute, edit `calendar-week-card.js` and feel free to open a pull request.
 
 ## License
 

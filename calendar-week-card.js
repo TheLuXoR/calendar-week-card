@@ -408,6 +408,29 @@ class CalendarWeekCard extends HTMLElement {
 
         content.appendChild(list);
 
+        const donateSection = document.createElement("div");
+        Object.assign(donateSection.style, {
+            marginTop: "8px",
+            display: "flex",
+            justifyContent: "center"
+        });
+
+        const donateLink = document.createElement("a");
+        donateLink.href = "https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4";
+        donateLink.target = "_blank";
+        donateLink.rel = "noopener noreferrer";
+        donateLink.style.display = "inline-flex";
+        donateLink.style.alignItems = "center";
+
+        const donateImage = document.createElement("img");
+        donateImage.src = "https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif";
+        donateImage.alt = "Donate with PayPal";
+        donateImage.style.border = "0";
+
+        donateLink.appendChild(donateImage);
+        donateSection.appendChild(donateLink);
+        content.appendChild(donateSection);
+
         const closeBtn = document.createElement("button");
         closeBtn.textContent = "Save & Close";
         Object.assign(closeBtn.style, {
