@@ -11,6 +11,8 @@ class CalendarWeekCard extends HTMLElement {
         this.hiddenBottomMinutes = 0;
         this.visibleMinutes = 24 * 60;
         this.pixelsPerMinute = 1;
+        this._colorCanvas = null;
+        this._colorContext = null;
     }
 
     setConfig(config) {
@@ -77,7 +79,16 @@ class CalendarWeekCard extends HTMLElement {
             .week-header { display: grid; grid-template-columns: 60px repeat(7, 1fr); text-align: center; font-weight: bold; padding-bottom: 4px; }
             .week-header div { display: flex; flex-direction: column; align-items: center; }
             .day-num { font-size: 0.8em; font-weight: normal; color: #666; }
-            .week-body { flex: 1; display: flex; width: 100%; height: 100%; border: 1px solid #ccc; overflow: hidden; }
+            .week-body { flex: 1; display: flex; flex-direction: column; width: 100%; height: 100%; border: 1px solid #ccc; overflow: hidden; }
+            .all-day-row { display: flex; border-bottom: 1px solid #ccc; background: linear-gradient(to bottom, #f4f5fb, #ffffff); }
+            .all-day-label { width: 60px; border-right: 1px solid #ccc; font-size: 11px; color: #666; padding: 6px 4px; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: flex-start; justify-content: center; }
+            .all-day-grid { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); background: #fafbff; }
+            .all-day-column { border-left: 1px solid #ddd; padding: 6px 6px 4px; min-height: 32px; display: flex; flex-direction: column; gap: 6px; position: relative; }
+            .all-day-column:first-child { border-left: none; }
+            .all-day-event { border-radius: 8px; padding: 6px 8px; font-size: 11px; font-weight: 600; color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.18); position: relative; overflow: hidden; backdrop-filter: blur(0.3px); min-height: 28px; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+            .all-day-event .all-day-title { display: block; }
+            .all-day-event .all-day-flags { font-size: 9px; opacity: 0.85; margin-top: 2px; display: flex; gap: 4px; align-items: center; }
+            .timed-row { flex: 1; display: flex; min-height: 0; }
             .time-bar { position: relative; width: 60px; border-right: 1px solid #ccc; font-size: 11px; background: #fafafa; flex-shrink: 0; overflow-y: auto; }
             .hour-label { position: absolute; left: 2px; font-size: 11px; color: #666; transform: translateY(-50%); }
             .week-grid { position: relative; flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); height: 100%; width: 100%; overflow-y: auto; background: linear-gradient(to bottom,#e8e8e8 0%,#e8e8e8 25%,#f9f9f9 25%,#f9f9f9 91.6%,#e8e8e8 91.6%,#e8e8e8 100%); }
@@ -100,9 +111,17 @@ class CalendarWeekCard extends HTMLElement {
         <div class="week-header"></div>
 
         <div class="week-body">
-            <div class="time-bar"></div>
-            <div class="week-grid">
-                ${[...Array(7)].map(() => `<div class="day-column"></div>`).join("")}
+            <div class="all-day-row">
+                <div class="all-day-label">All day</div>
+                <div class="all-day-grid">
+                    ${[...Array(7)].map(() => `<div class="all-day-column"></div>`).join("")}
+                </div>
+            </div>
+            <div class="timed-row">
+                <div class="time-bar"></div>
+                <div class="week-grid">
+                    ${[...Array(7)].map(() => `<div class="day-column"></div>`).join("")}
+                </div>
             </div>
         </div>
         `;
@@ -112,6 +131,8 @@ class CalendarWeekCard extends HTMLElement {
         this.header = this.shadowRoot.querySelector(".week-header");
         this.titleLine = this.shadowRoot.querySelector(".title-line");
         this.dayColumns = this.shadowRoot.querySelectorAll(".day-column");
+        this.allDayColumns = this.shadowRoot.querySelectorAll(".all-day-column");
+        this.allDayRow = this.shadowRoot.querySelector(".all-day-row");
 
         this.shadowRoot.querySelector(".prev-week").addEventListener("click", () => this.changeWeek(-1));
         this.shadowRoot.querySelector(".next-week").addEventListener("click", () => this.changeWeek(1));
@@ -238,12 +259,23 @@ class CalendarWeekCard extends HTMLElement {
                 const url = `calendars/${entity}?start=${start.toISOString()}&end=${end.toISOString()}`;
                 const events = await hass.callApi("get", url);
                 events.forEach(ev => {
+                    const startRaw = ev.start?.dateTime || ev.start?.date;
+                    const endRaw = ev.end?.dateTime || ev.end?.date;
+                    if (!startRaw || !endRaw) return;
+                    const startDate = new Date(startRaw);
+                    const endDate = new Date(endRaw);
+                    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return;
+                    const isAllDaySource = Boolean(ev.start?.date && !ev.start?.dateTime) || Boolean(ev.end?.date && !ev.end?.dateTime);
+                    const isWholeDayRange = this.isWholeDayRange(startDate, endDate);
                     allEvents.push({
                         calendar: entity,
                         title: ev.summary || "(no title)",
-                        start: new Date(ev.start.dateTime || ev.start.date),
-                        end: new Date(ev.end.dateTime || ev.end.date),
-                        color: ev.color
+                        start: new Date(startDate.getTime()),
+                        end: new Date(endDate.getTime()),
+                        originalStart: new Date(startDate.getTime()),
+                        originalEnd: new Date(endDate.getTime()),
+                        color: ev.color,
+                        isAllDay: isAllDaySource || isWholeDayRange
                     });
                 });
             } catch (e) {
@@ -256,7 +288,8 @@ class CalendarWeekCard extends HTMLElement {
     }
     renderList(events) {
         this.lastEvents = events;
-        this.dayColumns.forEach(col => col.innerHTML = "");
+        Array.from(this.dayColumns).forEach(col => col.innerHTML = "");
+        Array.from(this.allDayColumns || []).forEach(col => col.innerHTML = "");
 
         const [startOfWeek] = this.getWeekRange();
 
@@ -264,45 +297,143 @@ class CalendarWeekCard extends HTMLElement {
             ? events.filter(ev => !this.isEntityHidden(ev.calendar))
             : [];
 
-        this.applyDynamicZoom(visibleEvents);
+        const dayData = Array.from({ length: 7 }, () => ({ allDay: [], timed: [] }));
+        const timedSegments = [];
+
+        visibleEvents.forEach(ev => {
+            if (!(ev?.start instanceof Date) || !(ev?.end instanceof Date)) return;
+            const eventStart = new Date(ev.start.getTime());
+            const eventEnd = new Date(ev.end.getTime());
+            if (eventEnd <= eventStart) return;
+
+            const isAllDay = Boolean(ev.isAllDay) || this.isWholeDayRange(eventStart, eventEnd);
+
+            for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+                const dayStart = new Date(startOfWeek);
+                dayStart.setDate(startOfWeek.getDate() + dayOffset);
+                dayStart.setHours(0, 0, 0, 0);
+                const dayEnd = new Date(dayStart);
+                dayEnd.setDate(dayEnd.getDate() + 1);
+
+                if (eventEnd <= dayStart || eventStart >= dayEnd) continue;
+
+                if (isAllDay) {
+                    const segment = {
+                        ...ev,
+                        start: new Date(Math.max(eventStart.getTime(), dayStart.getTime())),
+                        end: new Date(Math.min(eventEnd.getTime(), dayEnd.getTime())),
+                        originalStart: ev.originalStart ? new Date(ev.originalStart.getTime()) : new Date(eventStart.getTime()),
+                        originalEnd: ev.originalEnd ? new Date(ev.originalEnd.getTime()) : new Date(eventEnd.getTime()),
+                        continuesBefore: eventStart < dayStart,
+                        continuesAfter: eventEnd > dayEnd
+                    };
+                    dayData[dayOffset].allDay.push(segment);
+                } else {
+                    const segmentStart = eventStart < dayStart ? dayStart : eventStart;
+                    const segmentEnd = eventEnd > dayEnd ? dayEnd : eventEnd;
+                    if (segmentEnd <= segmentStart) continue;
+                    const segment = {
+                        ...ev,
+                        start: new Date(segmentStart.getTime()),
+                        end: new Date(segmentEnd.getTime()),
+                        originalStart: ev.originalStart ? new Date(ev.originalStart.getTime()) : new Date(eventStart.getTime()),
+                        originalEnd: ev.originalEnd ? new Date(ev.originalEnd.getTime()) : new Date(eventEnd.getTime()),
+                        continuesBefore: eventStart < dayStart,
+                        continuesAfter: eventEnd > dayEnd
+                    };
+                    dayData[dayOffset].timed.push(segment);
+                    timedSegments.push(segment);
+                }
+            }
+        });
+
+        this.applyDynamicZoom(timedSegments);
 
         const gridHeight = this.grid.clientHeight || 1440;
         this.pixelsPerMinute = gridHeight / this.getVisibleMinutes();
 
+        let hasAllDayEvents = false;
+
         for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-            // Get all events for this day, sorted by start time
-            const dayEvents = visibleEvents
-                .filter(ev => {
-                    const evDayOffset = Math.floor((ev.start - startOfWeek) / (1000 * 60 * 60 * 24));
-                    return evDayOffset === dayOffset;
-                })
-                .sort((a, b) => a.start - b.start);
+            const dayStart = new Date(startOfWeek);
+            dayStart.setDate(startOfWeek.getDate() + dayOffset);
+            dayStart.setHours(0, 0, 0, 0);
 
-            const activeStack = []; // currently overlapping events
+            const allDayColumn = this.allDayColumns?.[dayOffset];
+            if (allDayColumn) {
+                const allDayEvents = dayData[dayOffset].allDay.sort((a, b) => {
+                    const aStart = a.originalStart || a.start;
+                    const bStart = b.originalStart || b.start;
+                    return aStart - bStart;
+                });
+                if (allDayEvents.length) {
+                    hasAllDayEvents = true;
+                }
+                allDayEvents.forEach(segment => {
+                    const eventDiv = document.createElement("div");
+                    eventDiv.className = "all-day-event";
+                    const color = this.getEventColor(segment);
+                    eventDiv.style.background = this.colorToGradient(color);
+                    eventDiv.style.color = this.getReadableTextColor(color);
+                    eventDiv.style.border = `1px solid ${this.colorWithAlpha(color, 0.55)}`;
+                    eventDiv.style.cursor = "pointer";
 
-            for (const ev of dayEvents) {
-                // Remove ended events from the stack
+                    const title = document.createElement("span");
+                    title.className = "all-day-title";
+                    title.textContent = segment.title;
+                    eventDiv.appendChild(title);
+
+                    if (segment.continuesBefore || segment.continuesAfter) {
+                        const flags = document.createElement("div");
+                        flags.className = "all-day-flags";
+                        if (segment.continuesBefore) {
+                            const before = document.createElement("span");
+                            before.textContent = "◀";
+                            flags.appendChild(before);
+                        }
+                        if (segment.continuesAfter) {
+                            const after = document.createElement("span");
+                            after.textContent = "▶";
+                            flags.appendChild(after);
+                        }
+                        if (flags.childElementCount) {
+                            eventDiv.appendChild(flags);
+                        }
+                    }
+
+                    eventDiv.addEventListener("click", () => this.showEventDialog(segment));
+                    allDayColumn.appendChild(eventDiv);
+                });
+            }
+
+            const timedColumn = this.dayColumns?.[dayOffset];
+            if (!timedColumn) continue;
+
+            const dayEvents = dayData[dayOffset].timed.sort((a, b) => {
+                if (a.start.getTime() === b.start.getTime()) {
+                    return (a.end.getTime() - b.end.getTime());
+                }
+                return a.start - b.start;
+            });
+
+            const activeStack = [];
+
+            for (const segment of dayEvents) {
                 for (let i = activeStack.length - 1; i >= 0; i--) {
-                    if (activeStack[i].end <= ev.start) activeStack.splice(i, 1);
+                    if (activeStack[i].end <= segment.start) {
+                        activeStack.splice(i, 1);
+                    }
                 }
 
-                // Determine max column among overlapping events
-                let maxCol = -1;
-                activeStack.forEach(e => { if (e.column > maxCol) maxCol = e.column; });
-                ev.column = maxCol + 1;
+                const usedColumns = new Set(activeStack.map(e => e.column));
+                let column = 0;
+                while (usedColumns.has(column)) column++;
+                segment.column = column;
+                activeStack.push(segment);
 
-                // Add current event to stack
-                activeStack.push(ev);
-
-                const startMinutes = ev.start.getHours() * 60 + ev.start.getMinutes();
-                let endMinutes = ev.end.getHours() * 60 + ev.end.getMinutes();
-                const durationMinutes = Math.max(0, Math.round((ev.end - ev.start) / 60000));
-                if (durationMinutes > 0) {
-                    endMinutes = startMinutes + durationMinutes;
-                }
-                if (endMinutes <= startMinutes) {
-                    endMinutes = startMinutes + 15;
-                }
+                const startMinutes = Math.max(0, Math.round((segment.start - dayStart) / 60000));
+                const endMinutesRaw = Math.max(0, Math.round((segment.end - dayStart) / 60000));
+                let endMinutes = Math.max(startMinutes, endMinutesRaw);
                 endMinutes = Math.min(endMinutes, 24 * 60);
                 const visibleStart = Math.max(startMinutes, this.hiddenTopMinutes);
                 const visibleEnd = Math.max(visibleStart, Math.min(endMinutes, 24 * 60 - this.hiddenBottomMinutes));
@@ -310,8 +441,8 @@ class CalendarWeekCard extends HTMLElement {
                 const top = (visibleStart - this.hiddenTopMinutes) * this.pixelsPerMinute;
                 const height = duration * this.pixelsPerMinute;
 
-                const leftIndent = 2 + ev.column * 12;   // main left offset
-                const rightIndent = 2 + ev.column * 2;   // subtle right offset
+                const leftIndent = 2 + segment.column * 12;
+                const rightIndent = 2 + segment.column * 2;
 
                 const eventDiv = document.createElement("div");
                 eventDiv.className = "event";
@@ -319,17 +450,22 @@ class CalendarWeekCard extends HTMLElement {
                 eventDiv.style.height = `${height}px`;
                 eventDiv.style.left = `${leftIndent}px`;
                 eventDiv.style.right = `${rightIndent}px`;
-                eventDiv.style.backgroundColor = this.config.colors[ev.calendar] || ev.color || "#4287f5";
+                const color = this.getEventColor(segment);
+                eventDiv.style.backgroundColor = color;
                 eventDiv.style.boxShadow = "0 2px 6px rgba(0,0,0,0.9)";
 
-                const startStr = ev.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                const endStr = ev.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                eventDiv.innerHTML = `<div><b>${ev.title}</b></div><div style="font-size:10px;opacity:0.9;">${startStr} – ${endStr}</div>`;
+                const startStr = segment.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                const endStr = segment.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                eventDiv.innerHTML = `<div><b>${segment.title}</b></div><div style="font-size:10px;opacity:0.9;">${startStr} – ${endStr}</div>`;
 
-                eventDiv.addEventListener("click", () => this.showEventDialog(ev));
+                eventDiv.addEventListener("click", () => this.showEventDialog(segment));
 
-                this.dayColumns[dayOffset].appendChild(eventDiv);
+                timedColumn.appendChild(eventDiv);
             }
+        }
+
+        if (this.allDayRow) {
+            this.allDayRow.style.display = hasAllDayEvents ? "flex" : "none";
         }
 
         this.updateTimeLine();
@@ -417,6 +553,92 @@ class CalendarWeekCard extends HTMLElement {
             }
         });
         localStorage.setItem("calendar-week-card-colors", JSON.stringify(this.config.colors));
+    }
+
+    getEventColor(ev) {
+        return this.config.colors?.[ev?.calendar] || ev?.color || "#4287f5";
+    }
+
+    ensureColorContext() {
+        if (!this._colorCanvas) {
+            const canvas = document.createElement("canvas");
+            canvas.width = canvas.height = 1;
+            this._colorCanvas = canvas;
+            this._colorContext = canvas.getContext("2d");
+        }
+        return this._colorContext;
+    }
+
+    parseColor(color) {
+        if (!color) return null;
+        const ctx = this.ensureColorContext();
+        if (!ctx) return null;
+        try {
+            ctx.fillStyle = color;
+            const computed = ctx.fillStyle;
+            if (!computed) return null;
+            if (computed.startsWith("#")) {
+                const hex = computed.slice(1);
+                const parseHex = h => parseInt(h, 16);
+                if (hex.length === 3) {
+                    const r = parseHex(hex[0] + hex[0]);
+                    const g = parseHex(hex[1] + hex[1]);
+                    const b = parseHex(hex[2] + hex[2]);
+                    return { r, g, b, a: 1 };
+                }
+                if (hex.length === 6) {
+                    const r = parseHex(hex.slice(0, 2));
+                    const g = parseHex(hex.slice(2, 4));
+                    const b = parseHex(hex.slice(4, 6));
+                    return { r, g, b, a: 1 };
+                }
+            }
+            const match = computed.match(/rgba?\(([^)]+)\)/i);
+            if (match) {
+                const parts = match[1].split(/\s*,\s*/).map(Number);
+                if (parts.length >= 3) {
+                    const [r, g, b] = parts;
+                    const a = parts.length >= 4 ? parts[3] : 1;
+                    return { r, g, b, a };
+                }
+            }
+        } catch (err) {
+            return null;
+        }
+        return null;
+    }
+
+    colorToGradient(color) {
+        const parsed = this.parseColor(color);
+        if (!parsed) {
+            return `linear-gradient(to bottom, ${color}, ${color}, rgba(255,255,255,0))`;
+        }
+        const { r, g, b } = parsed;
+        return `linear-gradient(to bottom, rgba(${r},${g},${b},0.95), rgba(${r},${g},${b},0.65), rgba(${r},${g},${b},0))`;
+    }
+
+    colorWithAlpha(color, alpha = 1) {
+        const parsed = this.parseColor(color);
+        if (!parsed) return color;
+        const { r, g, b } = parsed;
+        const clamped = Math.max(0, Math.min(alpha, 1));
+        return `rgba(${r},${g},${b},${clamped})`;
+    }
+
+    getReadableTextColor(color) {
+        const parsed = this.parseColor(color);
+        if (!parsed) return "#fff";
+        const luminance = (0.299 * parsed.r + 0.587 * parsed.g + 0.114 * parsed.b) / 255;
+        return luminance > 0.6 ? "#1a1a1a" : "#ffffff";
+    }
+
+    isWholeDayRange(start, end) {
+        if (!(start instanceof Date) || !(end instanceof Date)) return false;
+        if (end <= start) return false;
+        const duration = end.getTime() - start.getTime();
+        const startIsMidnight = start.getHours() === 0 && start.getMinutes() === 0 && start.getSeconds() === 0;
+        const endIsMidnight = end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0;
+        return startIsMidnight && endIsMidnight && duration >= 24 * 60 * 60 * 1000;
     }
 
     normalizeZoomSettings(settings = {}) {
@@ -840,8 +1062,10 @@ class CalendarWeekCard extends HTMLElement {
         Object.assign(title.style, { margin: 0, fontSize: "1.3em", color: "#333" });
         content.appendChild(title);
 
-        const startDate = ev.start.toLocaleString(undefined, {weekday: "long", year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit"});
-        const endDate = ev.end.toLocaleString(undefined, {weekday: "long", year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit"});
+        const originalStart = ev.originalStart instanceof Date ? ev.originalStart : ev.start;
+        const originalEnd = ev.originalEnd instanceof Date ? ev.originalEnd : ev.end;
+        const startDate = originalStart.toLocaleString(undefined, {weekday: "long", year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit"});
+        const endDate = originalEnd.toLocaleString(undefined, {weekday: "long", year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit"});
 
         const details = document.createElement("div");
         details.innerHTML = `
