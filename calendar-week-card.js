@@ -60,9 +60,13 @@ class CalendarWeekCard extends HTMLElement {
             .time-bar { position: relative; width: 60px; border-right: 1px solid #ccc; font-size: 11px; background: #fafafa; flex-shrink: 0; overflow-y: auto; }
             .hour-label { position: absolute; left: 2px; font-size: 11px; color: #666; transform: translateY(-50%); }
             .week-grid { position: relative; flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); height: 100%; width: 100%; overflow-y: auto; background: linear-gradient(to bottom,#e8e8e8 0%,#e8e8e8 25%,#f9f9f9 25%,#f9f9f9 91.6%,#e8e8e8 91.6%,#e8e8e8 100%); }
-            .day-column { position: relative; border-left: 1px solid #ddd; overflow: hidden; background: transparent; }
+            .day-column { position: relative; border-left: 1px solid #ddd; overflow: hidden; background: transparent; display: flex; flex-direction: column; }
             .day-column:first-child { border-left: none; }
-            .event {position: absolute;left: 2px;color: white;border-radius: 4px;padding: 2px 4px;font-size: 11px;overflow: hidden;box-shadow: 0 2px 6px rgba(0,0,0,0.3);}
+            .all-day-events { padding: 4px 2px; display: flex; flex-direction: column; gap: 4px; }
+            .timed-events { position: relative; flex: 1; }
+            .event {color: white;border-radius: 4px;padding: 2px 4px;font-size: 11px;overflow: hidden;box-shadow: 0 2px 6px rgba(0,0,0,0.3);cursor: pointer;}
+            .event.timed-event { position: absolute; }
+            .event.all-day-event { position: relative; padding: 6px 8px; color: var(--primary-text-color, #000); font-weight: 600; }
             .time-line {position: absolute; left: 0; right: 0; height: 2px; background: red; z-index: 20; box-shadow: 0 0 1px 1px rgba(255,255,255,0.4);}
         </style>
 
@@ -198,12 +202,24 @@ class CalendarWeekCard extends HTMLElement {
                 const url = `calendars/${entity}?start=${start.toISOString()}&end=${end.toISOString()}`;
                 const events = await hass.callApi("get", url);
                 events.forEach(ev => {
+                    const startDate = new Date(ev.start.dateTime || ev.start.date);
+                    const endDate = new Date(ev.end.dateTime || ev.end.date);
+                    let isAllDay = !!ev.start?.date && !ev.start?.dateTime;
+
+                    if (!isAllDay && ev.start?.dateTime && ev.end?.dateTime) {
+                        const durationMinutes = (endDate - startDate) / (1000 * 60);
+                        if (durationMinutes >= 24 * 60 && startDate.getHours() === 0 && startDate.getMinutes() === 0 && endDate.getHours() === 0 && endDate.getMinutes() === 0) {
+                            isAllDay = true;
+                        }
+                    }
+
                     allEvents.push({
                         calendar: entity,
                         title: ev.summary || "(no title)",
-                        start: new Date(ev.start.dateTime || ev.start.date),
-                        end: new Date(ev.end.dateTime || ev.end.date),
-                        color: ev.color
+                        start: startDate,
+                        end: endDate,
+                        color: ev.color,
+                        isAllDay
                     });
                 });
             } catch (e) {
@@ -216,7 +232,12 @@ class CalendarWeekCard extends HTMLElement {
     }
     renderList(events) {
         this.lastEvents = events;
-        this.dayColumns.forEach(col => col.innerHTML = "");
+        this.dayColumns.forEach(col => {
+            col.innerHTML = `
+                <div class="all-day-events"></div>
+                <div class="timed-events"></div>
+            `;
+        });
 
         const [startOfWeek] = this.getWeekRange();
 
@@ -226,12 +247,33 @@ class CalendarWeekCard extends HTMLElement {
 
         for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
             // Get all events for this day, sorted by start time
+            const allDayEvents = visibleEvents
+                .filter(ev => {
+                    const evDayOffset = Math.floor((ev.start - startOfWeek) / (1000 * 60 * 60 * 24));
+                    return evDayOffset === dayOffset && ev.isAllDay;
+                })
+                .sort((a, b) => a.start - b.start);
+
             const dayEvents = visibleEvents
                 .filter(ev => {
                     const evDayOffset = Math.floor((ev.start - startOfWeek) / (1000 * 60 * 60 * 24));
-                    return evDayOffset === dayOffset;
+                    return evDayOffset === dayOffset && !ev.isAllDay;
                 })
                 .sort((a, b) => a.start - b.start);
+
+            const dayColumn = this.dayColumns[dayOffset];
+            const allDayContainer = dayColumn.querySelector(".all-day-events");
+            const timedContainer = dayColumn.querySelector(".timed-events");
+
+            for (const ev of allDayEvents) {
+                const baseColor = this.config.colors[ev.calendar] || ev.color || "#4287f5";
+                const eventDiv = document.createElement("div");
+                eventDiv.className = "event all-day-event";
+                eventDiv.textContent = ev.title;
+                eventDiv.style.background = `linear-gradient(135deg, ${baseColor}, var(--card-background-color, rgba(255,255,255,0.95)))`;
+                eventDiv.addEventListener("click", () => this.showEventDialog(ev));
+                allDayContainer.appendChild(eventDiv);
+            }
 
             const activeStack = []; // currently overlapping events
 
@@ -258,7 +300,7 @@ class CalendarWeekCard extends HTMLElement {
                 const rightIndent = 2 + ev.column * 2;   // subtle right offset
 
                 const eventDiv = document.createElement("div");
-                eventDiv.className = "event";
+                eventDiv.className = "event timed-event";
                 eventDiv.style.top = `${top}px`;
                 eventDiv.style.height = `${height}px`;
                 eventDiv.style.left = `${leftIndent}px`;
@@ -272,7 +314,7 @@ class CalendarWeekCard extends HTMLElement {
 
                 eventDiv.addEventListener("click", () => this.showEventDialog(ev));
 
-                this.dayColumns[dayOffset].appendChild(eventDiv);
+                timedContainer.appendChild(eventDiv);
             }
         }
 
