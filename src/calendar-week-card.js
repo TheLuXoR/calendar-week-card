@@ -7,14 +7,14 @@ import {
     translate
 } from "./localization.js";
 import {
-    getHexColor as getHexColorValue,
-    getReadableTextColor as resolveReadableTextColor,
-    getRelativeLuminance as calculateRelativeLuminance,
-    mixColors as mixColorValues,
+    getHexColor,
+    getReadableTextColor,
+    getRelativeLuminance,
+    mixColors,
     parseRGB,
-    resolveColorValue as resolveRawColorValue,
-    rgbToHex as rgbToHexValue,
-    rgbToString as rgbToStringValue
+    resolveColorValue,
+    rgbToHex,
+    rgbToString
 } from "./colors.js";
 
 export class CalendarWeekCard extends HTMLElement {
@@ -758,7 +758,7 @@ export class CalendarWeekCard extends HTMLElement {
 
 
     resolveColorValue(color) {
-        return resolveRawColorValue(color, this.colorResolver);
+        return resolveColorValue(color, this.colorResolver);
     }
 
     getRGB(color) {
@@ -766,27 +766,27 @@ export class CalendarWeekCard extends HTMLElement {
     }
 
     rgbToString({ r, g, b }) {
-        return rgbToStringValue({ r, g, b });
+        return rgbToString({ r, g, b });
     }
 
     rgbToHex({ r, g, b }) {
-        return rgbToHexValue({ r, g, b });
+        return rgbToHex({ r, g, b });
     }
 
     getHexColor(color, fallback = "#4287f5") {
-        return getHexColorValue(color, fallback, this.colorResolver);
+        return getHexColor(color, fallback, this.colorResolver);
     }
 
     mixColor(colorA, colorB, weight = 0.5) {
-        return mixColorValues(colorA, colorB, weight, this.colorResolver);
+        return mixColors(colorA, colorB, weight, this.colorResolver);
     }
 
     getReadableTextColor(color, fallback = "#ffffff") {
-        return resolveReadableTextColor(color, fallback, this.colorResolver);
+        return getReadableTextColor(color, fallback, this.colorResolver);
     }
 
     getRelativeLuminance({ r, g, b }) {
-        return calculateRelativeLuminance({ r, g, b });
+        return getRelativeLuminance({ r, g, b });
     }
 
     async ensureEntities(hass) {
