@@ -11,9 +11,8 @@ class CalendarWeekCard extends HTMLElement {
         this.timeViewportHeight = 24 * 60;
         this.columnPaddingTop = 6;
         this.columnPaddingBottom = 12;
-        this.allDayRowHeight = 28;
-        this.allDayRowOverlap = 6;
-        this.allDayBandHeight = 0;
+        this.allDayRowHeight = 22;
+        this.allDayRowOverlap = 8;
     }
 
     setConfig(config) {
@@ -59,10 +58,12 @@ class CalendarWeekCard extends HTMLElement {
                 display: flex;
                 flex-direction: column;
                 height: 100%;
+                max-height: 100vh;
                 width: 100%;
                 box-sizing: border-box;
                 font-family: var(--primary-font-family, "Roboto", "Helvetica", sans-serif);
                 color: var(--primary-text-color, #1f1f1f);
+                overflow: hidden;
             }
             .header-bar {
                 display: flex;
@@ -147,7 +148,7 @@ class CalendarWeekCard extends HTMLElement {
                 font-size: 11px;
                 background: linear-gradient(180deg, rgba(245, 247, 250, 0.9) 0%, rgba(235, 238, 242, 0.8) 100%);
                 flex-shrink: 0;
-                overflow-y: auto;
+                overflow: hidden;
                 min-height: 0;
             }
             .hour-label {
@@ -164,7 +165,7 @@ class CalendarWeekCard extends HTMLElement {
                 grid-template-columns: repeat(7, 1fr);
                 height: 100%;
                 width: 100%;
-                overflow-y: auto;
+                overflow: hidden;
                 background: linear-gradient(to bottom, rgba(249,249,249,0.9) 0%, rgba(255,255,255,0.95) 65%, rgba(245,247,250,0.9) 100%);
                 min-height: 0;
             }
@@ -229,17 +230,11 @@ class CalendarWeekCard extends HTMLElement {
             .event.all-day-event {
                 position: absolute;
                 font-weight: 600;
-                z-index: 2;
+                z-index: 3;
             }
             .event.all-day-event .event-surface {
                 padding: 4px 8px;
-                flex-direction: row;
-                align-items: center;
-                justify-content: space-between;
-                gap: 6px;
-            }
-            .event.all-day-event .event-time {
-                font-size: 0.7em;
+                gap: 4px;
             }
             .event-title {
                 font-weight: 600;
@@ -352,9 +347,9 @@ class CalendarWeekCard extends HTMLElement {
 
     buildTimeLabels() {
         if (!this.timeBar) return;
-        const totalHeight = this.columnPaddingTop + this.allDayBandHeight + (24 * 60 * this.pixelsPerMinute) + this.columnPaddingBottom;
         this.timeBar.innerHTML = "";
-        this.timeBar.style.minHeight = `${totalHeight}px`;
+        this.timeBar.style.minHeight = "";
+        this.timeBar.style.height = "100%";
         this.timeBar.style.paddingTop = `${this.columnPaddingTop}px`;
         this.timeBar.style.paddingBottom = `${this.columnPaddingBottom}px`;
         for (let h = 1; h <= 23; h++) {
@@ -447,7 +442,6 @@ class CalendarWeekCard extends HTMLElement {
             : [];
 
         const dayRenderData = [];
-        let maxAllDayEvents = 0;
 
         for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
             // Get all events for this day, sorted by start time
@@ -467,20 +461,15 @@ class CalendarWeekCard extends HTMLElement {
 
             const dayColumn = this.dayColumns[dayOffset];
             const timedContainer = dayColumn.querySelector(".timed-events");
-
-            if (allDayEvents.length > maxAllDayEvents) {
-                maxAllDayEvents = allDayEvents.length;
-            }
-
             dayRenderData.push({ dayEvents, allDayEvents, timedContainer });
         }
 
-        this.allDayBandHeight = this.computeAllDayBandHeight(maxAllDayEvents);
+        this.allDayBandHeight = 0;
         this.updateTimeMetrics();
 
         const allDayOverlap = Math.min(this.allDayRowOverlap, this.allDayRowHeight - 4);
-        const allDayRowStep = this.allDayRowHeight - allDayOverlap;
-        const baseTopOffset = this.allDayBandHeight;
+        const allDayRowStep = Math.max(this.allDayRowHeight - allDayOverlap, 4);
+        const baseTopOffset = 0;
 
         for (const { dayEvents, allDayEvents, timedContainer } of dayRenderData) {
             if (!timedContainer) continue;
@@ -578,41 +567,35 @@ class CalendarWeekCard extends HTMLElement {
         this.updateTimeLine();
     }
 
-    computeAllDayBandHeight(rowCount = 0) {
-        if (!rowCount || rowCount <= 0) return 0;
-        const effectiveOverlap = Math.min(this.allDayRowOverlap, this.allDayRowHeight - 4);
-        const step = this.allDayRowHeight - effectiveOverlap;
-        if (step <= 0) {
-            return this.allDayRowHeight * rowCount;
-        }
-        return this.allDayRowHeight + (rowCount - 1) * step;
-    }
-
     updateTimeMetrics() {
-        const fallbackViewport = 24 * 60;
+        const fallbackViewport = Math.max(this.clientHeight || 0, this.grid?.clientHeight || 0, 480);
         const firstViewport = this.dayColumns?.[0]?.querySelector(".timed-viewport");
-        let viewportHeight = fallbackViewport;
+        let viewportHeight = firstViewport?.clientHeight || firstViewport?.offsetHeight || 0;
 
-        if (firstViewport) {
-            const rect = firstViewport.getBoundingClientRect();
+        if (!viewportHeight && this.grid) {
+            const rect = this.grid.getBoundingClientRect();
             if (rect?.height) {
                 viewportHeight = rect.height;
             }
-        } else if (this.grid?.clientHeight) {
-            viewportHeight = this.grid.clientHeight;
         }
 
-        const effectiveHeight = Math.max(viewportHeight - this.allDayBandHeight, 24);
-        this.pixelsPerMinute = effectiveHeight / (24 * 60);
-        this.timeViewportHeight = viewportHeight;
-        this.timeAxisOffset = this.columnPaddingTop + this.allDayBandHeight;
-
-        this.dayColumns.forEach(column => {
-            const timedEvents = column.querySelector(".timed-events");
-            if (timedEvents) {
-                timedEvents.style.height = `${this.timeViewportHeight}px`;
+        if (!viewportHeight && typeof this.getBoundingClientRect === "function") {
+            const hostRect = this.getBoundingClientRect();
+            if (hostRect?.height) {
+                const headerRect = this.shadowRoot.querySelector(".header-bar")?.getBoundingClientRect();
+                const headerHeight = headerRect?.height || 0;
+                viewportHeight = Math.max(hostRect.height - headerHeight, 0);
             }
-        });
+        }
+
+        if (!viewportHeight) {
+            viewportHeight = fallbackViewport;
+        }
+
+        this.timeViewportHeight = viewportHeight;
+        const effectiveHeight = Math.max(viewportHeight, 24);
+        this.pixelsPerMinute = effectiveHeight / (24 * 60);
+        this.timeAxisOffset = this.columnPaddingTop;
     }
 
 
