@@ -19,7 +19,7 @@ export const TRANSLATIONS = {
         donateWithPaypal: "Donate with PayPal",
         highlightToday: "Highlight current day",
         highlightTodayDescription: "Shade today's column with a subtle gradient.",
-        todayHighlightColor: "Highlight color"
+        todayHighlightColor: "Current day highlight"
     },
     de: {
         today: "Heute",
@@ -39,7 +39,7 @@ export const TRANSLATIONS = {
         donateWithPaypal: "Mit PayPal spenden",
         highlightToday: "Aktuellen Tag hervorheben",
         highlightTodayDescription: "Markiert die heutige Spalte mit einem sanften Farbverlauf.",
-        todayHighlightColor: "Farbe der Hervorhebung"
+        todayHighlightColor: "Aktuellen Tag hervorheben"
     },
     fr: {
         today: "Aujourd'hui",
@@ -59,7 +59,7 @@ export const TRANSLATIONS = {
         donateWithPaypal: "Faire un don avec PayPal",
         highlightToday: "Mettre en surbrillance aujourd'hui",
         highlightTodayDescription: "Colorer la colonne d'aujourd'hui avec un léger dégradé.",
-        todayHighlightColor: "Couleur de surbrillance"
+        todayHighlightColor: "Mise en évidence du jour actuel"
     },
     es: {
         today: "Hoy",
@@ -79,7 +79,7 @@ export const TRANSLATIONS = {
         donateWithPaypal: "Donar con PayPal",
         highlightToday: "Resaltar el día actual",
         highlightTodayDescription: "Sombrea la columna de hoy con un degradado suave.",
-        todayHighlightColor: "Color de resaltado"
+        todayHighlightColor: "Resaltado del día actual"
     },
     it: {
         today: "Oggi",
@@ -99,7 +99,7 @@ export const TRANSLATIONS = {
         donateWithPaypal: "Dona con PayPal",
         highlightToday: "Evidenzia il giorno corrente",
         highlightTodayDescription: "Colora la colonna di oggi con un leggero gradiente.",
-        todayHighlightColor: "Colore di evidenziazione"
+        todayHighlightColor: "Evidenziazione del giorno corrente"
     },
     nl: {
         today: "Vandaag",
@@ -119,7 +119,7 @@ export const TRANSLATIONS = {
         donateWithPaypal: "Doneren met PayPal",
         highlightToday: "Markeer de huidige dag",
         highlightTodayDescription: "Kleur de kolom van vandaag met een subtiele gradiënt.",
-        todayHighlightColor: "Markeerkleur"
+        todayHighlightColor: "Markering van de huidige dag"
     }
 };
 

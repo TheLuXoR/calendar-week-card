@@ -264,6 +264,15 @@ export class CalendarWeekCard extends HTMLElement {
                 background: linear-gradient(to bottom, rgba(249,249,249,0.9) 0%, rgba(255,255,255,0.95) 65%, rgba(245,247,250,0.9) 100%);
                 min-height: 0;
             }
+            .night-overlay {
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 0;
+                bottom: 0;
+                pointer-events: none;
+                z-index: 0;
+            }
             .day-column {
                 position: relative;
                 border-left: 1px solid rgba(0, 0, 0, 0.04);
@@ -275,6 +284,7 @@ export class CalendarWeekCard extends HTMLElement {
                 box-sizing: border-box;
                 min-height: 0;
                 overflow: hidden;
+                z-index: 1;
             }
             .day-column::before {
                 content: "";
@@ -288,7 +298,7 @@ export class CalendarWeekCard extends HTMLElement {
                 z-index: 0;
             }
             .day-column.today-column::before {
-                background: var(--calendar-week-card-today-gradient, linear-gradient(180deg, rgba(77, 150, 255, 0.18) 0%, rgba(77, 150, 255, 0.05) 100%));
+                background: var(--calendar-week-card-today-gradient, linear-gradient(90deg, rgba(77, 150, 255, 0) 0%, rgba(77, 150, 255, 0.48) 15%, rgba(77, 150, 255, 0.6) 50%, rgba(77, 150, 255, 0.48) 85%, rgba(77, 150, 255, 0) 100%));
                 opacity: 1;
             }
             .day-column > * {
@@ -312,18 +322,12 @@ export class CalendarWeekCard extends HTMLElement {
                 min-height: 0;
                 z-index: 1;
             }
-            .day-background-layer {
-                position: absolute;
-                inset: 0;
-                pointer-events: none;
-                z-index: 0;
-            }
             .night-block {
                 position: absolute;
                 left: 0;
                 right: 0;
-                background: linear-gradient(180deg, rgba(15, 23, 42, 0.12) 0%, rgba(15, 23, 42, 0.16) 100%);
-                border-radius: 10px;
+                background: linear-gradient(180deg, rgba(17, 27, 45, 0.12) 0%, rgba(17, 27, 45, 0.28) 100%);
+                border-radius: 12px;
                 pointer-events: none;
             }
             .event {
@@ -461,6 +465,7 @@ export class CalendarWeekCard extends HTMLElement {
         <div class="week-body">
             <div class="time-bar"></div>
             <div class="week-grid">
+                <div class="night-overlay"></div>
                 ${[...Array(7)].map(() => `<div class="day-column"></div>`).join("")}
             </div>
         </div>
@@ -471,6 +476,7 @@ export class CalendarWeekCard extends HTMLElement {
         this.header = this.shadowRoot.querySelector(".week-header");
         this.titleLine = this.shadowRoot.querySelector(".title-line");
         this.dayColumns = this.shadowRoot.querySelectorAll(".day-column");
+        this.nightOverlay = this.shadowRoot.querySelector(".night-overlay");
 
         this.colorResolver = document.createElement("div");
         this.colorResolver.style.display = "none";
@@ -628,7 +634,6 @@ export class CalendarWeekCard extends HTMLElement {
             col.style.removeProperty("--calendar-week-card-today-gradient");
             col.innerHTML = `
                 <div class="timed-viewport">
-                    <div class="day-background-layer"></div>
                     <div class="timed-events"></div>
                 </div>
             `;
@@ -660,8 +665,7 @@ export class CalendarWeekCard extends HTMLElement {
 
             const dayColumn = this.dayColumns[dayOffset];
             const timedContainer = dayColumn.querySelector(".timed-events");
-            const backgroundLayer = dayColumn.querySelector(".day-background-layer");
-            dayRenderData.push({ dayEvents, allDayEvents, timedContainer, backgroundLayer, dayColumn, dayOffset });
+            dayRenderData.push({ dayEvents, allDayEvents, timedContainer, dayColumn, dayOffset });
         }
 
         this.allDayBandHeight = 0;
@@ -669,24 +673,22 @@ export class CalendarWeekCard extends HTMLElement {
 
         const highlightEnabled = this.config.highlight_today !== false;
         const highlightColor = this.getHexColor(this.config.today_highlight_color || "#4D96FF");
-        const highlightStart = this.mixColor(highlightColor, "#ffffff", 0.65) || highlightColor;
-        const highlightEnd = this.mixColor(highlightColor, "#ffffff", 0.9) || highlightColor;
-        const highlightGradient = `linear-gradient(180deg, ${highlightStart} 0%, ${highlightEnd} 100%)`;
+        const highlightMid = this.colorWithAlpha(this.mixColor(highlightColor, "#ffffff", 0.25) || highlightColor, 0.5);
+        const highlightCore = this.colorWithAlpha(highlightColor, 0.65);
+        const highlightEdge = this.colorWithAlpha(highlightColor, 0);
+        const highlightGradient = `linear-gradient(90deg, ${highlightEdge} 0%, ${highlightMid} 15%, ${highlightCore} 50%, ${highlightMid} 85%, ${highlightEdge} 100%)`;
         const now = new Date();
         const todayOffset = (now.getDay() + 6) % 7;
         const shouldHighlightToday = highlightEnabled && this.weekOffset === 0;
 
-        for (const { backgroundLayer, dayColumn, dayOffset } of dayRenderData) {
+        for (const { dayColumn, dayOffset } of dayRenderData) {
             if (shouldHighlightToday && dayOffset === todayOffset) {
                 dayColumn.classList.add("today-column");
                 dayColumn.style.setProperty("--calendar-week-card-today-gradient", highlightGradient);
             }
-
-            if (backgroundLayer) {
-                backgroundLayer.innerHTML = "";
-                this.addNightBlocks(backgroundLayer);
-            }
         }
+
+        this.renderNightOverlay();
 
         const allDayOverlap = Math.min(this.allDayRowOverlap, this.allDayRowHeight - 4);
         const allDayRowStep = Math.max(this.allDayRowHeight - allDayOverlap, 4);
@@ -831,17 +833,26 @@ export class CalendarWeekCard extends HTMLElement {
         this.timeAxisOffset = this.columnPaddingTop;
     }
 
-    addNightBlocks(layer) {
-        if (!layer) return;
+    renderNightOverlay() {
+        const overlay = this.nightOverlay;
+        if (!overlay) return;
+
+        overlay.innerHTML = "";
+
         const ppm = this.pixelsPerMinute;
         if (!ppm) return;
 
+        overlay.style.top = `${this.columnPaddingTop}px`;
+        overlay.style.bottom = `${this.columnPaddingBottom}px`;
+        overlay.style.left = "0";
+        overlay.style.right = "0";
+
         const segments = [
-            { start: 0, end: 6, radius: "12px 12px 6px 6px" },
-            { start: 22, end: 24, radius: "6px 6px 12px 12px" }
+            { start: 0, end: 6 },
+            { start: 22, end: 24 }
         ];
 
-        segments.forEach(({ start, end, radius }) => {
+        segments.forEach(({ start, end }) => {
             if (end <= start) return;
             const block = document.createElement("div");
             block.className = "night-block";
@@ -849,11 +860,20 @@ export class CalendarWeekCard extends HTMLElement {
             const height = Math.max((end - start) * 60 * ppm, 1);
             block.style.top = `${top}px`;
             block.style.height = `${height}px`;
-            block.style.borderRadius = radius;
-            layer.appendChild(block);
+            overlay.appendChild(block);
         });
     }
 
+
+    colorWithAlpha(color, alpha = 1) {
+        const rgb = this.getRGB(color);
+        if (!rgb) {
+            return color;
+        }
+
+        const clampedAlpha = Math.max(0, Math.min(1, Number(alpha)));
+        return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${clampedAlpha})`;
+    }
 
     resolveColorValue(color) {
         return resolveColorValue(color, this.colorResolver);
