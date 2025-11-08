@@ -223,6 +223,12 @@ class CalendarWeekCard extends HTMLElement {
                 justify-content: flex-start;
                 gap: 2px;
             }
+            .event-surface.all-day-surface {
+                padding: 3px 6px;
+                flex-direction: row;
+                align-items: center;
+                gap: 4px;
+            }
             .event.timed-event .event-surface {
                 padding: 4px 8px;
                 gap: 3px;
@@ -232,9 +238,34 @@ class CalendarWeekCard extends HTMLElement {
                 font-weight: 600;
                 z-index: 3;
             }
-            .event.all-day-event .event-surface {
-                padding: 4px 8px;
-                gap: 4px;
+            .event.all-day-event .event-title {
+                font-size: 0.8em;
+                margin-bottom: 0;
+                letter-spacing: 0.01em;
+                flex: 1;
+            }
+            .event.all-day-event .event-title,
+            .event.all-day-event .event-title * {
+                min-width: 0;
+            }
+            .event-tag {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 999px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                padding: 1px 6px 0;
+                line-height: 1.2;
+                background: rgba(255, 255, 255, 0.25);
+                color: inherit;
+                white-space: nowrap;
+            }
+            .event-all-day-tag {
+                font-size: 0.6em;
+                margin-left: auto;
+                opacity: 0.9;
             }
             .event-title {
                 font-weight: 600;
@@ -242,6 +273,7 @@ class CalendarWeekCard extends HTMLElement {
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
+                min-width: 0;
             }
             .event-time {
                 font-size: 0.75em;
@@ -492,14 +524,14 @@ class CalendarWeekCard extends HTMLElement {
                 eventDiv.style.color = this.getReadableTextColor(gradientStart);
 
                 const eventSurface = document.createElement("div");
-                eventSurface.className = "event-surface";
+                eventSurface.className = "event-surface all-day-surface";
 
                 const titleEl = document.createElement("div");
                 titleEl.className = "event-title";
                 titleEl.textContent = ev.title;
 
                 const timeEl = document.createElement("div");
-                timeEl.className = "event-time";
+                timeEl.className = "event-tag event-all-day-tag";
                 timeEl.textContent = "All day";
 
                 eventSurface.appendChild(titleEl);
