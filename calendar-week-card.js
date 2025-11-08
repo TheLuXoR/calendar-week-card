@@ -910,6 +910,26 @@ class CalendarWeekCard extends HTMLElement {
         return `rgb(${clamp(r)}, ${clamp(g)}, ${clamp(b)})`;
     }
 
+    rgbToHex({ r, g, b }) {
+        const clamp = v => Math.max(0, Math.min(255, Math.round(v)));
+        const toHex = v => clamp(v).toString(16).padStart(2, "0");
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    getHexColor(color, fallback = "#4287f5") {
+        const rgb = this.getRGB(color);
+        if (rgb) {
+            return this.rgbToHex(rgb);
+        }
+
+        const fallbackRgb = this.getRGB(fallback);
+        if (fallbackRgb) {
+            return this.rgbToHex(fallbackRgb);
+        }
+
+        return "#4287f5";
+    }
+
     mixColor(colorA, colorB, weight = 0.5) {
         const rgbA = this.getRGB(colorA);
         const rgbB = this.getRGB(colorB);
@@ -1164,7 +1184,7 @@ class CalendarWeekCard extends HTMLElement {
 
             const picker = document.createElement("input");
             picker.type = "color";
-            picker.value = this.config.colors[entity] || "#4287f5";
+            picker.value = this.getHexColor(this.config.colors[entity]);
             picker.style.width = "40px";
             picker.style.height = "30px";
             picker.style.border = "none";
