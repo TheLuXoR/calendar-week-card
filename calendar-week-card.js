@@ -47,27 +47,180 @@ class CalendarWeekCard extends HTMLElement {
 
         this.shadowRoot.innerHTML = `
         <style>
-            :host { display: flex; flex-direction: column; height: 100%; width: 100%; box-sizing: border-box; }
-            .header-bar { display: flex; align-items: center; margin-bottom: 6px; padding-top: 6px; }
-            .header-bar h3 { margin: 0; font-size: 1.1em; font-weight: bold; flex: 1; text-align: center; }
-            .nav-buttons { display: flex; gap: 4px; }
-            .nav-buttons button { border: none; background: none; cursor: pointer; font-size: 1.2em; color: var(--primary-color, #4287f5); }
-            .settings-icon {cursor:pointer; margin-left:8px;}
-            .week-header { display: grid; grid-template-columns: 60px repeat(7, 1fr); text-align: center; font-weight: bold; padding-bottom: 4px; }
-            .week-header div { display: flex; flex-direction: column; align-items: center; }
-            .day-num { font-size: 0.8em; font-weight: normal; color: #666; }
-            .week-body { flex: 1; display: flex; width: 100%; height: 100%; border: 1px solid #ccc; overflow: hidden; }
-            .time-bar { position: relative; width: 60px; border-right: 1px solid #ccc; font-size: 11px; background: #fafafa; flex-shrink: 0; overflow-y: auto; }
-            .hour-label { position: absolute; left: 2px; font-size: 11px; color: #666; transform: translateY(-50%); }
-            .week-grid { position: relative; flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); height: 100%; width: 100%; overflow-y: auto; background: linear-gradient(to bottom,#e8e8e8 0%,#e8e8e8 25%,#f9f9f9 25%,#f9f9f9 91.6%,#e8e8e8 91.6%,#e8e8e8 100%); }
-            .day-column { position: relative; border-left: 1px solid #ddd; overflow: hidden; background: transparent; display: flex; flex-direction: column; }
-            .day-column:first-child { border-left: none; }
-            .all-day-events { padding: 4px 2px; display: flex; flex-direction: column; gap: 4px; }
-            .timed-events { position: relative; flex: 1; }
-            .event {color: white;border-radius: 4px;padding: 2px 4px;font-size: 11px;overflow: hidden;box-shadow: 0 2px 6px rgba(0,0,0,0.3);cursor: pointer;}
-            .event.timed-event { position: absolute; }
-            .event.all-day-event { position: relative; padding: 6px 8px; color: var(--primary-text-color, #000); font-weight: 600; }
-            .time-line {position: absolute; left: 0; right: 0; height: 2px; background: red; z-index: 20; box-shadow: 0 0 1px 1px rgba(255,255,255,0.4);}
+            :host {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                width: 100%;
+                box-sizing: border-box;
+                font-family: var(--primary-font-family, "Roboto", "Helvetica", sans-serif);
+                color: var(--primary-text-color, #1f1f1f);
+            }
+            .header-bar {
+                display: flex;
+                align-items: center;
+                margin-bottom: 10px;
+                padding: 8px 4px 0;
+                gap: 6px;
+            }
+            .header-bar h3 {
+                margin: 0;
+                font-size: 1.2em;
+                font-weight: 600;
+                flex: 1;
+                text-align: center;
+                letter-spacing: 0.02em;
+            }
+            .nav-buttons {
+                display: flex;
+                gap: 6px;
+            }
+            .nav-buttons button {
+                border: none;
+                background: rgba(66, 135, 245, 0.08);
+                color: var(--primary-color, #4287f5);
+                cursor: pointer;
+                font-size: 0.85em;
+                padding: 6px 10px;
+                border-radius: 8px;
+                font-weight: 600;
+                transition: background 0.2s ease, transform 0.2s ease;
+            }
+            .nav-buttons button:hover {
+                background: rgba(66, 135, 245, 0.15);
+                transform: translateY(-1px);
+            }
+            .settings-icon {
+                cursor: pointer;
+                margin-left: 4px;
+                font-size: 1.1em;
+                padding: 4px;
+                border-radius: 50%;
+                transition: background 0.2s ease;
+            }
+            .settings-icon:hover {
+                background: rgba(0, 0, 0, 0.08);
+            }
+            .week-header {
+                display: grid;
+                grid-template-columns: 60px repeat(7, 1fr);
+                text-align: center;
+                font-weight: 600;
+                padding: 0 6px 8px;
+                color: var(--secondary-text-color, #5f6368);
+            }
+            .week-header div {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2px;
+            }
+            .day-num {
+                font-size: 0.85em;
+                font-weight: 500;
+                color: inherit;
+            }
+            .week-body {
+                flex: 1;
+                display: flex;
+                width: 100%;
+                height: 100%;
+                border-radius: 16px;
+                border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.08));
+                overflow: hidden;
+                background: var(--card-background-color, #ffffff);
+                box-shadow: 0 12px 28px rgba(15, 15, 30, 0.12);
+            }
+            .time-bar {
+                position: relative;
+                width: 64px;
+                border-right: 1px solid var(--divider-color, rgba(0, 0, 0, 0.08));
+                font-size: 11px;
+                background: linear-gradient(180deg, rgba(245, 247, 250, 0.9) 0%, rgba(235, 238, 242, 0.8) 100%);
+                flex-shrink: 0;
+                overflow-y: auto;
+            }
+            .hour-label {
+                position: absolute;
+                left: 6px;
+                font-size: 11px;
+                color: var(--secondary-text-color, #6f6f6f);
+                transform: translateY(-50%);
+            }
+            .week-grid {
+                position: relative;
+                flex: 1;
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                height: 100%;
+                width: 100%;
+                overflow-y: auto;
+                background: linear-gradient(to bottom, rgba(249,249,249,0.9) 0%, rgba(255,255,255,0.95) 65%, rgba(245,247,250,0.9) 100%);
+            }
+            .day-column {
+                position: relative;
+                border-left: 1px solid rgba(0, 0, 0, 0.04);
+                background: transparent;
+                display: flex;
+                flex-direction: column;
+                padding: 6px 6px 12px;
+                gap: 6px;
+            }
+            .day-column:first-child {
+                border-left: none;
+            }
+            .all-day-events {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .timed-events {
+                position: relative;
+                flex: 1;
+            }
+            .event {
+                border-radius: 10px;
+                padding: 6px 8px;
+                font-size: 12px;
+                line-height: 1.3;
+                overflow: hidden;
+                box-shadow: 0 6px 14px rgba(15, 15, 30, 0.18);
+                cursor: pointer;
+                border: 1px solid rgba(255, 255, 255, 0.35);
+                backdrop-filter: saturate(130%);
+                transition: box-shadow 0.2s ease, transform 0.2s ease;
+            }
+            .event:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 10px 20px rgba(15, 15, 30, 0.22);
+            }
+            .event.timed-event {
+                position: absolute;
+            }
+            .event.all-day-event {
+                position: relative;
+                font-weight: 600;
+            }
+            .event-title {
+                font-weight: 600;
+                margin-bottom: 2px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .event-time {
+                font-size: 0.75em;
+                opacity: 0.9;
+            }
+            .time-line {
+                position: absolute;
+                left: 0;
+                right: 0;
+                height: 2px;
+                background: var(--accent-color, #ff3b30);
+                z-index: 20;
+                box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
+            }
         </style>
 
         <div class="header-bar">
@@ -95,6 +248,10 @@ class CalendarWeekCard extends HTMLElement {
         this.header = this.shadowRoot.querySelector(".week-header");
         this.titleLine = this.shadowRoot.querySelector(".title-line");
         this.dayColumns = this.shadowRoot.querySelectorAll(".day-column");
+
+        this.colorResolver = document.createElement("div");
+        this.colorResolver.style.display = "none";
+        this.shadowRoot.appendChild(this.colorResolver);
 
         this.shadowRoot.querySelector(".prev-week").addEventListener("click", () => this.changeWeek(-1));
         this.shadowRoot.querySelector(".next-week").addEventListener("click", () => this.changeWeek(1));
@@ -269,8 +426,17 @@ class CalendarWeekCard extends HTMLElement {
                 const baseColor = this.config.colors[ev.calendar] || ev.color || "#4287f5";
                 const eventDiv = document.createElement("div");
                 eventDiv.className = "event all-day-event";
-                eventDiv.textContent = ev.title;
-                eventDiv.style.background = `linear-gradient(135deg, ${baseColor}, var(--card-background-color, rgba(255,255,255,0.95)))`;
+                const gradientStart = this.mixColor(baseColor, "#000000", 0.15) || baseColor;
+                const gradientEnd = this.mixColor(baseColor, "#ffffff", 0.55) || baseColor;
+                eventDiv.style.background = `linear-gradient(140deg, ${gradientStart}, ${gradientEnd})`;
+                eventDiv.style.borderColor = this.mixColor(baseColor, "#ffffff", 0.35) || "rgba(255,255,255,0.35)";
+                eventDiv.style.color = this.getReadableTextColor(gradientStart);
+
+                const titleEl = document.createElement("div");
+                titleEl.className = "event-title";
+                titleEl.textContent = ev.title;
+                eventDiv.appendChild(titleEl);
+
                 eventDiv.addEventListener("click", () => this.showEventDialog(ev));
                 allDayContainer.appendChild(eventDiv);
             }
@@ -305,12 +471,25 @@ class CalendarWeekCard extends HTMLElement {
                 eventDiv.style.height = `${height}px`;
                 eventDiv.style.left = `${leftIndent}px`;
                 eventDiv.style.right = `${rightIndent}px`;
-                eventDiv.style.backgroundColor = this.config.colors[ev.calendar] || ev.color || "#4287f5";
-                eventDiv.style.boxShadow = "0 2px 6px rgba(0,0,0,0.9)";
+                const baseColor = this.config.colors[ev.calendar] || ev.color || "#4287f5";
+                const gradientStart = this.mixColor(baseColor, "#000000", 0.2) || baseColor;
+                const gradientEnd = this.mixColor(baseColor, "#ffffff", 0.3) || baseColor;
+                eventDiv.style.background = `linear-gradient(160deg, ${gradientStart}, ${gradientEnd})`;
+                eventDiv.style.borderColor = this.mixColor(baseColor, "#ffffff", 0.25) || "rgba(255,255,255,0.35)";
+                eventDiv.style.color = this.getReadableTextColor(gradientStart);
 
                 const startStr = ev.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
                 const endStr = ev.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                eventDiv.innerHTML = `<div><b>${ev.title}</b></div><div style="font-size:10px;opacity:0.9;">${startStr} – ${endStr}</div>`;
+                const titleEl = document.createElement("div");
+                titleEl.className = "event-title";
+                titleEl.textContent = ev.title;
+
+                const timeEl = document.createElement("div");
+                timeEl.className = "event-time";
+                timeEl.textContent = `${startStr} – ${endStr}`;
+
+                eventDiv.appendChild(titleEl);
+                eventDiv.appendChild(timeEl);
 
                 eventDiv.addEventListener("click", () => this.showEventDialog(ev));
 
@@ -322,6 +501,133 @@ class CalendarWeekCard extends HTMLElement {
         this.buildTimeLabels();
     }
 
+
+    resolveColorValue(color) {
+        if (color === undefined || color === null) {
+            return null;
+        }
+        if (typeof color === "number" && Number.isFinite(color)) {
+            const hex = `#${Math.round(color).toString(16).padStart(6, "0")}`;
+            return hex;
+        }
+        if (typeof color !== "string") {
+            return null;
+        }
+
+        const trimmed = color.trim();
+        if (!trimmed) {
+            return null;
+        }
+
+        if (/^#[0-9a-fA-F]{3,8}$/.test(trimmed) || trimmed.startsWith("rgb")) {
+            return trimmed;
+        }
+
+        if (!this.colorResolver) {
+            return trimmed;
+        }
+
+        this.colorResolver.style.backgroundColor = trimmed;
+        const computed = getComputedStyle(this.colorResolver).backgroundColor;
+        this.colorResolver.style.backgroundColor = "";
+        if (computed && computed !== "rgba(0, 0, 0, 0)") {
+            return computed;
+        }
+
+        return trimmed;
+    }
+
+    getRGB(color) {
+        const resolved = this.resolveColorValue(color);
+        if (!resolved) {
+            return null;
+        }
+
+        const hexMatch = resolved.match(/^#([0-9a-fA-F]{3,8})$/);
+        if (hexMatch) {
+            let hex = hexMatch[1];
+            if (hex.length === 3) {
+                hex = hex.split("").map(ch => ch + ch).join("");
+            } else if (hex.length === 4) {
+                hex = hex.split("").map(ch => ch + ch).join("");
+            }
+            if (hex.length >= 6) {
+                const r = parseInt(hex.substring(0, 2), 16);
+                const g = parseInt(hex.substring(2, 4), 16);
+                const b = parseInt(hex.substring(4, 6), 16);
+                return { r, g, b };
+            }
+        }
+
+        const rgbMatch = resolved.match(/rgba?\(([^)]+)\)/);
+        if (rgbMatch) {
+            const parts = rgbMatch[1].split(",").map(p => p.trim()).slice(0, 3);
+            if (parts.length === 3) {
+                const values = parts.map(part => {
+                    if (part.endsWith("%")) {
+                        const percent = parseFloat(part);
+                        return Math.max(0, Math.min(255, (Number.isFinite(percent) ? percent : 0) * 2.55));
+                    }
+                    const numeric = parseFloat(part);
+                    return Math.max(0, Math.min(255, Number.isFinite(numeric) ? numeric : 0));
+                });
+                const [r, g, b] = values;
+                if ([r, g, b].every(v => Number.isFinite(v))) {
+                    return { r, g, b };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    rgbToString({ r, g, b }) {
+        const clamp = v => Math.max(0, Math.min(255, Math.round(v)));
+        return `rgb(${clamp(r)}, ${clamp(g)}, ${clamp(b)})`;
+    }
+
+    mixColor(colorA, colorB, weight = 0.5) {
+        const rgbA = this.getRGB(colorA);
+        const rgbB = this.getRGB(colorB);
+        if (!rgbA && !rgbB) {
+            return null;
+        }
+        if (!rgbA) {
+            return this.rgbToString(rgbB);
+        }
+        if (!rgbB) {
+            return this.rgbToString(rgbA);
+        }
+
+        const w = Math.max(0, Math.min(1, Number(weight)));
+        const r = rgbA.r * (1 - w) + rgbB.r * w;
+        const g = rgbA.g * (1 - w) + rgbB.g * w;
+        const b = rgbA.b * (1 - w) + rgbB.b * w;
+        return this.rgbToString({ r, g, b });
+    }
+
+    getReadableTextColor(color, fallback = "#ffffff") {
+        const rgb = this.getRGB(color);
+        if (!rgb) {
+            return fallback;
+        }
+
+        const luminance = this.getRelativeLuminance(rgb);
+        return luminance > 0.57 ? "#1f1f1f" : "#ffffff";
+    }
+
+    getRelativeLuminance({ r, g, b }) {
+        const toLinear = value => {
+            const channel = value / 255;
+            return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+        };
+
+        const rLin = toLinear(r);
+        const gLin = toLinear(g);
+        const bLin = toLinear(b);
+
+        return 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin;
+    }
 
     async ensureEntities(hass) {
         if (!hass) return;
