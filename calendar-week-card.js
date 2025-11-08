@@ -665,10 +665,11 @@ class CalendarWeekCard extends HTMLElement {
         Object.assign(languageSelect.style, {
             padding: "6px 10px",
             borderRadius: "6px",
-            border: "1px solid #ccc",
+            border: "1px solid var(--divider-color, #ccc)",
             fontSize: "0.95em",
             cursor: "pointer",
-            background: "#fff"
+            background: "var(--card-background-color, #fff)",
+            color: "var(--primary-text-color, #111)"
         });
 
         const systemOption = document.createElement("option");
