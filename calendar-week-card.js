@@ -9,6 +9,11 @@ class CalendarWeekCard extends HTMLElement {
         this.pixelsPerMinute = 1;
         this.timeAxisOffset = 0;
         this.timeViewportHeight = 24 * 60;
+        this.columnPaddingTop = 6;
+        this.columnPaddingBottom = 12;
+        this.allDayRowHeight = 28;
+        this.allDayRowOverlap = 6;
+        this.allDayBandHeight = 0;
     }
 
     setConfig(config) {
@@ -133,6 +138,7 @@ class CalendarWeekCard extends HTMLElement {
                 overflow: hidden;
                 background: var(--card-background-color, #ffffff);
                 box-shadow: 0 12px 28px rgba(15, 15, 30, 0.12);
+                min-height: 0;
             }
             .time-bar {
                 position: relative;
@@ -142,6 +148,7 @@ class CalendarWeekCard extends HTMLElement {
                 background: linear-gradient(180deg, rgba(245, 247, 250, 0.9) 0%, rgba(235, 238, 242, 0.8) 100%);
                 flex-shrink: 0;
                 overflow-y: auto;
+                min-height: 0;
             }
             .hour-label {
                 position: absolute;
@@ -159,39 +166,33 @@ class CalendarWeekCard extends HTMLElement {
                 width: 100%;
                 overflow-y: auto;
                 background: linear-gradient(to bottom, rgba(249,249,249,0.9) 0%, rgba(255,255,255,0.95) 65%, rgba(245,247,250,0.9) 100%);
+                min-height: 0;
             }
             .day-column {
-                --time-viewport-height: 1440px;
-                --all-day-height: 0px;
-                --section-gap: 0px;
                 position: relative;
                 border-left: 1px solid rgba(0, 0, 0, 0.04);
                 background: transparent;
-                display: grid;
-                grid-template-rows: auto 1fr;
+                display: flex;
+                flex-direction: column;
                 padding: 6px 6px 12px;
-                gap: 6px;
+                gap: 0;
                 box-sizing: border-box;
-                min-height: calc(var(--all-day-height, 0px) + var(--time-viewport-height, 1440px) + var(--section-gap, 0px) + 18px);
+                min-height: 0;
             }
             .day-column:first-child {
                 border-left: none;
             }
-            .all-day-events {
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-                min-height: var(--all-day-height, 0px);
-            }
             .timed-viewport {
                 position: relative;
+                flex: 1;
                 width: 100%;
-                height: var(--time-viewport-height, 1440px);
+                min-height: 0;
             }
             .timed-events {
                 position: relative;
                 width: 100%;
                 height: 100%;
+                min-height: 0;
             }
             .event {
                 border-radius: 10px;
@@ -226,11 +227,19 @@ class CalendarWeekCard extends HTMLElement {
                 gap: 3px;
             }
             .event.all-day-event {
-                position: relative;
+                position: absolute;
                 font-weight: 600;
+                z-index: 2;
             }
             .event.all-day-event .event-surface {
-                padding: 8px 10px;
+                padding: 4px 8px;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                gap: 6px;
+            }
+            .event.all-day-event .event-time {
+                font-size: 0.7em;
             }
             .event-title {
                 font-weight: 600;
@@ -343,9 +352,11 @@ class CalendarWeekCard extends HTMLElement {
 
     buildTimeLabels() {
         if (!this.timeBar) return;
-        const totalHeight = this.timeAxisOffset + (24 * 60 * this.pixelsPerMinute);
+        const totalHeight = this.columnPaddingTop + this.allDayBandHeight + (24 * 60 * this.pixelsPerMinute) + this.columnPaddingBottom;
         this.timeBar.innerHTML = "";
         this.timeBar.style.minHeight = `${totalHeight}px`;
+        this.timeBar.style.paddingTop = `${this.columnPaddingTop}px`;
+        this.timeBar.style.paddingBottom = `${this.columnPaddingBottom}px`;
         for (let h = 1; h <= 23; h++) {
             const label = document.createElement("div");
             label.className = "hour-label";
@@ -423,7 +434,6 @@ class CalendarWeekCard extends HTMLElement {
         this.lastEvents = events;
         this.dayColumns.forEach(col => {
             col.innerHTML = `
-                <div class="all-day-events"></div>
                 <div class="timed-viewport">
                     <div class="timed-events"></div>
                 </div>
@@ -437,6 +447,7 @@ class CalendarWeekCard extends HTMLElement {
             : [];
 
         const dayRenderData = [];
+        let maxAllDayEvents = 0;
 
         for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
             // Get all events for this day, sorted by start time
@@ -455,40 +466,60 @@ class CalendarWeekCard extends HTMLElement {
                 .sort((a, b) => a.start - b.start);
 
             const dayColumn = this.dayColumns[dayOffset];
-            const allDayContainer = dayColumn.querySelector(".all-day-events");
             const timedContainer = dayColumn.querySelector(".timed-events");
 
-            for (const ev of allDayEvents) {
+            if (allDayEvents.length > maxAllDayEvents) {
+                maxAllDayEvents = allDayEvents.length;
+            }
+
+            dayRenderData.push({ dayEvents, allDayEvents, timedContainer });
+        }
+
+        this.allDayBandHeight = this.computeAllDayBandHeight(maxAllDayEvents);
+        this.updateTimeMetrics();
+
+        const allDayOverlap = Math.min(this.allDayRowOverlap, this.allDayRowHeight - 4);
+        const allDayRowStep = this.allDayRowHeight - allDayOverlap;
+        const baseTopOffset = this.allDayBandHeight;
+
+        for (const { dayEvents, allDayEvents, timedContainer } of dayRenderData) {
+            if (!timedContainer) continue;
+            const activeStack = [];
+
+            allDayEvents.forEach((ev, index) => {
                 const baseColor = this.config.colors[ev.calendar] || ev.color || "#4287f5";
+                const gradientStart = this.mixColor(baseColor, "#000000", 0.18) || baseColor;
+                const gradientEnd = this.mixColor(baseColor, "#ffffff", 0.45) || baseColor;
+                const top = index * allDayRowStep;
+
                 const eventDiv = document.createElement("div");
                 eventDiv.className = "event all-day-event";
+                eventDiv.style.top = `${top}px`;
+                eventDiv.style.height = `${this.allDayRowHeight}px`;
+                eventDiv.style.left = "2px";
+                eventDiv.style.right = "2px";
+                eventDiv.style.background = `linear-gradient(150deg, ${gradientStart}, ${gradientEnd})`;
+                eventDiv.style.borderColor = this.mixColor(baseColor, "#ffffff", 0.3) || "rgba(255,255,255,0.35)";
+                eventDiv.style.color = this.getReadableTextColor(gradientStart);
+
                 const eventSurface = document.createElement("div");
                 eventSurface.className = "event-surface";
-                const gradientStart = this.mixColor(baseColor, "#000000", 0.15) || baseColor;
-                const gradientEnd = this.mixColor(baseColor, "#ffffff", 0.55) || baseColor;
-                eventDiv.style.background = `linear-gradient(140deg, ${gradientStart}, ${gradientEnd})`;
-                eventDiv.style.borderColor = this.mixColor(baseColor, "#ffffff", 0.35) || "rgba(255,255,255,0.35)";
-                eventDiv.style.color = this.getReadableTextColor(gradientStart);
 
                 const titleEl = document.createElement("div");
                 titleEl.className = "event-title";
                 titleEl.textContent = ev.title;
+
+                const timeEl = document.createElement("div");
+                timeEl.className = "event-time";
+                timeEl.textContent = "All day";
+
                 eventSurface.appendChild(titleEl);
+                eventSurface.appendChild(timeEl);
                 eventDiv.appendChild(eventSurface);
 
                 eventDiv.addEventListener("click", () => this.showEventDialog(ev));
-                allDayContainer.appendChild(eventDiv);
-            }
-
-            dayRenderData.push({ dayEvents, timedContainer });
-        }
-
-        this.normalizeAllDayHeights();
-        this.updateTimeMetrics();
-
-        for (const { dayEvents, timedContainer } of dayRenderData) {
-            if (!timedContainer) continue;
-            const activeStack = [];
+                timedContainer.appendChild(eventDiv);
+            });
 
             for (const ev of dayEvents) {
                 for (let i = activeStack.length - 1; i >= 0; i--) {
@@ -502,7 +533,7 @@ class CalendarWeekCard extends HTMLElement {
 
                 const startMinutes = ev.start.getHours() * 60 + ev.start.getMinutes();
                 const endMinutes = ev.end.getHours() * 60 + ev.end.getMinutes();
-                const top = startMinutes * this.pixelsPerMinute;
+                const top = baseTopOffset + startMinutes * this.pixelsPerMinute;
                 const height = Math.max(endMinutes - startMinutes, 15) * this.pixelsPerMinute;
 
                 const leftIndent = 2 + ev.column * 12;
@@ -547,72 +578,40 @@ class CalendarWeekCard extends HTMLElement {
         this.updateTimeLine();
     }
 
-
-    normalizeAllDayHeights() {
-        if (!this.dayColumns?.length) return 0;
-
-        // Reset any previous sizing to measure natural content height
-        this.dayColumns.forEach(column => {
-            const container = column.querySelector(".all-day-events");
-            if (container) container.style.minHeight = "";
-        });
-
-        let maxHeight = 0;
-        this.dayColumns.forEach(column => {
-            const container = column.querySelector(".all-day-events");
-            if (!container) return;
-            const rect = container.getBoundingClientRect();
-            if (rect?.height > maxHeight) {
-                maxHeight = rect.height;
-            }
-        });
-
-        this.dayColumns.forEach(column => {
-            const container = column.querySelector(".all-day-events");
-            if (!container) return;
-            container.style.minHeight = maxHeight ? `${maxHeight}px` : "";
-        });
-
-        this.dayColumns.forEach(column => {
-            column.style.setProperty("--all-day-height", `${maxHeight || 0}px`);
-        });
-
-        this.maxAllDayHeight = maxHeight;
-        return maxHeight;
+    computeAllDayBandHeight(rowCount = 0) {
+        if (!rowCount || rowCount <= 0) return 0;
+        const effectiveOverlap = Math.min(this.allDayRowOverlap, this.allDayRowHeight - 4);
+        const step = this.allDayRowHeight - effectiveOverlap;
+        if (step <= 0) {
+            return this.allDayRowHeight * rowCount;
+        }
+        return this.allDayRowHeight + (rowCount - 1) * step;
     }
 
     updateTimeMetrics() {
-        const firstColumn = this.dayColumns?.[0];
-        const paddingTop = 6;
-        const paddingBottom = 12;
-        const sectionGap = 6;
-        const allDayHeight = this.maxAllDayHeight || 0;
-        const gapHeight = allDayHeight > 0 ? sectionGap : 0;
-        const fallbackViewport = 24 * 60; // default to 1px per minute
-
+        const fallbackViewport = 24 * 60;
+        const firstViewport = this.dayColumns?.[0]?.querySelector(".timed-viewport");
         let viewportHeight = fallbackViewport;
 
-        if (firstColumn) {
-            const columnRect = firstColumn.getBoundingClientRect();
-            if (columnRect?.height) {
-                const availableHeight = columnRect.height - paddingTop - paddingBottom - gapHeight - allDayHeight;
-                if (availableHeight > 0) {
-                    viewportHeight = availableHeight;
-                }
+        if (firstViewport) {
+            const rect = firstViewport.getBoundingClientRect();
+            if (rect?.height) {
+                viewportHeight = rect.height;
             }
         } else if (this.grid?.clientHeight) {
             viewportHeight = this.grid.clientHeight;
         }
 
-        this.timeAxisOffset = paddingTop + allDayHeight + gapHeight;
+        const effectiveHeight = Math.max(viewportHeight - this.allDayBandHeight, 24);
+        this.pixelsPerMinute = effectiveHeight / (24 * 60);
         this.timeViewportHeight = viewportHeight;
-        this.pixelsPerMinute = viewportHeight > 0 ? viewportHeight / (24 * 60) : this.pixelsPerMinute;
+        this.timeAxisOffset = this.columnPaddingTop + this.allDayBandHeight;
 
-        const viewportPx = `${this.timeViewportHeight}px`;
-        const gapPx = `${gapHeight}px`;
         this.dayColumns.forEach(column => {
-            column.style.setProperty("--time-viewport-height", viewportPx);
-            column.style.setProperty("--section-gap", gapPx);
+            const timedEvents = column.querySelector(".timed-events");
+            if (timedEvents) {
+                timedEvents.style.height = `${this.timeViewportHeight}px`;
+            }
         });
     }
 
