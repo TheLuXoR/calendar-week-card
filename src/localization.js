@@ -16,7 +16,10 @@ export const TRANSLATIONS = {
         noTitle: "(no title)",
         languageLabel: "Language",
         systemDefault: "System default",
-        donateWithPaypal: "Donate with PayPal"
+        donateWithPaypal: "Donate with PayPal",
+        highlightToday: "Highlight current day",
+        highlightTodayDescription: "Shade today's column with a subtle gradient.",
+        todayHighlightColor: "Highlight color"
     },
     de: {
         today: "Heute",
@@ -33,7 +36,10 @@ export const TRANSLATIONS = {
         noTitle: "(kein Titel)",
         languageLabel: "Sprache",
         systemDefault: "Systemstandard",
-        donateWithPaypal: "Mit PayPal spenden"
+        donateWithPaypal: "Mit PayPal spenden",
+        highlightToday: "Aktuellen Tag hervorheben",
+        highlightTodayDescription: "Markiert die heutige Spalte mit einem sanften Farbverlauf.",
+        todayHighlightColor: "Farbe der Hervorhebung"
     },
     fr: {
         today: "Aujourd'hui",
@@ -50,7 +56,10 @@ export const TRANSLATIONS = {
         noTitle: "(sans titre)",
         languageLabel: "Langue",
         systemDefault: "Langue du système",
-        donateWithPaypal: "Faire un don avec PayPal"
+        donateWithPaypal: "Faire un don avec PayPal",
+        highlightToday: "Mettre en surbrillance aujourd'hui",
+        highlightTodayDescription: "Colorer la colonne d'aujourd'hui avec un léger dégradé.",
+        todayHighlightColor: "Couleur de surbrillance"
     },
     es: {
         today: "Hoy",
@@ -67,7 +76,10 @@ export const TRANSLATIONS = {
         noTitle: "(sin título)",
         languageLabel: "Idioma",
         systemDefault: "Predeterminado del sistema",
-        donateWithPaypal: "Donar con PayPal"
+        donateWithPaypal: "Donar con PayPal",
+        highlightToday: "Resaltar el día actual",
+        highlightTodayDescription: "Sombrea la columna de hoy con un degradado suave.",
+        todayHighlightColor: "Color de resaltado"
     },
     it: {
         today: "Oggi",
@@ -84,7 +96,10 @@ export const TRANSLATIONS = {
         noTitle: "(senza titolo)",
         languageLabel: "Lingua",
         systemDefault: "Predefinito di sistema",
-        donateWithPaypal: "Dona con PayPal"
+        donateWithPaypal: "Dona con PayPal",
+        highlightToday: "Evidenzia il giorno corrente",
+        highlightTodayDescription: "Colora la colonna di oggi con un leggero gradiente.",
+        todayHighlightColor: "Colore di evidenziazione"
     },
     nl: {
         today: "Vandaag",
@@ -101,7 +116,10 @@ export const TRANSLATIONS = {
         noTitle: "(geen titel)",
         languageLabel: "Taal",
         systemDefault: "Systeemstandaard",
-        donateWithPaypal: "Doneren met PayPal"
+        donateWithPaypal: "Doneren met PayPal",
+        highlightToday: "Markeer de huidige dag",
+        highlightTodayDescription: "Kleur de kolom van vandaag met een subtiele gradiënt.",
+        todayHighlightColor: "Markeerkleur"
     }
 };
 

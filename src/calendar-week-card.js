@@ -131,6 +131,20 @@ export class CalendarWeekCard extends HTMLElement {
             this.assignDefaultColors(this.config.entities);
         }
 
+        const savedHighlightColor = localStorage.getItem("calendar-week-card-today-highlight-color");
+        if (savedHighlightColor) {
+            this.config.today_highlight_color = savedHighlightColor;
+        } else if (!this.config.today_highlight_color) {
+            this.config.today_highlight_color = "#4D96FF";
+        }
+
+        const savedHighlightEnabled = localStorage.getItem("calendar-week-card-highlight-enabled");
+        if (savedHighlightEnabled !== null) {
+            this.config.highlight_today = savedHighlightEnabled !== "false";
+        } else if (typeof this.config.highlight_today !== "boolean") {
+            this.config.highlight_today = true;
+        }
+
         this.attachShadow({mode: "open"});
 
         this.shadowRoot.innerHTML = `
@@ -236,7 +250,7 @@ export class CalendarWeekCard extends HTMLElement {
                 position: absolute;
                 left: 6px;
                 font-size: 11px;
-                color: var(--secondary-text-color, #6f6f6f);
+                color: #000000;
                 transform: translateY(-50%);
             }
             .week-grid {
@@ -260,6 +274,26 @@ export class CalendarWeekCard extends HTMLElement {
                 gap: 0;
                 box-sizing: border-box;
                 min-height: 0;
+                overflow: hidden;
+            }
+            .day-column::before {
+                content: "";
+                position: absolute;
+                inset: 2px;
+                border-radius: 12px;
+                background: transparent;
+                opacity: 0;
+                transition: opacity 0.25s ease;
+                pointer-events: none;
+                z-index: 0;
+            }
+            .day-column.today-column::before {
+                background: var(--calendar-week-card-today-gradient, linear-gradient(180deg, rgba(77, 150, 255, 0.18) 0%, rgba(77, 150, 255, 0.05) 100%));
+                opacity: 1;
+            }
+            .day-column > * {
+                position: relative;
+                z-index: 1;
             }
             .day-column:first-child {
                 border-left: none;
@@ -269,12 +303,28 @@ export class CalendarWeekCard extends HTMLElement {
                 flex: 1;
                 width: 100%;
                 min-height: 0;
+                overflow: hidden;
             }
             .timed-events {
                 position: relative;
                 width: 100%;
                 height: 100%;
                 min-height: 0;
+                z-index: 1;
+            }
+            .day-background-layer {
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+                z-index: 0;
+            }
+            .night-block {
+                position: absolute;
+                left: 0;
+                right: 0;
+                background: linear-gradient(180deg, rgba(15, 23, 42, 0.12) 0%, rgba(15, 23, 42, 0.16) 100%);
+                border-radius: 10px;
+                pointer-events: none;
             }
             .event {
                 border-radius: 10px;
@@ -574,8 +624,11 @@ export class CalendarWeekCard extends HTMLElement {
     renderList(events) {
         this.lastEvents = events;
         this.dayColumns.forEach(col => {
+            col.classList.remove("today-column");
+            col.style.removeProperty("--calendar-week-card-today-gradient");
             col.innerHTML = `
                 <div class="timed-viewport">
+                    <div class="day-background-layer"></div>
                     <div class="timed-events"></div>
                 </div>
             `;
@@ -607,11 +660,33 @@ export class CalendarWeekCard extends HTMLElement {
 
             const dayColumn = this.dayColumns[dayOffset];
             const timedContainer = dayColumn.querySelector(".timed-events");
-            dayRenderData.push({ dayEvents, allDayEvents, timedContainer });
+            const backgroundLayer = dayColumn.querySelector(".day-background-layer");
+            dayRenderData.push({ dayEvents, allDayEvents, timedContainer, backgroundLayer, dayColumn, dayOffset });
         }
 
         this.allDayBandHeight = 0;
         this.updateTimeMetrics();
+
+        const highlightEnabled = this.config.highlight_today !== false;
+        const highlightColor = this.getHexColor(this.config.today_highlight_color || "#4D96FF");
+        const highlightStart = this.mixColor(highlightColor, "#ffffff", 0.65) || highlightColor;
+        const highlightEnd = this.mixColor(highlightColor, "#ffffff", 0.9) || highlightColor;
+        const highlightGradient = `linear-gradient(180deg, ${highlightStart} 0%, ${highlightEnd} 100%)`;
+        const now = new Date();
+        const todayOffset = (now.getDay() + 6) % 7;
+        const shouldHighlightToday = highlightEnabled && this.weekOffset === 0;
+
+        for (const { backgroundLayer, dayColumn, dayOffset } of dayRenderData) {
+            if (shouldHighlightToday && dayOffset === todayOffset) {
+                dayColumn.classList.add("today-column");
+                dayColumn.style.setProperty("--calendar-week-card-today-gradient", highlightGradient);
+            }
+
+            if (backgroundLayer) {
+                backgroundLayer.innerHTML = "";
+                this.addNightBlocks(backgroundLayer);
+            }
+        }
 
         const allDayOverlap = Math.min(this.allDayRowOverlap, this.allDayRowHeight - 4);
         const allDayRowStep = Math.max(this.allDayRowHeight - allDayOverlap, 4);
@@ -754,6 +829,29 @@ export class CalendarWeekCard extends HTMLElement {
         const effectiveHeight = Math.max(viewportHeight, 24);
         this.pixelsPerMinute = effectiveHeight / (24 * 60);
         this.timeAxisOffset = this.columnPaddingTop;
+    }
+
+    addNightBlocks(layer) {
+        if (!layer) return;
+        const ppm = this.pixelsPerMinute;
+        if (!ppm) return;
+
+        const segments = [
+            { start: 0, end: 6, radius: "12px 12px 6px 6px" },
+            { start: 22, end: 24, radius: "6px 6px 12px 12px" }
+        ];
+
+        segments.forEach(({ start, end, radius }) => {
+            if (end <= start) return;
+            const block = document.createElement("div");
+            block.className = "night-block";
+            const top = start * 60 * ppm;
+            const height = Math.max((end - start) * 60 * ppm, 1);
+            block.style.top = `${top}px`;
+            block.style.height = `${height}px`;
+            block.style.borderRadius = radius;
+            layer.appendChild(block);
+        });
     }
 
 
@@ -1036,6 +1134,95 @@ export class CalendarWeekCard extends HTMLElement {
 
         content.appendChild(list);
 
+        const highlightSection = document.createElement("div");
+        Object.assign(highlightSection.style, {
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+            padding: "12px",
+            borderRadius: "10px",
+            background: "rgba(77, 150, 255, 0.08)"
+        });
+
+        const highlightHeader = document.createElement("div");
+        Object.assign(highlightHeader.style, {
+            display: "flex",
+            alignItems: "center",
+            gap: "10px"
+        });
+
+        const highlightToggle = document.createElement("input");
+        highlightToggle.type = "checkbox";
+        highlightToggle.checked = this.config.highlight_today !== false;
+        highlightToggle.style.width = "18px";
+        highlightToggle.style.height = "18px";
+        highlightToggle.style.cursor = "pointer";
+
+        const highlightLabel = document.createElement("span");
+        highlightLabel.style.flex = "1";
+        highlightLabel.style.fontWeight = "600";
+        highlightLabel.style.color = "#2f2f2f";
+
+        highlightHeader.appendChild(highlightToggle);
+        highlightHeader.appendChild(highlightLabel);
+
+        const highlightDescription = document.createElement("span");
+        highlightDescription.style.fontSize = "0.85em";
+        highlightDescription.style.color = "#4a4a4a";
+
+        const highlightColorRow = document.createElement("div");
+        Object.assign(highlightColorRow.style, {
+            display: "flex",
+            alignItems: "center",
+            gap: "12px"
+        });
+
+        const highlightColorLabel = document.createElement("span");
+        highlightColorLabel.style.flex = "1";
+        highlightColorLabel.style.fontWeight = "500";
+        highlightColorLabel.style.color = "#333";
+
+        const highlightColorPicker = document.createElement("input");
+        highlightColorPicker.type = "color";
+        highlightColorPicker.value = this.getHexColor(this.config.today_highlight_color || "#4D96FF");
+        highlightColorPicker.style.width = "50px";
+        highlightColorPicker.style.height = "34px";
+        highlightColorPicker.style.border = "1px solid rgba(0,0,0,0.1)";
+        highlightColorPicker.style.borderRadius = "8px";
+        highlightColorPicker.style.cursor = "pointer";
+
+        const applyHighlightState = enabled => {
+            highlightColorPicker.disabled = !enabled;
+            highlightColorPicker.style.opacity = enabled ? "1" : "0.5";
+        };
+
+        applyHighlightState(highlightToggle.checked);
+
+        highlightToggle.addEventListener("change", e => {
+            const enabled = e.target.checked;
+            this.config.highlight_today = enabled;
+            localStorage.setItem("calendar-week-card-highlight-enabled", String(enabled));
+            applyHighlightState(enabled);
+            this.renderList(this.lastEvents);
+        });
+
+        highlightColorPicker.addEventListener("input", e => {
+            const value = this.getHexColor(e.target.value, this.config.today_highlight_color || "#4D96FF");
+            this.config.today_highlight_color = value;
+            localStorage.setItem("calendar-week-card-today-highlight-color", value);
+            highlightColorPicker.value = value;
+            this.renderList(this.lastEvents);
+        });
+
+        highlightColorRow.appendChild(highlightColorLabel);
+        highlightColorRow.appendChild(highlightColorPicker);
+
+        highlightSection.appendChild(highlightHeader);
+        highlightSection.appendChild(highlightDescription);
+        highlightSection.appendChild(highlightColorRow);
+
+        content.appendChild(highlightSection);
+
         const donateSection = document.createElement("div");
         Object.assign(donateSection.style, {
             marginTop: "8px",
@@ -1095,6 +1282,9 @@ export class CalendarWeekCard extends HTMLElement {
             supportText.textContent = this.t("supportViaPaypal");
             donateImage.alt = this.t("donateWithPaypal");
             closeBtn.textContent = this.t("saveAndClose");
+            highlightLabel.textContent = this.t("highlightToday");
+            highlightDescription.textContent = this.t("highlightTodayDescription");
+            highlightColorLabel.textContent = this.t("todayHighlightColor");
         };
 
         languageSelect.addEventListener("change", e => {
