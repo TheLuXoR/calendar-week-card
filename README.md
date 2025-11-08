@@ -8,6 +8,7 @@ A custom Lovelace card that renders a week-based calendar view in Home Assistant
 - Automatic calendar discovery with optional manual entity list
 - Persistent color picker for each calendar
 - Event detail dialog
+- Optional dynamic zoom to hide unused early/late hours
 
 ## Installation
 

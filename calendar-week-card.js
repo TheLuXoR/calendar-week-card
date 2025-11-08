@@ -6,12 +6,18 @@ class CalendarWeekCard extends HTMLElement {
         this.dynamicEntities = [];
         this.availableCalendars = [];
         this.configHiddenKey = "calendar-week-card-hidden";
+        this.zoomSettingsKey = "calendar-week-card-zoom";
+        this.hiddenTopMinutes = 0;
+        this.hiddenBottomMinutes = 0;
+        this.visibleMinutes = 24 * 60;
+        this.pixelsPerMinute = 1;
     }
 
     setConfig(config) {
         this.config = structuredClone(config) || {};
         this.config.colors = this.config.colors || {};
         this.config.hidden_entities = Array.isArray(this.config.hidden_entities) ? this.config.hidden_entities : [];
+        this.config.dynamic_zoom = this.normalizeZoomSettings(this.config.dynamic_zoom);
         this.dynamicEntities = [];
         this.availableCalendars = [];
         this._entitiesPromise = undefined;
@@ -35,6 +41,21 @@ class CalendarWeekCard extends HTMLElement {
                 }
             } catch (err) {
                 console.warn("calendar-week-card: Failed to parse saved hidden calendars", err);
+            }
+        }
+
+        const savedZoom = localStorage.getItem(this.zoomSettingsKey);
+        if (savedZoom) {
+            try {
+                const parsedZoom = JSON.parse(savedZoom);
+                if (parsedZoom && typeof parsedZoom === "object") {
+                    this.config.dynamic_zoom = this.normalizeZoomSettings({
+                        ...this.config.dynamic_zoom,
+                        ...parsedZoom
+                    });
+                }
+            } catch (err) {
+                console.warn("calendar-week-card: Failed to parse saved zoom settings", err);
             }
         }
 
@@ -151,26 +172,45 @@ class CalendarWeekCard extends HTMLElement {
 
     buildTimeLabels() {
         const gridHeight = this.grid.clientHeight || 1440;
-        this.pixelsPerMinute = gridHeight / (24 * 60);
+        this.pixelsPerMinute = gridHeight / this.getVisibleMinutes();
         this.timeBar.innerHTML = "";
-        for (let h = 1; h <= 23; h++) {
+        const visibleStart = this.hiddenTopMinutes;
+        const visibleEnd = 24 * 60 - this.hiddenBottomMinutes;
+
+        const appendLabel = (minutes, text) => {
             const label = document.createElement("div");
             label.className = "hour-label";
-            label.textContent = `${h.toString().padStart(2, '0')}:00`;
-            label.style.top = `${h * 60 * this.pixelsPerMinute}px`;
+            label.textContent = text;
+            label.style.top = `${(minutes - this.hiddenTopMinutes) * this.pixelsPerMinute}px`;
             this.timeBar.appendChild(label);
+        };
+
+        if (visibleStart > 0) {
+            appendLabel(visibleStart, this.formatMinutes(visibleStart));
+        }
+
+        for (let h = 1; h < 24; h++) {
+            const minutes = h * 60;
+            if (minutes <= visibleStart || minutes >= visibleEnd) continue;
+            appendLabel(minutes, `${h.toString().padStart(2, '0')}:00`);
+        }
+
+        if (visibleEnd < 24 * 60) {
+            appendLabel(visibleEnd, this.formatMinutes(visibleEnd));
         }
 
         // Add timeline in left bar
         const now = new Date();
         if (this.weekOffset === 0) {
             const minutes = now.getHours() * 60 + now.getMinutes();
-            const line = document.createElement("div");
-            line.className = "time-line";
-            line.style.left = "0";
-            line.style.right = "0";
-            line.style.top = `${minutes * this.pixelsPerMinute}px`;
-            this.timeBar.appendChild(line);
+            if (minutes >= visibleStart && minutes <= visibleEnd) {
+                const line = document.createElement("div");
+                line.className = "time-line";
+                line.style.left = "0";
+                line.style.right = "0";
+                line.style.top = `${(minutes - this.hiddenTopMinutes) * this.pixelsPerMinute}px`;
+                this.timeBar.appendChild(line);
+            }
         }
     }
 
@@ -224,6 +264,11 @@ class CalendarWeekCard extends HTMLElement {
             ? events.filter(ev => !this.isEntityHidden(ev.calendar))
             : [];
 
+        this.applyDynamicZoom(visibleEvents);
+
+        const gridHeight = this.grid.clientHeight || 1440;
+        this.pixelsPerMinute = gridHeight / this.getVisibleMinutes();
+
         for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
             // Get all events for this day, sorted by start time
             const dayEvents = visibleEvents
@@ -250,9 +295,20 @@ class CalendarWeekCard extends HTMLElement {
                 activeStack.push(ev);
 
                 const startMinutes = ev.start.getHours() * 60 + ev.start.getMinutes();
-                const endMinutes = ev.end.getHours() * 60 + ev.end.getMinutes();
-                const top = startMinutes * this.pixelsPerMinute;
-                const height = Math.max(endMinutes - startMinutes, 15) * this.pixelsPerMinute;
+                let endMinutes = ev.end.getHours() * 60 + ev.end.getMinutes();
+                const durationMinutes = Math.max(0, Math.round((ev.end - ev.start) / 60000));
+                if (durationMinutes > 0) {
+                    endMinutes = startMinutes + durationMinutes;
+                }
+                if (endMinutes <= startMinutes) {
+                    endMinutes = startMinutes + 15;
+                }
+                endMinutes = Math.min(endMinutes, 24 * 60);
+                const visibleStart = Math.max(startMinutes, this.hiddenTopMinutes);
+                const visibleEnd = Math.max(visibleStart, Math.min(endMinutes, 24 * 60 - this.hiddenBottomMinutes));
+                const duration = Math.max(visibleEnd - visibleStart, 15);
+                const top = (visibleStart - this.hiddenTopMinutes) * this.pixelsPerMinute;
+                const height = duration * this.pixelsPerMinute;
 
                 const leftIndent = 2 + ev.column * 12;   // main left offset
                 const rightIndent = 2 + ev.column * 2;   // subtle right offset
@@ -363,6 +419,104 @@ class CalendarWeekCard extends HTMLElement {
         localStorage.setItem("calendar-week-card-colors", JSON.stringify(this.config.colors));
     }
 
+    normalizeZoomSettings(settings = {}) {
+        const defaults = { enabled: false, max_hidden_start: 360, max_hidden_end: 360 };
+        const normalized = { ...defaults };
+        if (settings && typeof settings === "object") {
+            normalized.enabled = Boolean(settings.enabled);
+            const start = Number(settings.max_hidden_start);
+            const end = Number(settings.max_hidden_end);
+            if (Number.isFinite(start) && start >= 0) {
+                normalized.max_hidden_start = Math.min(start, 24 * 60);
+            }
+            if (Number.isFinite(end) && end >= 0) {
+                normalized.max_hidden_end = Math.min(end, 24 * 60);
+            }
+        }
+        return normalized;
+    }
+
+    saveZoomSettings() {
+        localStorage.setItem(this.zoomSettingsKey, JSON.stringify(this.config.dynamic_zoom));
+    }
+
+    getVisibleMinutes() {
+        return Math.max(60, 24 * 60 - this.hiddenTopMinutes - this.hiddenBottomMinutes);
+    }
+
+    applyDynamicZoom(events = []) {
+        const settings = this.config.dynamic_zoom;
+        this.hiddenTopMinutes = 0;
+        this.hiddenBottomMinutes = 0;
+
+        if (!settings?.enabled || !Array.isArray(events) || !events.length) {
+            this.visibleMinutes = this.getVisibleMinutes();
+            return;
+        }
+
+        let earliestStart = 24 * 60;
+        let latestEnd = 0;
+
+        events.forEach(ev => {
+            if (!(ev?.start instanceof Date) || !(ev?.end instanceof Date)) return;
+            const startMinutes = ev.start.getHours() * 60 + ev.start.getMinutes();
+            let endMinutes = ev.end.getHours() * 60 + ev.end.getMinutes();
+            const durationMinutes = Math.max(0, Math.round((ev.end - ev.start) / 60000));
+            if (durationMinutes > 0) {
+                endMinutes = startMinutes + durationMinutes;
+            }
+            if (endMinutes <= startMinutes) {
+                endMinutes = startMinutes + 15;
+            }
+            endMinutes = Math.min(endMinutes, 24 * 60);
+            if (startMinutes < earliestStart) earliestStart = startMinutes;
+            if (endMinutes > latestEnd) latestEnd = endMinutes;
+        });
+
+        if (latestEnd <= earliestStart) {
+            this.visibleMinutes = this.getVisibleMinutes();
+            return;
+        }
+
+        const dayMinutes = 24 * 60;
+        this.hiddenTopMinutes = Math.min(earliestStart, settings.max_hidden_start);
+        this.hiddenBottomMinutes = Math.min(Math.max(dayMinutes - latestEnd, 0), settings.max_hidden_end);
+
+        const totalHidden = this.hiddenTopMinutes + this.hiddenBottomMinutes;
+        if (totalHidden >= dayMinutes) {
+            this.hiddenTopMinutes = 0;
+            this.hiddenBottomMinutes = 0;
+        } else {
+            const minVisible = 60; // always keep at least one hour visible
+            const overflow = totalHidden - (dayMinutes - minVisible);
+            if (overflow > 0) {
+                if (this.hiddenBottomMinutes >= overflow) {
+                    this.hiddenBottomMinutes -= overflow;
+                } else {
+                    const remaining = overflow - this.hiddenBottomMinutes;
+                    this.hiddenBottomMinutes = 0;
+                    this.hiddenTopMinutes = Math.max(0, this.hiddenTopMinutes - remaining);
+                }
+            }
+        }
+
+        this.visibleMinutes = this.getVisibleMinutes();
+    }
+
+    formatMinutes(totalMinutes) {
+        const minutes = Math.max(0, Math.min(totalMinutes, 24 * 60));
+        const hours = Math.floor(minutes / 60);
+        const mins = Math.round(minutes % 60);
+        return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
+    }
+
+    formatHours(totalMinutes) {
+        if (!Number.isFinite(totalMinutes)) return "0";
+        const hours = totalMinutes / 60;
+        if (!Number.isFinite(hours)) return "0";
+        return hours.toFixed(2).replace(/\.00$/, "").replace(/\.([0-9])0$/, ".$1");
+    }
+
     
 
     updateTimeLine() {
@@ -375,9 +529,10 @@ class CalendarWeekCard extends HTMLElement {
         if (!this.dayColumns[todayOffset]) return;
 
         const minutes = now.getHours() * 60 + now.getMinutes();
+        if (minutes < this.hiddenTopMinutes || minutes > (24 * 60 - this.hiddenBottomMinutes)) return;
         const line = document.createElement("div");
         line.className = "time-line";
-        line.style.top = `${minutes * this.pixelsPerMinute}px`;
+        line.style.top = `${(minutes - this.hiddenTopMinutes) * this.pixelsPerMinute}px`;
         this.dayColumns[todayOffset].appendChild(line);
     }
 
@@ -409,9 +564,128 @@ class CalendarWeekCard extends HTMLElement {
         content.addEventListener("click", e => e.stopPropagation());
 
         const title = document.createElement("h3");
-        title.textContent = "Calendar Colors";
+        title.textContent = "Calendar Settings";
         Object.assign(title.style, { margin: 0, fontSize: "1.3em", color: "#333" });
         content.appendChild(title);
+
+        const zoomSection = document.createElement("div");
+        zoomSection.style.display = "flex";
+        zoomSection.style.flexDirection = "column";
+        zoomSection.style.gap = "8px";
+
+        const zoomHeader = document.createElement("h4");
+        zoomHeader.textContent = "Dynamic Zoom";
+        Object.assign(zoomHeader.style, { margin: "0", fontSize: "1.1em", color: "#333" });
+        zoomSection.appendChild(zoomHeader);
+
+        const zoomToggleRow = document.createElement("label");
+        zoomToggleRow.style.display = "flex";
+        zoomToggleRow.style.alignItems = "center";
+        zoomToggleRow.style.gap = "8px";
+
+        const zoomToggle = document.createElement("input");
+        zoomToggle.type = "checkbox";
+        zoomToggle.checked = Boolean(this.config.dynamic_zoom?.enabled);
+
+        const zoomToggleText = document.createElement("span");
+        zoomToggleText.textContent = "Enable automatic hiding of unused night hours";
+        zoomToggleText.style.color = "#555";
+
+        zoomToggleRow.appendChild(zoomToggle);
+        zoomToggleRow.appendChild(zoomToggleText);
+        zoomSection.appendChild(zoomToggleRow);
+
+        const zoomInputsRow = document.createElement("div");
+        zoomInputsRow.style.display = "flex";
+        zoomInputsRow.style.flexWrap = "wrap";
+        zoomInputsRow.style.gap = "12px";
+
+        const createZoomInput = (labelText, valueMinutes, onChange) => {
+            const wrapper = document.createElement("div");
+            wrapper.style.display = "flex";
+            wrapper.style.flexDirection = "column";
+            wrapper.style.gap = "4px";
+
+            const label = document.createElement("label");
+            label.textContent = labelText;
+            label.style.fontSize = "0.9em";
+            label.style.color = "#555";
+
+            const input = document.createElement("input");
+            input.type = "number";
+            input.min = "0";
+            input.max = "23";
+            input.step = "0.5";
+            input.value = this.formatHours(valueMinutes);
+            input.style.padding = "6px";
+            input.style.borderRadius = "6px";
+            input.style.border = "1px solid #ccc";
+            input.addEventListener("change", () => {
+                const sanitized = onChange(parseFloat(input.value));
+                if (Number.isFinite(sanitized)) {
+                    input.value = this.formatHours(sanitized);
+                }
+            });
+
+            wrapper.appendChild(label);
+            wrapper.appendChild(input);
+            zoomInputsRow.appendChild(wrapper);
+            return input;
+        };
+
+        const startInput = createZoomInput(
+            "Max hours hidden before first event",
+            this.config.dynamic_zoom.max_hidden_start,
+            value => {
+                const hours = Number.isFinite(value) ? Math.max(0, Math.min(value, 23)) : 0;
+                this.config.dynamic_zoom.max_hidden_start = Math.round(hours * 60);
+                this.config.dynamic_zoom = this.normalizeZoomSettings(this.config.dynamic_zoom);
+                this.saveZoomSettings();
+                this.renderList(this.lastEvents);
+                return this.config.dynamic_zoom.max_hidden_start;
+            }
+        );
+
+        const endInput = createZoomInput(
+            "Max hours hidden after last event",
+            this.config.dynamic_zoom.max_hidden_end,
+            value => {
+                const hours = Number.isFinite(value) ? Math.max(0, Math.min(value, 23)) : 0;
+                this.config.dynamic_zoom.max_hidden_end = Math.round(hours * 60);
+                this.config.dynamic_zoom = this.normalizeZoomSettings(this.config.dynamic_zoom);
+                this.saveZoomSettings();
+                this.renderList(this.lastEvents);
+                return this.config.dynamic_zoom.max_hidden_end;
+            }
+        );
+
+        zoomSection.appendChild(zoomInputsRow);
+        content.appendChild(zoomSection);
+
+        const updateZoomControls = () => {
+            const enabled = Boolean(this.config.dynamic_zoom?.enabled);
+            startInput.disabled = !enabled;
+            endInput.disabled = !enabled;
+            startInput.style.opacity = enabled ? "1" : "0.5";
+            endInput.style.opacity = enabled ? "1" : "0.5";
+            if (startInput.parentElement) startInput.parentElement.style.opacity = enabled ? "1" : "0.6";
+            if (endInput.parentElement) endInput.parentElement.style.opacity = enabled ? "1" : "0.6";
+        };
+
+        zoomToggle.addEventListener("change", e => {
+            this.config.dynamic_zoom.enabled = e.target.checked;
+            this.config.dynamic_zoom = this.normalizeZoomSettings(this.config.dynamic_zoom);
+            this.saveZoomSettings();
+            updateZoomControls();
+            this.renderList(this.lastEvents);
+        });
+
+        updateZoomControls();
+
+        const colorsHeader = document.createElement("h4");
+        colorsHeader.textContent = "Calendar Colors";
+        Object.assign(colorsHeader.style, { margin: "8px 0 0 0", fontSize: "1.1em", color: "#333" });
+        content.appendChild(colorsHeader);
 
         const list = document.createElement("div");
         list.style.display = "flex";
