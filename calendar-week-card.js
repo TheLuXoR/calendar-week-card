@@ -5,11 +5,13 @@ class CalendarWeekCard extends HTMLElement {
         this.lastEvents = [];
         this.dynamicEntities = [];
         this.availableCalendars = [];
+        this.configHiddenKey = "calendar-week-card-hidden";
     }
 
     setConfig(config) {
         this.config = structuredClone(config) || {};
         this.config.colors = this.config.colors || {};
+        this.config.hidden_entities = Array.isArray(this.config.hidden_entities) ? this.config.hidden_entities : [];
         this.dynamicEntities = [];
         this.availableCalendars = [];
         this._entitiesPromise = undefined;
@@ -18,6 +20,22 @@ class CalendarWeekCard extends HTMLElement {
         const savedColors = localStorage.getItem("calendar-week-card-colors");
         if (savedColors) {
             this.config.colors = { ...this.config.colors, ...JSON.parse(savedColors) };
+        }
+
+        const savedHidden = localStorage.getItem(this.configHiddenKey);
+        if (savedHidden) {
+            try {
+                const parsedHidden = JSON.parse(savedHidden);
+                if (Array.isArray(parsedHidden)) {
+                    const merged = new Set([
+                        ...this.config.hidden_entities,
+                        ...parsedHidden
+                    ]);
+                    this.config.hidden_entities = Array.from(merged);
+                }
+            } catch (err) {
+                console.warn("calendar-week-card: Failed to parse saved hidden calendars", err);
+            }
         }
 
         // Assign distinct pastel colors if missing
@@ -165,7 +183,9 @@ class CalendarWeekCard extends HTMLElement {
         await this.ensureEntities(hass);
 
         const entities = this.getActiveEntities();
-        if (!entities.length) {
+        const visibleEntities = entities.filter(entity => !this.isEntityHidden(entity));
+
+        if (!visibleEntities.length) {
             this.renderList([]);
             return;
         }
@@ -173,7 +193,7 @@ class CalendarWeekCard extends HTMLElement {
         const [start, end] = this.getWeekRange();
         let allEvents = [];
 
-        for (const entity of entities) {
+        for (const entity of visibleEntities) {
             try {
                 const url = `calendars/${entity}?start=${start.toISOString()}&end=${end.toISOString()}`;
                 const events = await hass.callApi("get", url);
@@ -200,9 +220,13 @@ class CalendarWeekCard extends HTMLElement {
 
         const [startOfWeek] = this.getWeekRange();
 
+        const visibleEvents = Array.isArray(events)
+            ? events.filter(ev => !this.isEntityHidden(ev.calendar))
+            : [];
+
         for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
             // Get all events for this day, sorted by start time
-            const dayEvents = events
+            const dayEvents = visibleEvents
                 .filter(ev => {
                     const evDayOffset = Math.floor((ev.start - startOfWeek) / (1000 * 60 * 60 * 24));
                     return evDayOffset === dayOffset;
@@ -302,6 +326,25 @@ class CalendarWeekCard extends HTMLElement {
         return this.dynamicEntities;
     }
 
+    getHiddenEntities() {
+        return Array.isArray(this.config?.hidden_entities) ? this.config.hidden_entities : [];
+    }
+
+    isEntityHidden(entityId) {
+        return this.getHiddenEntities().includes(entityId);
+    }
+
+    setEntityHidden(entityId, shouldHide) {
+        const hiddenSet = new Set(this.getHiddenEntities());
+        if (shouldHide) {
+            hiddenSet.add(entityId);
+        } else {
+            hiddenSet.delete(entityId);
+        }
+        this.config.hidden_entities = Array.from(hiddenSet);
+        localStorage.setItem(this.configHiddenKey, JSON.stringify(this.config.hidden_entities));
+    }
+
     getCalendarName(entityId) {
         const calendar = this.availableCalendars?.find(cal => cal.entity_id === entityId);
         if (calendar?.name) return calendar.name;
@@ -381,11 +424,26 @@ class CalendarWeekCard extends HTMLElement {
             row.style.alignItems = "center";
             row.style.gap = "12px";
 
-            const label = document.createElement("span");
-            label.textContent = this.getCalendarName(entity);
-            label.style.flex = "1";
-            label.style.fontWeight = "500";
-            label.style.color = "#555";
+            const toggle = document.createElement("input");
+            toggle.type = "checkbox";
+            toggle.checked = !this.isEntityHidden(entity);
+            toggle.style.width = "16px";
+            toggle.style.height = "16px";
+            toggle.style.cursor = "pointer";
+
+            const name = document.createElement("span");
+            name.textContent = this.getCalendarName(entity);
+            name.style.flex = "1";
+            name.style.fontWeight = "500";
+            name.style.color = "#555";
+
+            const toggleLabel = document.createElement("label");
+            toggleLabel.style.display = "flex";
+            toggleLabel.style.alignItems = "center";
+            toggleLabel.style.gap = "8px";
+            toggleLabel.style.flex = "1";
+            toggleLabel.appendChild(toggle);
+            toggleLabel.appendChild(name);
 
             const picker = document.createElement("input");
             picker.type = "color";
@@ -395,13 +453,30 @@ class CalendarWeekCard extends HTMLElement {
             picker.style.border = "none";
             picker.style.borderRadius = "0px";
             picker.style.cursor = "pointer";
+            picker.disabled = this.isEntityHidden(entity);
+            picker.style.opacity = picker.disabled ? "0.5" : "1";
             picker.addEventListener("input", e => {
                 this.config.colors[entity] = e.target.value;
                 localStorage.setItem("calendar-week-card-colors", JSON.stringify(this.config.colors));
                 this.renderList(this.lastEvents);
             });
 
-            row.appendChild(label);
+            const applyVisibility = hidden => {
+                picker.disabled = hidden;
+                picker.style.opacity = hidden ? "0.5" : "1";
+                this.renderList(this.lastEvents);
+                if (!hidden && this._hass) {
+                    this.loadEvents(this._hass);
+                }
+            };
+
+            toggle.addEventListener("change", e => {
+                const hidden = !e.target.checked;
+                this.setEntityHidden(entity, hidden);
+                applyVisibility(hidden);
+            });
+
+            row.appendChild(toggleLabel);
             row.appendChild(picker);
             list.appendChild(row);
         });
@@ -412,8 +487,18 @@ class CalendarWeekCard extends HTMLElement {
         Object.assign(donateSection.style, {
             marginTop: "8px",
             display: "flex",
-            justifyContent: "center"
+            justifyContent: "center",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "6px",
+            textAlign: "center"
         });
+
+        const supportText = document.createElement("span");
+        supportText.textContent = "Like it? Support me via PayPal:";
+        supportText.style.color = "#555";
+        supportText.style.fontSize = "0.9em";
+        donateSection.appendChild(supportText);
 
         const donateLink = document.createElement("a");
         donateLink.href = "https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4";
