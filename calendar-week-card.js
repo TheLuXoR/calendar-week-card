@@ -180,7 +180,6 @@ class CalendarWeekCard extends HTMLElement {
             }
             .event {
                 border-radius: 10px;
-                padding: 6px 8px;
                 font-size: 12px;
                 line-height: 1.3;
                 overflow: hidden;
@@ -189,6 +188,8 @@ class CalendarWeekCard extends HTMLElement {
                 border: 1px solid rgba(255, 255, 255, 0.35);
                 backdrop-filter: saturate(130%);
                 transition: box-shadow 0.2s ease, transform 0.2s ease;
+                box-sizing: border-box;
+                padding: 0;
             }
             .event:hover {
                 transform: translateY(-1px);
@@ -197,9 +198,24 @@ class CalendarWeekCard extends HTMLElement {
             .event.timed-event {
                 position: absolute;
             }
+            .event-surface {
+                padding: 6px 8px;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                gap: 2px;
+            }
+            .event.timed-event .event-surface {
+                padding: 4px 8px;
+                gap: 3px;
+            }
             .event.all-day-event {
                 position: relative;
                 font-weight: 600;
+            }
+            .event.all-day-event .event-surface {
+                padding: 8px 10px;
             }
             .event-title {
                 font-weight: 600;
@@ -426,6 +442,8 @@ class CalendarWeekCard extends HTMLElement {
                 const baseColor = this.config.colors[ev.calendar] || ev.color || "#4287f5";
                 const eventDiv = document.createElement("div");
                 eventDiv.className = "event all-day-event";
+                const eventSurface = document.createElement("div");
+                eventSurface.className = "event-surface";
                 const gradientStart = this.mixColor(baseColor, "#000000", 0.15) || baseColor;
                 const gradientEnd = this.mixColor(baseColor, "#ffffff", 0.55) || baseColor;
                 eventDiv.style.background = `linear-gradient(140deg, ${gradientStart}, ${gradientEnd})`;
@@ -435,7 +453,8 @@ class CalendarWeekCard extends HTMLElement {
                 const titleEl = document.createElement("div");
                 titleEl.className = "event-title";
                 titleEl.textContent = ev.title;
-                eventDiv.appendChild(titleEl);
+                eventSurface.appendChild(titleEl);
+                eventDiv.appendChild(eventSurface);
 
                 eventDiv.addEventListener("click", () => this.showEventDialog(ev));
                 allDayContainer.appendChild(eventDiv);
@@ -478,6 +497,8 @@ class CalendarWeekCard extends HTMLElement {
                 eventDiv.style.borderColor = this.mixColor(baseColor, "#ffffff", 0.25) || "rgba(255,255,255,0.35)";
                 eventDiv.style.color = this.getReadableTextColor(gradientStart);
 
+                const eventSurface = document.createElement("div");
+                eventSurface.className = "event-surface";
                 const startStr = ev.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
                 const endStr = ev.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
                 const titleEl = document.createElement("div");
@@ -488,8 +509,9 @@ class CalendarWeekCard extends HTMLElement {
                 timeEl.className = "event-time";
                 timeEl.textContent = `${startStr} – ${endStr}`;
 
-                eventDiv.appendChild(titleEl);
-                eventDiv.appendChild(timeEl);
+                eventSurface.appendChild(titleEl);
+                eventSurface.appendChild(timeEl);
+                eventDiv.appendChild(eventSurface);
 
                 eventDiv.addEventListener("click", () => this.showEventDialog(ev));
 
