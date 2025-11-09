@@ -17,6 +17,62 @@ import {
     rgbToString
 } from "./colors.js";
 
+const THEME_VARIABLES = {
+    light: {
+        "--cwc-primary-text": "#1f1f1f",
+        "--cwc-secondary-text": "#5f6368",
+        "--cwc-background": "#ffffff",
+        "--cwc-surface": "#ffffff",
+        "--cwc-surface-alt": "#f5f7fa",
+        "--cwc-week-bg": "#ffffff",
+        "--cwc-timebar-bg": "#f5f7fa",
+        "--cwc-timebar-text": "#1f1f1f",
+        "--cwc-border-color": "rgba(0, 0, 0, 0.08)",
+        "--cwc-button-bg": "rgba(66, 135, 245, 0.08)",
+        "--cwc-button-bg-hover": "rgba(66, 135, 245, 0.15)",
+        "--cwc-settings-icon-hover": "rgba(0, 0, 0, 0.08)",
+        "--cwc-event-shadow": "5px 3px 5px rgba(15, 15, 30, 0.7)",
+        "--cwc-event-border": "rgba(255, 255, 255, 0.35)",
+        "--cwc-time-line-glow": "rgba(255, 59, 48, 0.35)",
+        "--cwc-time-line-dot-border": "rgba(255, 255, 255, 0.85)",
+        "--cwc-overlay": "rgba(0, 0, 0, 0.5)",
+        "--cwc-dialog-background": "#ffffff",
+        "--cwc-dialog-text": "#333333",
+        "--cwc-dialog-muted": "#555555",
+        "--cwc-dialog-divider": "rgba(0, 0, 0, 0.08)",
+        "--cwc-today-glow": "rgba(77, 150, 255, 0.18)"
+    },
+    dark: {
+        "--cwc-primary-text": "#f5f7ff",
+        "--cwc-secondary-text": "#c4c8d2",
+        "--cwc-background": "#11151c",
+        "--cwc-surface": "#181c24",
+        "--cwc-surface-alt": "#1f2430",
+        "--cwc-week-bg": "#181c24",
+        "--cwc-timebar-bg": "#1f2430",
+        "--cwc-timebar-text": "#f5f7ff",
+        "--cwc-border-color": "rgba(255, 255, 255, 0.12)",
+        "--cwc-button-bg": "rgba(77, 150, 255, 0.12)",
+        "--cwc-button-bg-hover": "rgba(77, 150, 255, 0.2)",
+        "--cwc-settings-icon-hover": "rgba(255, 255, 255, 0.08)",
+        "--cwc-event-shadow": "3px 2px 8px rgba(0, 0, 0, 0.85)",
+        "--cwc-event-border": "rgba(255, 255, 255, 0.25)",
+        "--cwc-time-line-glow": "rgba(255, 92, 70, 0.55)",
+        "--cwc-time-line-dot-border": "rgba(17, 21, 28, 0.95)",
+        "--cwc-overlay": "rgba(0, 0, 0, 0.65)",
+        "--cwc-dialog-background": "#1b1f2a",
+        "--cwc-dialog-text": "#e3e8ff",
+        "--cwc-dialog-muted": "#b0b6c9",
+        "--cwc-dialog-divider": "rgba(255, 255, 255, 0.12)",
+        "--cwc-today-glow": "rgba(77, 150, 255, 0.35)"
+    }
+};
+
+const THEME_ACCENT_FALLBACK = {
+    light: "#ff3b30",
+    dark: "#ff453a"
+};
+
 export class CalendarWeekCard extends HTMLElement {
     constructor() {
         super();
@@ -85,12 +141,6 @@ export class CalendarWeekCard extends HTMLElement {
 
         this.language = this.resolveLanguage(this.languagePreference);
         this.config.language = this.languagePreference;
-
-        const storedThemePreference = localStorage.getItem("calendar-week-card-theme");
-        const configTheme = typeof this.config.theme === "string" ? this.config.theme : null;
-        const initialThemePreference = configTheme || storedThemePreference || "system";
-        this.themePreference = ["light", "dark", "system"].includes(initialThemePreference) ? initialThemePreference : "system";
-        this.theme = this.resolveTheme(this.themePreference);
         localStorage.setItem("calendar-week-card-language", this.languagePreference);
 
         this.refreshDisplay();
@@ -109,6 +159,36 @@ export class CalendarWeekCard extends HTMLElement {
         return "light";
     }
 
+    readCssColor(variable, fallback) {
+        if (typeof window === "undefined" || typeof window.getComputedStyle !== "function") {
+            return fallback;
+        }
+
+        try {
+            const target = this.isConnected ? this : document.documentElement;
+            const computed = window.getComputedStyle(target);
+            const value = computed.getPropertyValue(variable);
+            return value ? value.trim() || fallback : fallback;
+        } catch (err) {
+            return fallback;
+        }
+    }
+
+    initializeThemePreference() {
+        let storedThemePreference = null;
+        try {
+            storedThemePreference = localStorage.getItem("calendar-week-card-theme");
+        } catch (err) {
+            storedThemePreference = null;
+        }
+        const configTheme = typeof this.config?.theme === "string" ? this.config.theme : null;
+        const initialThemePreference = storedThemePreference || configTheme || "system";
+        const validThemes = ["light", "dark", "system"];
+        this.themePreference = validThemes.includes(initialThemePreference) ? initialThemePreference : "system";
+        this.config.theme = this.themePreference;
+        this.theme = this.resolveTheme(this.themePreference);
+    }
+
     updateThemePreference(preference, { persist = true, refresh = true } = {}) {
         const valid = ["light", "dark", "system"];
         const normalized = valid.includes(preference) ? preference : "system";
@@ -116,7 +196,11 @@ export class CalendarWeekCard extends HTMLElement {
         this.config.theme = normalized;
 
         if (persist) {
-            localStorage.setItem("calendar-week-card-theme", normalized);
+            try {
+                localStorage.setItem("calendar-week-card-theme", normalized);
+            } catch (err) {
+                // Ignore persistence errors
+            }
         }
 
         this.updateSystemThemeListener();
@@ -133,11 +217,23 @@ export class CalendarWeekCard extends HTMLElement {
         this.classList.toggle("theme-dark", theme === "dark");
         this.classList.toggle("theme-light", theme !== "dark");
 
+        this.applyThemeVariables(theme);
+
         if (!this.shadowRoot || !refresh) {
             return;
         }
 
         this.refreshDisplay();
+    }
+
+    applyThemeVariables(theme) {
+        const palette = THEME_VARIABLES[theme] || THEME_VARIABLES.light;
+        Object.entries(palette).forEach(([variable, value]) => {
+            this.style.setProperty(variable, value);
+        });
+
+        const accent = this.readCssColor("--accent-color", THEME_ACCENT_FALLBACK[theme] || THEME_ACCENT_FALLBACK.light);
+        this.style.setProperty("--cwc-time-line-color", accent || THEME_ACCENT_FALLBACK[theme] || THEME_ACCENT_FALLBACK.light);
     }
 
     updateSystemThemeListener() {
@@ -160,6 +256,7 @@ export class CalendarWeekCard extends HTMLElement {
         const handler = event => {
             if (this.themePreference === "system") {
                 this.theme = event.matches ? "dark" : "light";
+                this.applyThemeVariables(this.theme);
                 if (this.shadowRoot) {
                     this.classList.toggle("theme-dark", this.theme === "dark");
                     this.classList.toggle("theme-light", this.theme !== "dark");
@@ -252,6 +349,7 @@ export class CalendarWeekCard extends HTMLElement {
         this.config.language = this.languagePreference;
         this.themePreference = "system";
         this.theme = this.resolveTheme(this.themePreference);
+        this.config.theme = this.themePreference;
         this.config.today_highlight_color = "#4D96FF";
         this.config.highlight_today = true;
 
@@ -280,6 +378,8 @@ export class CalendarWeekCard extends HTMLElement {
         this.dynamicEntities = [];
         this.availableCalendars = [];
         this._entitiesPromise = undefined;
+
+        this.initializeThemePreference();
 
         // Load saved colors
         const savedColors = localStorage.getItem("calendar-week-card-colors");
@@ -339,18 +439,19 @@ export class CalendarWeekCard extends HTMLElement {
                 background: var(--cwc-background, var(--card-background-color, #ffffff));
                 --cwc-primary-text: var(--primary-text-color, #1f1f1f);
                 --cwc-secondary-text: var(--secondary-text-color, #5f6368);
-                --cwc-background: var(--card-background-color, #ffffff);
-                --cwc-surface: var(--card-background-color, #ffffff);
+                --cwc-background: #ffffff;
+                --cwc-surface: #ffffff;
                 --cwc-surface-alt: #f5f7fa;
-                --cwc-border-color: var(--divider-color, rgba(0, 0, 0, 0.08));
-                --cwc-timebar-bg: var(--cwc-surface-alt);
-                --cwc-week-bg: var(--cwc-surface);
+                --cwc-week-bg: #ffffff;
+                --cwc-timebar-bg: #f5f7fa;
+                --cwc-timebar-text: var(--primary-text-color, #1f1f1f);
+                --cwc-border-color: rgba(0, 0, 0, 0.08);
                 --cwc-button-bg: rgba(66, 135, 245, 0.08);
                 --cwc-button-bg-hover: rgba(66, 135, 245, 0.15);
                 --cwc-settings-icon-hover: rgba(0, 0, 0, 0.08);
                 --cwc-event-shadow: 5px 3px 5px rgba(15, 15, 30, 0.7);
                 --cwc-event-border: rgba(255, 255, 255, 0.35);
-                --cwc-time-line-color: var(--accent-color, #ff3b30);
+                --cwc-time-line-color: #ff3b30;
                 --cwc-time-line-glow: rgba(255, 59, 48, 0.35);
                 --cwc-time-line-dot-border: rgba(255, 255, 255, 0.85);
                 --cwc-overlay: rgba(0, 0, 0, 0.5);
@@ -364,17 +465,18 @@ export class CalendarWeekCard extends HTMLElement {
                 --cwc-primary-text: #f5f7ff;
                 --cwc-secondary-text: #c4c8d2;
                 --cwc-background: #11151c;
-                --cwc-surface: rgba(24, 28, 36, 0.95);
+                --cwc-surface: #181c24;
                 --cwc-surface-alt: #1f2430;
+                --cwc-week-bg: #181c24;
+                --cwc-timebar-bg: #1f2430;
+                --cwc-timebar-text: #f5f7ff;
                 --cwc-border-color: rgba(255, 255, 255, 0.12);
-                --cwc-timebar-bg: var(--cwc-surface-alt);
-                --cwc-week-bg: var(--cwc-surface);
                 --cwc-button-bg: rgba(77, 150, 255, 0.12);
                 --cwc-button-bg-hover: rgba(77, 150, 255, 0.2);
                 --cwc-settings-icon-hover: rgba(255, 255, 255, 0.08);
                 --cwc-event-shadow: 3px 2px 8px rgba(0, 0, 0, 0.85);
                 --cwc-event-border: rgba(255, 255, 255, 0.25);
-                --cwc-time-line-color: var(--accent-color, #ff453a);
+                --cwc-time-line-color: #ff453a;
                 --cwc-time-line-glow: rgba(255, 92, 70, 0.55);
                 --cwc-time-line-dot-border: rgba(17, 21, 28, 0.95);
                 --cwc-overlay: rgba(0, 0, 0, 0.65);
@@ -455,7 +557,7 @@ export class CalendarWeekCard extends HTMLElement {
                 width: 100%;
                 height: 100%;
                 overflow: hidden;
-                background: var(--cwc-surface);
+                background: var(--cwc-week-bg);
                 min-height: 0;
             }
             .time-bar {
@@ -472,7 +574,7 @@ export class CalendarWeekCard extends HTMLElement {
                 position: absolute;
                 left: 6px;
                 font-size: 11px;
-                color: var(--cwc-primary-text);
+                color: var(--cwc-timebar-text, var(--cwc-primary-text));
                 transform: translateY(-50%);
             }
             .week-grid {
