@@ -20,7 +20,7 @@ export const TRANSLATIONS = {
         systemDefault: "System default",
         donateWithPaypal: "Donate with PayPal",
         highlightToday: "Highlight current day",
-        highlightTodayDescription: "Shade today's column with a subtle gradient.",
+        highlightTodayDescription: "Shade today's column with a subtle color.",
         todayHighlightColor: "Current day highlight",
         themeLabel: "Appearance",
         themeSystem: "Match system",
