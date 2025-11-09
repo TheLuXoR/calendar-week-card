@@ -1,6 +1,6 @@
 {
   "name": "Calendar Week Card",
-  "filename": "dist/calendar-week-card.js",
+  "filename": "calendar-week-card.js",
   "render_readme": true,
   "content_in_root": false,
   "country": "DE",

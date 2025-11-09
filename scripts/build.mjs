@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, readFile, writeFile, copyFile } from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -6,7 +6,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
 const srcDir = path.join(rootDir, "src");
 const distDir = path.join(rootDir, "dist");
+
+// dist output (wie vorher)
 const outputFile = path.join(distDir, "calendar-week-card.js");
+
+// zusätzlich: Ziel für HACS (Repo-Root)
+const hacsOutputFile = path.join(rootDir, "calendar-week-card.js");
 
 function stripExports(source) {
     return source
@@ -62,7 +67,11 @@ async function build() {
     await mkdir(distDir, { recursive: true });
     await writeFile(outputFile, sections.join("\n\n") + "\n", "utf8");
 
+    // *** HIER: Datei zusätzlich an HACS-Ziel kopieren ***
+    await copyFile(outputFile, hacsOutputFile);
+
     console.log(`Built ${path.relative(rootDir, outputFile)}`);
+    console.log(`Copied for HACS → ${path.relative(rootDir, hacsOutputFile)}`);
 }
 
 build().catch(err => {
