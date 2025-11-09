@@ -779,6 +779,19 @@ export class CalendarWeekCard extends HTMLElement {
                 left: 1px;
                 right: 3px;
             }
+            .day-column .time-line::after {
+                content: "";
+                position: absolute;
+                top: 50%;
+                left: -6px;
+                transform: translate(-50%, -50%);
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                background: var(--cwc-time-line-color);
+                border: 2px solid var(--cwc-time-line-dot-border);
+                box-shadow: 0 0 12px var(--cwc-time-line-glow);
+            }
         </style>
 
         <div class="header-bar">
@@ -1672,17 +1685,6 @@ export class CalendarWeekCard extends HTMLElement {
         const highlightDescription = document.createElement("span");
         highlightDescription.style.fontSize = "0.85em";
 
-        const highlightColorRow = document.createElement("div");
-        Object.assign(highlightColorRow.style, {
-            display: "flex",
-            alignItems: "center",
-            gap: "12px"
-        });
-
-        const highlightColorLabel = document.createElement("span");
-        highlightColorLabel.style.flex = "1";
-        highlightColorLabel.style.fontWeight = "500";
-
         const highlightColorPicker = document.createElement("input");
         highlightColorPicker.type = "color";
         highlightColorPicker.value = this.getHexColor(this.config.today_highlight_color || "#4D96FF");
@@ -1691,6 +1693,7 @@ export class CalendarWeekCard extends HTMLElement {
         highlightColorPicker.style.border = "1px solid transparent";
         highlightColorPicker.style.borderRadius = "8px";
         highlightColorPicker.style.cursor = "pointer";
+        highlightColorPicker.style.alignSelf = "flex-start";
 
         const applyHighlightState = enabled => {
             highlightColorPicker.disabled = !enabled;
@@ -1715,12 +1718,9 @@ export class CalendarWeekCard extends HTMLElement {
             this.renderList(this.lastEvents);
         });
 
-        highlightColorRow.appendChild(highlightColorLabel);
-        highlightColorRow.appendChild(highlightColorPicker);
-
         highlightSection.appendChild(highlightHeader);
         highlightSection.appendChild(highlightDescription);
-        highlightSection.appendChild(highlightColorRow);
+        highlightSection.appendChild(highlightColorPicker);
 
         content.appendChild(highlightSection);
 
@@ -1871,7 +1871,6 @@ export class CalendarWeekCard extends HTMLElement {
             highlightSection.style.border = `1px solid ${palette.border}`;
             highlightLabel.style.color = palette.text;
             highlightDescription.style.color = palette.muted;
-            highlightColorLabel.style.color = palette.text;
             highlightColorPicker.style.border = `1px solid ${palette.border}`;
             highlightColorPicker.style.background = palette.inputBackground;
             supportText.style.color = palette.muted;
@@ -1918,7 +1917,6 @@ export class CalendarWeekCard extends HTMLElement {
             trimDescription.textContent = this.t("trimUnusedHoursDescription");
             highlightLabel.textContent = this.t("highlightToday");
             highlightDescription.textContent = this.t("highlightTodayDescription");
-            highlightColorLabel.textContent = this.t("todayHighlightColor");
             if (resetDescription) {
                 resetDescription.textContent = this.t("resetDataDescription");
             }
