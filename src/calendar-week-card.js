@@ -553,6 +553,7 @@ export class CalendarWeekCard extends HTMLElement {
                 font-weight: 600;
                 padding: 0 6px 8px;
                 color: var(--cwc-secondary-text);
+                border-bottom: 1px solid var(--cwc-border-color);
             }
             .week-header div {
                 display: flex;
@@ -777,19 +778,6 @@ export class CalendarWeekCard extends HTMLElement {
             .day-column .time-line {
                 left: 1px;
                 right: 3px;
-            }
-            .day-column .time-line::after {
-                content: "";
-                position: absolute;
-                top: 50%;
-                left: -6px;
-                transform: translate(-50%, -50%);
-                width: 12px;
-                height: 12px;
-                border-radius: 50%;
-                background: var(--cwc-time-line-color);
-                border: 2px solid var(--cwc-time-line-dot-border);
-                box-shadow: 0 0 12px var(--cwc-time-line-glow);
             }
         </style>
 
