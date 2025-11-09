@@ -1682,9 +1682,6 @@ export class CalendarWeekCard extends HTMLElement {
         highlightHeader.appendChild(highlightToggle);
         highlightHeader.appendChild(highlightLabel);
 
-        const highlightDescription = document.createElement("span");
-        highlightDescription.style.fontSize = "0.85em";
-
         const highlightColorPicker = document.createElement("input");
         highlightColorPicker.type = "color";
         highlightColorPicker.value = this.getHexColor(this.config.today_highlight_color || "#4D96FF");
@@ -1693,7 +1690,18 @@ export class CalendarWeekCard extends HTMLElement {
         highlightColorPicker.style.border = "1px solid transparent";
         highlightColorPicker.style.borderRadius = "8px";
         highlightColorPicker.style.cursor = "pointer";
-        highlightColorPicker.style.alignSelf = "flex-start";
+        highlightColorPicker.style.marginLeft = "auto";
+
+        const highlightDescriptionRow = document.createElement("div");
+        Object.assign(highlightDescriptionRow.style, {
+            display: "flex",
+            alignItems: "center",
+            gap: "12px"
+        });
+
+        const highlightDescription = document.createElement("span");
+        highlightDescription.style.flex = "1";
+        highlightDescription.style.fontSize = "0.85em";
 
         const applyHighlightState = enabled => {
             highlightColorPicker.disabled = !enabled;
@@ -1719,8 +1727,9 @@ export class CalendarWeekCard extends HTMLElement {
         });
 
         highlightSection.appendChild(highlightHeader);
-        highlightSection.appendChild(highlightDescription);
-        highlightSection.appendChild(highlightColorPicker);
+        highlightDescriptionRow.appendChild(highlightDescription);
+        highlightDescriptionRow.appendChild(highlightColorPicker);
+        highlightSection.appendChild(highlightDescriptionRow);
 
         content.appendChild(highlightSection);
 
