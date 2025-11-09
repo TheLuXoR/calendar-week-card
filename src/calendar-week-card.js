@@ -28,8 +28,8 @@ export class CalendarWeekCard extends HTMLElement {
         this.pixelsPerMinute = 1;
         this.timeAxisOffset = 0;
         this.timeViewportHeight = 24 * 60;
-        this.columnPaddingTop = 6;
-        this.columnPaddingBottom = 12;
+        this.columnPaddingTop = 0;
+        this.columnPaddingBottom = 0;
         this.allDayRowHeight = 22;
         this.allDayRowOverlap = 8;
         this.languagePreference = "system";
@@ -229,11 +229,8 @@ export class CalendarWeekCard extends HTMLElement {
                 display: flex;
                 width: 100%;
                 height: 100%;
-                border-radius: 16px;
-                border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.08));
                 overflow: hidden;
                 background: var(--card-background-color, #ffffff);
-                box-shadow: 0 12px 28px rgba(15, 15, 30, 0.12);
                 min-height: 0;
             }
             .time-bar {
@@ -260,18 +257,9 @@ export class CalendarWeekCard extends HTMLElement {
                 grid-template-columns: repeat(7, 1fr);
                 height: 100%;
                 width: 100%;
-                overflow: hidden;
+                overflow: visible;
                 background: linear-gradient(to bottom, rgba(249,249,249,0.9) 0%, rgba(255,255,255,0.95) 65%, rgba(245,247,250,0.9) 100%);
                 min-height: 0;
-            }
-            .night-overlay {
-                position: absolute;
-                left: 0;
-                right: 0;
-                top: 0;
-                bottom: 0;
-                pointer-events: none;
-                z-index: 0;
             }
             .day-column {
                 position: relative;
@@ -279,18 +267,16 @@ export class CalendarWeekCard extends HTMLElement {
                 background: transparent;
                 display: flex;
                 flex-direction: column;
-                padding: 6px 6px 12px;
+                padding: 0 3px 0 1px;
                 gap: 0;
                 box-sizing: border-box;
                 min-height: 0;
-                overflow: hidden;
+                overflow: visible;
                 z-index: 1;
             }
             .day-column::before {
                 content: "";
                 position: absolute;
-                inset: 2px;
-                border-radius: 12px;
                 background: transparent;
                 opacity: 0;
                 transition: opacity 0.25s ease;
@@ -313,7 +299,7 @@ export class CalendarWeekCard extends HTMLElement {
                 flex: 1;
                 width: 100%;
                 min-height: 0;
-                overflow: hidden;
+                overflow: visible;
             }
             .timed-events {
                 position: relative;
@@ -322,20 +308,12 @@ export class CalendarWeekCard extends HTMLElement {
                 min-height: 0;
                 z-index: 1;
             }
-            .night-block {
-                position: absolute;
-                left: 0;
-                right: 0;
-                background: linear-gradient(180deg, rgba(17, 27, 45, 0.12) 0%, rgba(17, 27, 45, 0.28) 100%);
-                border-radius: 12px;
-                pointer-events: none;
-            }
             .event {
-                border-radius: 10px;
+                border-radius: 6px;
                 font-size: 12px;
                 line-height: 1.3;
                 overflow: hidden;
-                box-shadow: 0 6px 14px rgba(15, 15, 30, 0.18);
+                box-shadow: 5px 3px 5px rgba(15, 15, 30, 0.7);
                 cursor: pointer;
                 border: 1px solid rgba(255, 255, 255, 0.35);
                 backdrop-filter: saturate(130%);
@@ -345,7 +323,7 @@ export class CalendarWeekCard extends HTMLElement {
             }
             .event:hover {
                 transform: translateY(-1px);
-                box-shadow: 0 10px 20px rgba(15, 15, 30, 0.22);
+                box-shadow: 6px 6px 6px rgba(15, 15, 30, 0.22);
             }
             .event.timed-event {
                 position: absolute;
@@ -465,7 +443,6 @@ export class CalendarWeekCard extends HTMLElement {
         <div class="week-body">
             <div class="time-bar"></div>
             <div class="week-grid">
-                <div class="night-overlay"></div>
                 ${[...Array(7)].map(() => `<div class="day-column"></div>`).join("")}
             </div>
         </div>
@@ -476,7 +453,6 @@ export class CalendarWeekCard extends HTMLElement {
         this.header = this.shadowRoot.querySelector(".week-header");
         this.titleLine = this.shadowRoot.querySelector(".title-line");
         this.dayColumns = this.shadowRoot.querySelectorAll(".day-column");
-        this.nightOverlay = this.shadowRoot.querySelector(".night-overlay");
 
         this.colorResolver = document.createElement("div");
         this.colorResolver.style.display = "none";
@@ -672,11 +648,11 @@ export class CalendarWeekCard extends HTMLElement {
         this.updateTimeMetrics();
 
         const highlightEnabled = this.config.highlight_today !== false;
-        const highlightColor = this.getHexColor(this.config.today_highlight_color || "#4D96FF");
-        const highlightMid = this.colorWithAlpha(this.mixColor(highlightColor, "#ffffff", 0.25) || highlightColor, 0.5);
-        const highlightCore = this.colorWithAlpha(highlightColor, 0.65);
-        const highlightEdge = this.colorWithAlpha(highlightColor, 0);
-        const highlightGradient = `linear-gradient(90deg, ${highlightEdge} 0%, ${highlightMid} 15%, ${highlightCore} 50%, ${highlightMid} 85%, ${highlightEdge} 100%)`;
+        const highlightEdgeColor = this.getHexColor(this.config.today_highlight_color || "#4D96FF");
+        const highlightMidColor = this.colorWithAlpha(this.mixColor(highlightEdgeColor, "#ffffff", 0.25) || highlightEdgeColor, 0.5);
+        const highlightCore = this.colorWithAlpha(highlightEdgeColor, 0);
+        const highlightEdge = this.colorWithAlpha(highlightEdgeColor, 0.2);
+        const highlightGradient = `linear-gradient(90deg, ${highlightEdge} 0%, ${highlightMidColor} 10%, ${highlightCore} 50%, ${highlightMidColor} 90%, ${highlightEdge} 100%)`;
         const now = new Date();
         const todayOffset = (now.getDay() + 6) % 7;
         const shouldHighlightToday = highlightEnabled && this.weekOffset === 0;
@@ -687,8 +663,6 @@ export class CalendarWeekCard extends HTMLElement {
                 dayColumn.style.setProperty("--calendar-week-card-today-gradient", highlightGradient);
             }
         }
-
-        this.renderNightOverlay();
 
         const allDayOverlap = Math.min(this.allDayRowOverlap, this.allDayRowHeight - 4);
         const allDayRowStep = Math.max(this.allDayRowHeight - allDayOverlap, 4);
@@ -832,38 +806,6 @@ export class CalendarWeekCard extends HTMLElement {
         this.pixelsPerMinute = effectiveHeight / (24 * 60);
         this.timeAxisOffset = this.columnPaddingTop;
     }
-
-    renderNightOverlay() {
-        const overlay = this.nightOverlay;
-        if (!overlay) return;
-
-        overlay.innerHTML = "";
-
-        const ppm = this.pixelsPerMinute;
-        if (!ppm) return;
-
-        overlay.style.top = `${this.columnPaddingTop}px`;
-        overlay.style.bottom = `${this.columnPaddingBottom}px`;
-        overlay.style.left = "0";
-        overlay.style.right = "0";
-
-        const segments = [
-            { start: 0, end: 6 },
-            { start: 22, end: 24 }
-        ];
-
-        segments.forEach(({ start, end }) => {
-            if (end <= start) return;
-            const block = document.createElement("div");
-            block.className = "night-block";
-            const top = start * 60 * ppm;
-            const height = Math.max((end - start) * 60 * ppm, 1);
-            block.style.top = `${top}px`;
-            block.style.height = `${height}px`;
-            overlay.appendChild(block);
-        });
-    }
-
 
     colorWithAlpha(color, alpha = 1) {
         const rgb = this.getRGB(color);
