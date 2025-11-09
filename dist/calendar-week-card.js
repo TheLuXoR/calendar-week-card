@@ -639,6 +639,8 @@ class CalendarWeekCard extends HTMLElement {
         this.config.today_highlight_color = "#4D96FF";
         this.config.highlight_today = true;
 
+        this.assignDefaultColors(this.getActiveEntities());
+
         this.updateSystemThemeListener();
         this.applyTheme({ refresh: false });
         this.refreshDisplay();
@@ -723,10 +725,10 @@ class CalendarWeekCard extends HTMLElement {
                 --cwc-secondary-text: var(--secondary-text-color, #5f6368);
                 --cwc-background: var(--card-background-color, #ffffff);
                 --cwc-surface: var(--card-background-color, #ffffff);
-                --cwc-surface-alt: rgba(249, 249, 249, 0.95);
+                --cwc-surface-alt: #f5f7fa;
                 --cwc-border-color: var(--divider-color, rgba(0, 0, 0, 0.08));
-                --cwc-timebar-bg: linear-gradient(180deg, rgba(245, 247, 250, 0.9) 0%, rgba(235, 238, 242, 0.8) 100%);
-                --cwc-week-bg: linear-gradient(to bottom, rgba(249, 249, 249, 0.9) 0%, rgba(255, 255, 255, 0.95) 65%, rgba(245, 247, 250, 0.9) 100%);
+                --cwc-timebar-bg: var(--cwc-surface-alt);
+                --cwc-week-bg: var(--cwc-surface);
                 --cwc-button-bg: rgba(66, 135, 245, 0.08);
                 --cwc-button-bg-hover: rgba(66, 135, 245, 0.15);
                 --cwc-settings-icon-hover: rgba(0, 0, 0, 0.08);
@@ -747,10 +749,10 @@ class CalendarWeekCard extends HTMLElement {
                 --cwc-secondary-text: #c4c8d2;
                 --cwc-background: #11151c;
                 --cwc-surface: rgba(24, 28, 36, 0.95);
-                --cwc-surface-alt: rgba(34, 39, 48, 0.95);
+                --cwc-surface-alt: #1f2430;
                 --cwc-border-color: rgba(255, 255, 255, 0.12);
-                --cwc-timebar-bg: linear-gradient(180deg, rgba(36, 40, 50, 0.95) 0%, rgba(26, 30, 38, 0.9) 100%);
-                --cwc-week-bg: linear-gradient(to bottom, rgba(28, 34, 44, 0.92) 0%, rgba(20, 24, 32, 0.92) 65%, rgba(18, 21, 30, 0.95) 100%);
+                --cwc-timebar-bg: var(--cwc-surface-alt);
+                --cwc-week-bg: var(--cwc-surface);
                 --cwc-button-bg: rgba(77, 150, 255, 0.12);
                 --cwc-button-bg-hover: rgba(77, 150, 255, 0.2);
                 --cwc-settings-icon-hover: rgba(255, 255, 255, 0.08);
@@ -896,7 +898,7 @@ class CalendarWeekCard extends HTMLElement {
                 border-radius: 12px;
             }
             .day-column.today-column::before {
-                background: var(--calendar-week-card-today-gradient, linear-gradient(90deg, rgba(77, 150, 255, 0) 0%, rgba(77, 150, 255, 0.48) 15%, rgba(77, 150, 255, 0.6) 50%, rgba(77, 150, 255, 0.48) 85%, rgba(77, 150, 255, 0) 100%));
+                background: var(--calendar-week-card-today-overlay, rgba(77, 150, 255, 0.16));
                 opacity: 1;
                 box-shadow: 0 0 18px 6px var(--cwc-today-glow);
             }
@@ -1120,6 +1122,7 @@ class CalendarWeekCard extends HTMLElement {
         monday.setHours(0, 0, 0, 0);
         const sunday = new Date(monday);
         sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
         return [monday, sunday];
     }
 
@@ -1228,7 +1231,7 @@ class CalendarWeekCard extends HTMLElement {
         this.lastEvents = events;
         this.dayColumns.forEach(col => {
             col.classList.remove("today-column");
-            col.style.removeProperty("--calendar-week-card-today-gradient");
+            col.style.removeProperty("--calendar-week-card-today-overlay");
             col.innerHTML = `
                 <div class="timed-viewport">
                     <div class="timed-events"></div>
@@ -1271,12 +1274,8 @@ class CalendarWeekCard extends HTMLElement {
         const highlightEnabled = this.config.highlight_today !== false;
         const highlightEdgeColor = this.getHexColor(this.config.today_highlight_color || "#4D96FF");
         const isDarkTheme = this.theme === "dark";
-        const highlightMidMix = this.mixColor(highlightEdgeColor, "#ffffff", isDarkTheme ? 0.15 : 0.25) || highlightEdgeColor;
-        const highlightEdgeMix = this.mixColor(highlightEdgeColor, "#ffffff", isDarkTheme ? 0.35 : 0.75) || highlightEdgeColor;
-        const highlightMidColor = this.colorWithAlpha(highlightMidMix, isDarkTheme ? 0.55 : 0.5);
-        const highlightCore = this.colorWithAlpha(highlightEdgeColor, isDarkTheme ? 0.25 : 0);
-        const highlightEdge = this.colorWithAlpha(highlightEdgeMix, isDarkTheme ? 0.4 : 0.2);
-        const highlightGradient = `linear-gradient(90deg, ${highlightEdge} 0%, ${highlightMidColor} 12%, ${highlightCore} 50%, ${highlightMidColor} 88%, ${highlightEdge} 100%)`;
+        const highlightMix = this.mixColor(highlightEdgeColor, "#ffffff", isDarkTheme ? 0.12 : 0.4) || highlightEdgeColor;
+        const highlightOverlay = this.colorWithAlpha(highlightMix, isDarkTheme ? 0.28 : 0.2);
         const now = new Date();
         const todayOffset = (now.getDay() + 6) % 7;
         const shouldHighlightToday = highlightEnabled && this.weekOffset === 0;
@@ -1284,7 +1283,7 @@ class CalendarWeekCard extends HTMLElement {
         for (const { dayColumn, dayOffset } of dayRenderData) {
             if (shouldHighlightToday && dayOffset === todayOffset) {
                 dayColumn.classList.add("today-column");
-                dayColumn.style.setProperty("--calendar-week-card-today-gradient", highlightGradient);
+                dayColumn.style.setProperty("--calendar-week-card-today-overlay", highlightOverlay);
             }
         }
 
