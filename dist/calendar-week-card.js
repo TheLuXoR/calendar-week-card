@@ -32,7 +32,7 @@ const TRANSLATIONS = {
         resetDataDescription: "Remove saved colors, language, highlight, and theme preferences.",
         resetConfirmation: "Clear stored calendar settings? This cannot be undone.",
         trimUnusedHours: "Trim blank hours",
-        trimUnusedHoursDescription: "Hide early and late hours without events while keeping 20% of the unused time visible."
+        trimUnusedHoursDescription: "Hide early and late hours without events."
     },
     de: {
         today: "Heute",
@@ -62,7 +62,7 @@ const TRANSLATIONS = {
         resetDataDescription: "Entfernt gespeicherte Farben, Sprache, Hervorhebung und Theme-Einstellungen.",
         resetConfirmation: "Gespeicherte Kalender-Einstellungen wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
         trimUnusedHours: "Unbenutzte Randstunden kürzen",
-        trimUnusedHoursDescription: "Blendet frühe und späte Stunden ohne Termine aus und lässt 20 % der freien Zeit sichtbar."
+        trimUnusedHoursDescription: "Blendet frühe und späte Stunden ohne Termine aus."
     },
     fr: {
         today: "Aujourd'hui",
@@ -92,7 +92,7 @@ const TRANSLATIONS = {
         resetDataDescription: "Supprime les couleurs, la langue, la mise en évidence et le thème sauvegardés.",
         resetConfirmation: "Effacer les paramètres enregistrés du calendrier ? Cette action est irréversible.",
         trimUnusedHours: "Réduire les heures vides",
-        trimUnusedHoursDescription: "Masque les heures matinales et tardives sans événements tout en laissant 20 % du temps inutilisé visible."
+        trimUnusedHoursDescription: "Masque les heures matinales et tardives sans événements."
     },
     es: {
         today: "Hoy",
@@ -122,7 +122,7 @@ const TRANSLATIONS = {
         resetDataDescription: "Elimina los colores, el idioma, el resaltado y el tema guardados.",
         resetConfirmation: "¿Borrar la configuración guardada del calendario? Esta acción no se puede deshacer.",
         trimUnusedHours: "Recortar horas vacías",
-        trimUnusedHoursDescription: "Oculta las horas tempranas y tardías sin eventos dejando visible el 20 % del tiempo sin usar."
+        trimUnusedHoursDescription: "Oculta las horas tempranas y tardías sin eventos."
     },
     it: {
         today: "Oggi",
@@ -152,7 +152,7 @@ const TRANSLATIONS = {
         resetDataDescription: "Rimuove colori, lingua, evidenziazione e tema salvati.",
         resetConfirmation: "Eliminare le impostazioni salvate del calendario? L'operazione è irreversibile.",
         trimUnusedHours: "Riduci ore vuote",
-        trimUnusedHoursDescription: "Nasconde le ore mattutine e serali senza eventi lasciando visibile il 20% del tempo inutilizzato."
+        trimUnusedHoursDescription: "Nasconde le ore mattutine e serali senza eventi."
     },
     nl: {
         today: "Vandaag",
@@ -182,7 +182,7 @@ const TRANSLATIONS = {
         resetDataDescription: "Verwijdert opgeslagen kleuren, taal, markering en thema-instellingen.",
         resetConfirmation: "Opgeslagen kalenderinstellingen wissen? Dit kan niet ongedaan worden gemaakt.",
         trimUnusedHours: "Lege uren inkorten",
-        trimUnusedHoursDescription: "Verbergt vroege en late uren zonder afspraken en laat 20% van de vrije tijd zichtbaar."
+        trimUnusedHoursDescription: "Verbergt vroege en late uren zonder afspraken."
     }
 };
 

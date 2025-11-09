@@ -31,6 +31,12 @@ A modern Lovelace card that renders a weekly calendar grid for Home Assistant. T
 
 ## Lovelace configuration
 
+### Minimal setup
+```yaml
+type: custom:calendar-week-card
+```
+
+### Configurable setup - !comming soon!
 ```yaml
 type: custom:calendar-week-card
 title: Family calendar
@@ -58,8 +64,7 @@ The command concatenates the source modules under `src/` into `dist/calendar-wee
 
 ## Support the project
 
-If this card saves you time, please consider supporting the development with a small donation.
-
+you like it? you could support me =)</br>
 [![Donate with PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4)
 
 ## License
