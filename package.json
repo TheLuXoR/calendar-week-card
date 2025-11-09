@@ -1,0 +1,9 @@
+{
+  "name": "calendar-week-card",
+  "version": "1.0.0",
+  "description": "Weekly calendar card for Home Assistant.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  }
+}

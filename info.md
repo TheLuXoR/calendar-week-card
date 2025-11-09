@@ -1,6 +1,6 @@
 # Calendar Week Card
 
-A Lovelace card that displays a weekly calendar grid with automatic entity discovery, configurable colors, and event dialogs.
+A Lovelace card that displays a weekly calendar grid with automatic entity discovery, configurable colors, language selection, and event dialogs.
 
 ## Usage
 
@@ -10,4 +10,4 @@ entities:
   - calendar.family
 ```
 
-Colors can be customized from the card's settings dialog and are saved locally per browser.
+Colors and visibility can be adjusted from the in-card settings dialog and are saved per browser profile.
