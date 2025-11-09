@@ -7,6 +7,8 @@ const TRANSLATIONS = {
     en: {
         today: "Today",
         allDay: "All day",
+        allDayShort: "All-day",
+        allDayAbbrev: "All",
         location: "Location",
         description: "Description",
         calendarColors: "Calendar Colors",
@@ -29,11 +31,15 @@ const TRANSLATIONS = {
         themeDark: "Dark",
         resetData: "Reset stored data",
         resetDataDescription: "Remove saved colors, language, highlight, and theme preferences.",
-        resetConfirmation: "Clear stored calendar settings? This cannot be undone."
+        resetConfirmation: "Clear stored calendar settings? This cannot be undone.",
+        trimUnusedHours: "Trim blank hours",
+        trimUnusedHoursDescription: "Hide early and late hours without events while keeping 20% of the unused time visible."
     },
     de: {
         today: "Heute",
         allDay: "Ganztägig",
+        allDayShort: "Ganztäg.",
+        allDayAbbrev: "Tag",
         location: "Ort",
         description: "Beschreibung",
         calendarColors: "Kalenderfarben",
@@ -56,11 +62,15 @@ const TRANSLATIONS = {
         themeDark: "Dunkel",
         resetData: "Gespeicherte Daten zurücksetzen",
         resetDataDescription: "Entfernt gespeicherte Farben, Sprache, Hervorhebung und Theme-Einstellungen.",
-        resetConfirmation: "Gespeicherte Kalender-Einstellungen wirklich löschen? Dies kann nicht rückgängig gemacht werden."
+        resetConfirmation: "Gespeicherte Kalender-Einstellungen wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+        trimUnusedHours: "Unbenutzte Randstunden kürzen",
+        trimUnusedHoursDescription: "Blendet frühe und späte Stunden ohne Termine aus und lässt 20 % der freien Zeit sichtbar."
     },
     fr: {
         today: "Aujourd'hui",
         allDay: "Toute la journée",
+        allDayShort: "Journée",
+        allDayAbbrev: "Jour",
         location: "Lieu",
         description: "Description",
         calendarColors: "Couleurs du calendrier",
@@ -83,11 +93,15 @@ const TRANSLATIONS = {
         themeDark: "Sombre",
         resetData: "Réinitialiser les données enregistrées",
         resetDataDescription: "Supprime les couleurs, la langue, la mise en évidence et le thème sauvegardés.",
-        resetConfirmation: "Effacer les paramètres enregistrés du calendrier ? Cette action est irréversible."
+        resetConfirmation: "Effacer les paramètres enregistrés du calendrier ? Cette action est irréversible.",
+        trimUnusedHours: "Réduire les heures vides",
+        trimUnusedHoursDescription: "Masque les heures matinales et tardives sans événements tout en laissant 20 % du temps inutilisé visible."
     },
     es: {
         today: "Hoy",
         allDay: "Todo el día",
+        allDayShort: "Todo día",
+        allDayAbbrev: "Día",
         location: "Ubicación",
         description: "Descripción",
         calendarColors: "Colores del calendario",
@@ -110,11 +124,15 @@ const TRANSLATIONS = {
         themeDark: "Oscuro",
         resetData: "Restablecer datos guardados",
         resetDataDescription: "Elimina los colores, el idioma, el resaltado y el tema guardados.",
-        resetConfirmation: "¿Borrar la configuración guardada del calendario? Esta acción no se puede deshacer."
+        resetConfirmation: "¿Borrar la configuración guardada del calendario? Esta acción no se puede deshacer.",
+        trimUnusedHours: "Recortar horas vacías",
+        trimUnusedHoursDescription: "Oculta las horas tempranas y tardías sin eventos dejando visible el 20 % del tiempo sin usar."
     },
     it: {
         today: "Oggi",
         allDay: "Tutto il giorno",
+        allDayShort: "Tutto giorno",
+        allDayAbbrev: "Giorno",
         location: "Posizione",
         description: "Descrizione",
         calendarColors: "Colori del calendario",
@@ -137,11 +155,15 @@ const TRANSLATIONS = {
         themeDark: "Scuro",
         resetData: "Reimposta i dati salvati",
         resetDataDescription: "Rimuove colori, lingua, evidenziazione e tema salvati.",
-        resetConfirmation: "Eliminare le impostazioni salvate del calendario? L'operazione è irreversibile."
+        resetConfirmation: "Eliminare le impostazioni salvate del calendario? L'operazione è irreversibile.",
+        trimUnusedHours: "Riduci ore vuote",
+        trimUnusedHoursDescription: "Nasconde le ore mattutine e serali senza eventi lasciando visibile il 20% del tempo inutilizzato."
     },
     nl: {
         today: "Vandaag",
         allDay: "Hele dag",
+        allDayShort: "Hele d.",
+        allDayAbbrev: "Dag",
         location: "Locatie",
         description: "Beschrijving",
         calendarColors: "Kalenderkleuren",
@@ -164,7 +186,9 @@ const TRANSLATIONS = {
         themeDark: "Donker",
         resetData: "Opgeslagen gegevens resetten",
         resetDataDescription: "Verwijdert opgeslagen kleuren, taal, markering en thema-instellingen.",
-        resetConfirmation: "Opgeslagen kalenderinstellingen wissen? Dit kan niet ongedaan worden gemaakt."
+        resetConfirmation: "Opgeslagen kalenderinstellingen wissen? Dit kan niet ongedaan worden gemaakt.",
+        trimUnusedHours: "Lege uren inkorten",
+        trimUnusedHoursDescription: "Verbergt vroege en late uren zonder afspraken en laat 20% van de vrije tijd zichtbaar."
     }
 };
 
@@ -472,6 +496,9 @@ class CalendarWeekCard extends HTMLElement {
         this.columnPaddingBottom = 0;
         this.allDayRowHeight = 22;
         this.allDayRowOverlap = 8;
+        this.visibleStartMinute = 0;
+        this.visibleEndMinute = 24 * 60;
+        this.trimUnusedHoursKey = "calendar-week-card-trim-hours";
         this.languagePreference = "system";
         this.language = "en";
         this.themePreference = "system";
@@ -715,6 +742,7 @@ class CalendarWeekCard extends HTMLElement {
             this.configHiddenKey,
             "calendar-week-card-today-highlight-color",
             "calendar-week-card-highlight-enabled",
+            this.trimUnusedHoursKey,
             "calendar-week-card-theme"
         ];
 
@@ -736,6 +764,7 @@ class CalendarWeekCard extends HTMLElement {
         this.config.theme = this.themePreference;
         this.config.today_highlight_color = "#4D96FF";
         this.config.highlight_today = true;
+        this.config.trim_unused_hours = false;
 
         this.assignDefaultColors(this.getActiveEntities());
 
@@ -804,6 +833,15 @@ class CalendarWeekCard extends HTMLElement {
             this.config.highlight_today = savedHighlightEnabled !== "false";
         } else if (typeof this.config.highlight_today !== "boolean") {
             this.config.highlight_today = true;
+        }
+
+        const savedTrimUnused = localStorage.getItem(this.trimUnusedHoursKey);
+        if (savedTrimUnused !== null) {
+            this.config.trim_unused_hours = savedTrimUnused !== "false";
+        } else if (typeof this.config.trim_unused_hours === "string") {
+            this.config.trim_unused_hours = this.config.trim_unused_hours !== "false";
+        } else if (typeof this.config.trim_unused_hours !== "boolean") {
+            this.config.trim_unused_hours = false;
         }
 
         this.attachShadow({mode: "open"});
@@ -1260,7 +1298,17 @@ class CalendarWeekCard extends HTMLElement {
         this.timeBar.style.height = "100%";
         this.timeBar.style.paddingTop = `${this.columnPaddingTop}px`;
         this.timeBar.style.paddingBottom = `${this.columnPaddingBottom}px`;
-        for (let h = 1; h <= 23; h++) {
+        const visibleStart = this.visibleStartMinute || 0;
+        const visibleEnd = this.visibleEndMinute || 24 * 60;
+        let startHour = Math.max(1, Math.ceil(visibleStart / 60));
+        let endHour = Math.min(23, Math.floor((visibleEnd - 1) / 60));
+
+        if (startHour > endHour) {
+            startHour = Math.max(1, Math.floor(visibleStart / 60));
+            endHour = Math.min(23, Math.ceil(visibleEnd / 60));
+        }
+
+        for (let h = startHour; h <= endHour; h++) {
             const label = document.createElement("div");
             label.className = "hour-label";
             label.textContent = `${h.toString().padStart(2, '0')}:00`;
@@ -1370,6 +1418,40 @@ class CalendarWeekCard extends HTMLElement {
             dayRenderData.push({ dayEvents, allDayEvents, timedContainer, dayColumn, dayOffset });
         }
 
+        const trimUnusedHours = this.config.trim_unused_hours === true;
+        let earliestStart = Infinity;
+        let latestEnd = -Infinity;
+
+        if (trimUnusedHours) {
+            dayRenderData.forEach(({ dayEvents }) => {
+                dayEvents.forEach(ev => {
+                    const startMinutes = ev.start.getHours() * 60 + ev.start.getMinutes();
+                    let endMinutes = ev.end.getHours() * 60 + ev.end.getMinutes();
+                    if (endMinutes <= startMinutes) {
+                        const durationMinutes = Math.max((ev.end - ev.start) / (1000 * 60), 1);
+                        endMinutes = Math.min(startMinutes + durationMinutes, 24 * 60);
+                    }
+                    earliestStart = Math.min(earliestStart, startMinutes);
+                    latestEnd = Math.max(latestEnd, endMinutes);
+                });
+            });
+        }
+
+        if (trimUnusedHours && Number.isFinite(earliestStart) && Number.isFinite(latestEnd) && latestEnd > earliestStart) {
+            const totalMinutes = 24 * 60;
+            const earlyUnused = Math.max(earliestStart, 0);
+            const lateUnused = Math.max(totalMinutes - latestEnd, 0);
+            const keepEarly = Math.max(Math.round(earlyUnused * 0.2), 0);
+            const keepLate = Math.max(Math.round(lateUnused * 0.2), 0);
+            const visibleStart = Math.max(0, earliestStart - keepEarly);
+            const visibleEnd = Math.min(totalMinutes, latestEnd + keepLate);
+            this.visibleStartMinute = Math.min(visibleStart, visibleEnd - 1);
+            this.visibleEndMinute = Math.max(visibleEnd, this.visibleStartMinute + 1);
+        } else {
+            this.visibleStartMinute = 0;
+            this.visibleEndMinute = 24 * 60;
+        }
+
         this.allDayBandHeight = 0;
         this.updateTimeMetrics();
 
@@ -1392,6 +1474,8 @@ class CalendarWeekCard extends HTMLElement {
         const allDayOverlap = Math.min(this.allDayRowOverlap, this.allDayRowHeight - 4);
         const allDayRowStep = Math.max(this.allDayRowHeight - allDayOverlap, 4);
         const baseTopOffset = 0;
+
+        const visibleStartMinute = this.visibleStartMinute || 0;
 
         for (const { dayEvents, allDayEvents, timedContainer } of dayRenderData) {
             if (!timedContainer) continue;
@@ -1424,7 +1508,11 @@ class CalendarWeekCard extends HTMLElement {
 
                 const timeEl = document.createElement("div");
                 timeEl.className = "event-tag event-all-day-tag";
-                timeEl.textContent = this.t("allDay");
+                const fullAllDay = this.t("allDay");
+                const shortAllDay = this.t("allDayShort") || fullAllDay;
+                const tinyAllDay = this.t("allDayAbbrev") || shortAllDay;
+                timeEl.textContent = fullAllDay;
+                timeEl.setAttribute("title", fullAllDay);
 
                 eventSurface.appendChild(titleEl);
                 eventSurface.appendChild(timeEl);
@@ -1432,6 +1520,21 @@ class CalendarWeekCard extends HTMLElement {
 
                 eventDiv.addEventListener("click", () => this.showEventDialog(ev));
                 timedContainer.appendChild(eventDiv);
+
+                const shrinkAllDayTag = () => {
+                    if (eventSurface.scrollWidth > eventSurface.clientWidth + 1) {
+                        timeEl.textContent = shortAllDay;
+                        if (eventSurface.scrollWidth > eventSurface.clientWidth + 1) {
+                            timeEl.textContent = tinyAllDay;
+                        }
+                    }
+                };
+
+                if (typeof requestAnimationFrame === "function") {
+                    requestAnimationFrame(shrinkAllDayTag);
+                } else {
+                    setTimeout(shrinkAllDayTag, 0);
+                }
             });
 
             for (const ev of dayEvents) {
@@ -1445,8 +1548,12 @@ class CalendarWeekCard extends HTMLElement {
                 activeStack.push(ev);
 
                 const startMinutes = ev.start.getHours() * 60 + ev.start.getMinutes();
-                const endMinutes = ev.end.getHours() * 60 + ev.end.getMinutes();
-                const top = baseTopOffset + startMinutes * this.pixelsPerMinute;
+                let endMinutes = ev.end.getHours() * 60 + ev.end.getMinutes();
+                if (endMinutes <= startMinutes) {
+                    const durationMinutes = Math.max((ev.end - ev.start) / (1000 * 60), 1);
+                    endMinutes = Math.min(startMinutes + durationMinutes, 24 * 60);
+                }
+                const top = baseTopOffset + (startMinutes - visibleStartMinute) * this.pixelsPerMinute;
                 const durationMinutes = Math.max(endMinutes - startMinutes, 1);
                 const minHeight = 32 * this.pixelsPerMinute;
                 const height = Math.max(durationMinutes * this.pixelsPerMinute, minHeight);
@@ -1527,8 +1634,14 @@ class CalendarWeekCard extends HTMLElement {
 
         this.timeViewportHeight = viewportHeight;
         const effectiveHeight = Math.max(viewportHeight, 24);
-        this.pixelsPerMinute = effectiveHeight / (24 * 60);
-        this.timeAxisOffset = this.columnPaddingTop;
+        const totalMinutes = 24 * 60;
+        const visibleStart = Math.max(0, Math.min(Number(this.visibleStartMinute) || 0, totalMinutes - 1));
+        const visibleEnd = Math.max(visibleStart + 1, Math.min(Number(this.visibleEndMinute) || totalMinutes, totalMinutes));
+        const visibleDuration = Math.max(visibleEnd - visibleStart, 1);
+        this.visibleStartMinute = visibleStart;
+        this.visibleEndMinute = visibleEnd;
+        this.pixelsPerMinute = effectiveHeight / visibleDuration;
+        this.timeAxisOffset = this.columnPaddingTop - visibleStart * this.pixelsPerMinute;
     }
 
     colorWithAlpha(color, alpha = 1) {
@@ -1672,6 +1785,12 @@ class CalendarWeekCard extends HTMLElement {
         if (now < start || now > end) return;
 
         const minutes = now.getHours() * 60 + now.getMinutes();
+        const visibleStart = this.visibleStartMinute || 0;
+        const visibleEnd = this.visibleEndMinute || 24 * 60;
+        if (minutes < visibleStart || minutes > visibleEnd) {
+            return;
+        }
+
         const topPosition = this.timeAxisOffset + minutes * this.pixelsPerMinute;
 
         if (this.timeBar && this.weekOffset === 0) {
@@ -1892,6 +2011,54 @@ class CalendarWeekCard extends HTMLElement {
 
         content.appendChild(list);
 
+        const trimSection = document.createElement("div");
+        Object.assign(trimSection.style, {
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+            padding: "12px",
+            borderRadius: "10px"
+        });
+
+        const trimHeader = document.createElement("div");
+        Object.assign(trimHeader.style, {
+            display: "flex",
+            alignItems: "center",
+            gap: "10px"
+        });
+
+        const trimToggle = document.createElement("input");
+        trimToggle.type = "checkbox";
+        trimToggle.checked = this.config.trim_unused_hours === true;
+        trimToggle.style.width = "18px";
+        trimToggle.style.height = "18px";
+        trimToggle.style.cursor = "pointer";
+
+        const trimLabel = document.createElement("span");
+        trimLabel.style.flex = "1";
+        trimLabel.style.fontWeight = "600";
+
+        trimHeader.appendChild(trimToggle);
+        trimHeader.appendChild(trimLabel);
+
+        const trimDescription = document.createElement("span");
+        trimDescription.style.fontSize = "0.85em";
+
+        trimToggle.addEventListener("change", e => {
+            const enabled = e.target.checked;
+            this.config.trim_unused_hours = enabled;
+            try {
+                localStorage.setItem(this.trimUnusedHoursKey, String(enabled));
+            } catch (err) {
+                console.warn("calendar-week-card: Failed to persist trim preference", err);
+            }
+            this.renderList(this.lastEvents);
+        });
+
+        trimSection.appendChild(trimHeader);
+        trimSection.appendChild(trimDescription);
+        content.appendChild(trimSection);
+
         const highlightSection = document.createElement("div");
         Object.assign(highlightSection.style, {
             display: "flex",
@@ -2023,6 +2190,7 @@ class CalendarWeekCard extends HTMLElement {
                 highlightToggle.checked = this.config.highlight_today !== false;
                 highlightColorPicker.value = this.getHexColor(this.config.today_highlight_color || "#4D96FF");
                 applyHighlightState(highlightToggle.checked);
+                trimToggle.checked = this.config.trim_unused_hours === true;
                 calendarToggles.forEach(({ toggle, entity }) => {
                     const hidden = this.isEntityHidden(entity);
                     toggle.checked = !hidden;
@@ -2111,6 +2279,12 @@ class CalendarWeekCard extends HTMLElement {
                 picker.style.border = `1px solid ${palette.border}`;
                 picker.style.background = palette.inputBackground;
             });
+            trimSection.style.background = this.theme === "dark"
+                ? "rgba(66, 135, 245, 0.18)"
+                : "rgba(66, 135, 245, 0.1)";
+            trimSection.style.border = `1px solid ${palette.border}`;
+            trimLabel.style.color = palette.text;
+            trimDescription.style.color = palette.muted;
             highlightSection.style.background = this.theme === "dark"
                 ? "rgba(77, 150, 255, 0.18)"
                 : "rgba(77, 150, 255, 0.08)";
@@ -2157,6 +2331,11 @@ class CalendarWeekCard extends HTMLElement {
             supportText.textContent = this.t("supportViaPaypal");
             donateImage.alt = this.t("donateWithPaypal");
             closeBtn.textContent = this.t("saveAndClose");
+            const trimLabelText = this.t("trimUnusedHours");
+            trimLabel.textContent = trimLabelText;
+            trimToggle.setAttribute("aria-label", trimLabelText);
+            trimToggle.setAttribute("title", trimLabelText);
+            trimDescription.textContent = this.t("trimUnusedHoursDescription");
             highlightLabel.textContent = this.t("highlightToday");
             highlightDescription.textContent = this.t("highlightTodayDescription");
             highlightColorLabel.textContent = this.t("todayHighlightColor");

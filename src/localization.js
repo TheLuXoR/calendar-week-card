@@ -4,6 +4,8 @@ export const TRANSLATIONS = {
     en: {
         today: "Today",
         allDay: "All day",
+        allDayShort: "All-day",
+        allDayAbbrev: "All",
         location: "Location",
         description: "Description",
         calendarColors: "Calendar Colors",
@@ -26,11 +28,15 @@ export const TRANSLATIONS = {
         themeDark: "Dark",
         resetData: "Reset stored data",
         resetDataDescription: "Remove saved colors, language, highlight, and theme preferences.",
-        resetConfirmation: "Clear stored calendar settings? This cannot be undone."
+        resetConfirmation: "Clear stored calendar settings? This cannot be undone.",
+        trimUnusedHours: "Trim blank hours",
+        trimUnusedHoursDescription: "Hide early and late hours without events while keeping 20% of the unused time visible."
     },
     de: {
         today: "Heute",
         allDay: "Ganztägig",
+        allDayShort: "Ganztäg.",
+        allDayAbbrev: "Tag",
         location: "Ort",
         description: "Beschreibung",
         calendarColors: "Kalenderfarben",
@@ -53,11 +59,15 @@ export const TRANSLATIONS = {
         themeDark: "Dunkel",
         resetData: "Gespeicherte Daten zurücksetzen",
         resetDataDescription: "Entfernt gespeicherte Farben, Sprache, Hervorhebung und Theme-Einstellungen.",
-        resetConfirmation: "Gespeicherte Kalender-Einstellungen wirklich löschen? Dies kann nicht rückgängig gemacht werden."
+        resetConfirmation: "Gespeicherte Kalender-Einstellungen wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+        trimUnusedHours: "Unbenutzte Randstunden kürzen",
+        trimUnusedHoursDescription: "Blendet frühe und späte Stunden ohne Termine aus und lässt 20 % der freien Zeit sichtbar."
     },
     fr: {
         today: "Aujourd'hui",
         allDay: "Toute la journée",
+        allDayShort: "Journée",
+        allDayAbbrev: "Jour",
         location: "Lieu",
         description: "Description",
         calendarColors: "Couleurs du calendrier",
@@ -80,11 +90,15 @@ export const TRANSLATIONS = {
         themeDark: "Sombre",
         resetData: "Réinitialiser les données enregistrées",
         resetDataDescription: "Supprime les couleurs, la langue, la mise en évidence et le thème sauvegardés.",
-        resetConfirmation: "Effacer les paramètres enregistrés du calendrier ? Cette action est irréversible."
+        resetConfirmation: "Effacer les paramètres enregistrés du calendrier ? Cette action est irréversible.",
+        trimUnusedHours: "Réduire les heures vides",
+        trimUnusedHoursDescription: "Masque les heures matinales et tardives sans événements tout en laissant 20 % du temps inutilisé visible."
     },
     es: {
         today: "Hoy",
         allDay: "Todo el día",
+        allDayShort: "Todo día",
+        allDayAbbrev: "Día",
         location: "Ubicación",
         description: "Descripción",
         calendarColors: "Colores del calendario",
@@ -107,11 +121,15 @@ export const TRANSLATIONS = {
         themeDark: "Oscuro",
         resetData: "Restablecer datos guardados",
         resetDataDescription: "Elimina los colores, el idioma, el resaltado y el tema guardados.",
-        resetConfirmation: "¿Borrar la configuración guardada del calendario? Esta acción no se puede deshacer."
+        resetConfirmation: "¿Borrar la configuración guardada del calendario? Esta acción no se puede deshacer.",
+        trimUnusedHours: "Recortar horas vacías",
+        trimUnusedHoursDescription: "Oculta las horas tempranas y tardías sin eventos dejando visible el 20 % del tiempo sin usar."
     },
     it: {
         today: "Oggi",
         allDay: "Tutto il giorno",
+        allDayShort: "Tutto giorno",
+        allDayAbbrev: "Giorno",
         location: "Posizione",
         description: "Descrizione",
         calendarColors: "Colori del calendario",
@@ -134,11 +152,15 @@ export const TRANSLATIONS = {
         themeDark: "Scuro",
         resetData: "Reimposta i dati salvati",
         resetDataDescription: "Rimuove colori, lingua, evidenziazione e tema salvati.",
-        resetConfirmation: "Eliminare le impostazioni salvate del calendario? L'operazione è irreversibile."
+        resetConfirmation: "Eliminare le impostazioni salvate del calendario? L'operazione è irreversibile.",
+        trimUnusedHours: "Riduci ore vuote",
+        trimUnusedHoursDescription: "Nasconde le ore mattutine e serali senza eventi lasciando visibile il 20% del tempo inutilizzato."
     },
     nl: {
         today: "Vandaag",
         allDay: "Hele dag",
+        allDayShort: "Hele d.",
+        allDayAbbrev: "Dag",
         location: "Locatie",
         description: "Beschrijving",
         calendarColors: "Kalenderkleuren",
@@ -161,7 +183,9 @@ export const TRANSLATIONS = {
         themeDark: "Donker",
         resetData: "Opgeslagen gegevens resetten",
         resetDataDescription: "Verwijdert opgeslagen kleuren, taal, markering en thema-instellingen.",
-        resetConfirmation: "Opgeslagen kalenderinstellingen wissen? Dit kan niet ongedaan worden gemaakt."
+        resetConfirmation: "Opgeslagen kalenderinstellingen wissen? Dit kan niet ongedaan worden gemaakt.",
+        trimUnusedHours: "Lege uren inkorten",
+        trimUnusedHoursDescription: "Verbergt vroege en late uren zonder afspraken en laat 20% van de vrije tijd zichtbaar."
     }
 };
 
