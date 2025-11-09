@@ -553,6 +553,7 @@ export class CalendarWeekCard extends HTMLElement {
                 font-weight: 600;
                 padding: 0 6px 8px;
                 color: var(--cwc-secondary-text);
+                border-bottom: 1px solid var(--cwc-border-color);
             }
             .week-header div {
                 display: flex;
