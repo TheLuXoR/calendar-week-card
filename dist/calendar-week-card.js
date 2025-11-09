@@ -23,8 +23,7 @@ const TRANSLATIONS = {
         systemDefault: "System default",
         donateWithPaypal: "Donate with PayPal",
         highlightToday: "Highlight current day",
-        highlightTodayDescription: "Shade today's column with a subtle gradient.",
-        todayHighlightColor: "Current day highlight",
+        highlightTodayDescription: "Shade today's column with a subtle color.",
         themeLabel: "Appearance",
         themeSystem: "Match system",
         themeLight: "Light",
@@ -54,8 +53,7 @@ const TRANSLATIONS = {
         systemDefault: "Systemstandard",
         donateWithPaypal: "Mit PayPal spenden",
         highlightToday: "Aktuellen Tag hervorheben",
-        highlightTodayDescription: "Markiert die heutige Spalte mit einem sanften Farbverlauf.",
-        todayHighlightColor: "Aktuellen Tag hervorheben",
+        highlightTodayDescription: "Markiert die heutige Spalte mit einer sanften Farbe.",
         themeLabel: "Darstellung",
         themeSystem: "System übernehmen",
         themeLight: "Hell",
@@ -85,8 +83,7 @@ const TRANSLATIONS = {
         systemDefault: "Langue du système",
         donateWithPaypal: "Faire un don avec PayPal",
         highlightToday: "Mettre en surbrillance aujourd'hui",
-        highlightTodayDescription: "Colorer la colonne d'aujourd'hui avec un léger dégradé.",
-        todayHighlightColor: "Mise en évidence du jour actuel",
+        highlightTodayDescription: "Colorer la colonne d'aujourd'hui avec une couleur subtile.",
         themeLabel: "Apparence",
         themeSystem: "Suivre le système",
         themeLight: "Clair",
@@ -116,8 +113,7 @@ const TRANSLATIONS = {
         systemDefault: "Predeterminado del sistema",
         donateWithPaypal: "Donar con PayPal",
         highlightToday: "Resaltar el día actual",
-        highlightTodayDescription: "Sombrea la columna de hoy con un degradado suave.",
-        todayHighlightColor: "Resaltado del día actual",
+        highlightTodayDescription: "Sombrea la columna de hoy con un color sutil.",
         themeLabel: "Apariencia",
         themeSystem: "Usar el sistema",
         themeLight: "Claro",
@@ -147,8 +143,7 @@ const TRANSLATIONS = {
         systemDefault: "Predefinito di sistema",
         donateWithPaypal: "Dona con PayPal",
         highlightToday: "Evidenzia il giorno corrente",
-        highlightTodayDescription: "Colora la colonna di oggi con un leggero gradiente.",
-        todayHighlightColor: "Evidenziazione del giorno corrente",
+        highlightTodayDescription: "Colora la colonna di oggi con un colore tenue.",
         themeLabel: "Aspetto",
         themeSystem: "Come sistema",
         themeLight: "Chiaro",
@@ -178,8 +173,7 @@ const TRANSLATIONS = {
         systemDefault: "Systeemstandaard",
         donateWithPaypal: "Doneren met PayPal",
         highlightToday: "Markeer de huidige dag",
-        highlightTodayDescription: "Kleur de kolom van vandaag met een subtiele gradiënt.",
-        todayHighlightColor: "Markering van de huidige dag",
+        highlightTodayDescription: "Kleur de kolom van vandaag met een subtiele kleur.",
         themeLabel: "Weergave",
         themeSystem: "Volg systeem",
         themeLight: "Licht",
@@ -2090,20 +2084,6 @@ class CalendarWeekCard extends HTMLElement {
         highlightHeader.appendChild(highlightToggle);
         highlightHeader.appendChild(highlightLabel);
 
-        const highlightDescription = document.createElement("span");
-        highlightDescription.style.fontSize = "0.85em";
-
-        const highlightColorRow = document.createElement("div");
-        Object.assign(highlightColorRow.style, {
-            display: "flex",
-            alignItems: "center",
-            gap: "12px"
-        });
-
-        const highlightColorLabel = document.createElement("span");
-        highlightColorLabel.style.flex = "1";
-        highlightColorLabel.style.fontWeight = "500";
-
         const highlightColorPicker = document.createElement("input");
         highlightColorPicker.type = "color";
         highlightColorPicker.value = this.getHexColor(this.config.today_highlight_color || "#4D96FF");
@@ -2112,6 +2092,18 @@ class CalendarWeekCard extends HTMLElement {
         highlightColorPicker.style.border = "1px solid transparent";
         highlightColorPicker.style.borderRadius = "8px";
         highlightColorPicker.style.cursor = "pointer";
+        highlightColorPicker.style.marginLeft = "auto";
+
+        const highlightDescriptionRow = document.createElement("div");
+        Object.assign(highlightDescriptionRow.style, {
+            display: "flex",
+            alignItems: "center",
+            gap: "12px"
+        });
+
+        const highlightDescription = document.createElement("span");
+        highlightDescription.style.flex = "1";
+        highlightDescription.style.fontSize = "0.85em";
 
         const applyHighlightState = enabled => {
             highlightColorPicker.disabled = !enabled;
@@ -2136,12 +2128,10 @@ class CalendarWeekCard extends HTMLElement {
             this.renderList(this.lastEvents);
         });
 
-        highlightColorRow.appendChild(highlightColorLabel);
-        highlightColorRow.appendChild(highlightColorPicker);
-
         highlightSection.appendChild(highlightHeader);
-        highlightSection.appendChild(highlightDescription);
-        highlightSection.appendChild(highlightColorRow);
+        highlightDescriptionRow.appendChild(highlightDescription);
+        highlightDescriptionRow.appendChild(highlightColorPicker);
+        highlightSection.appendChild(highlightDescriptionRow);
 
         content.appendChild(highlightSection);
 
@@ -2292,7 +2282,6 @@ class CalendarWeekCard extends HTMLElement {
             highlightSection.style.border = `1px solid ${palette.border}`;
             highlightLabel.style.color = palette.text;
             highlightDescription.style.color = palette.muted;
-            highlightColorLabel.style.color = palette.text;
             highlightColorPicker.style.border = `1px solid ${palette.border}`;
             highlightColorPicker.style.background = palette.inputBackground;
             supportText.style.color = palette.muted;
@@ -2339,7 +2328,6 @@ class CalendarWeekCard extends HTMLElement {
             trimDescription.textContent = this.t("trimUnusedHoursDescription");
             highlightLabel.textContent = this.t("highlightToday");
             highlightDescription.textContent = this.t("highlightTodayDescription");
-            highlightColorLabel.textContent = this.t("todayHighlightColor");
             if (resetDescription) {
                 resetDescription.textContent = this.t("resetDataDescription");
             }
