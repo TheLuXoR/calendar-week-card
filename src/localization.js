@@ -19,7 +19,14 @@ export const TRANSLATIONS = {
         donateWithPaypal: "Donate with PayPal",
         highlightToday: "Highlight current day",
         highlightTodayDescription: "Shade today's column with a subtle gradient.",
-        todayHighlightColor: "Current day highlight"
+        todayHighlightColor: "Current day highlight",
+        themeLabel: "Appearance",
+        themeSystem: "Match system",
+        themeLight: "Light",
+        themeDark: "Dark",
+        resetData: "Reset stored data",
+        resetDataDescription: "Remove saved colors, language, highlight, and theme preferences.",
+        resetConfirmation: "Clear stored calendar settings? This cannot be undone."
     },
     de: {
         today: "Heute",
@@ -39,7 +46,14 @@ export const TRANSLATIONS = {
         donateWithPaypal: "Mit PayPal spenden",
         highlightToday: "Aktuellen Tag hervorheben",
         highlightTodayDescription: "Markiert die heutige Spalte mit einem sanften Farbverlauf.",
-        todayHighlightColor: "Aktuellen Tag hervorheben"
+        todayHighlightColor: "Aktuellen Tag hervorheben",
+        themeLabel: "Darstellung",
+        themeSystem: "System übernehmen",
+        themeLight: "Hell",
+        themeDark: "Dunkel",
+        resetData: "Gespeicherte Daten zurücksetzen",
+        resetDataDescription: "Entfernt gespeicherte Farben, Sprache, Hervorhebung und Theme-Einstellungen.",
+        resetConfirmation: "Gespeicherte Kalender-Einstellungen wirklich löschen? Dies kann nicht rückgängig gemacht werden."
     },
     fr: {
         today: "Aujourd'hui",
@@ -59,7 +73,14 @@ export const TRANSLATIONS = {
         donateWithPaypal: "Faire un don avec PayPal",
         highlightToday: "Mettre en surbrillance aujourd'hui",
         highlightTodayDescription: "Colorer la colonne d'aujourd'hui avec un léger dégradé.",
-        todayHighlightColor: "Mise en évidence du jour actuel"
+        todayHighlightColor: "Mise en évidence du jour actuel",
+        themeLabel: "Apparence",
+        themeSystem: "Suivre le système",
+        themeLight: "Clair",
+        themeDark: "Sombre",
+        resetData: "Réinitialiser les données enregistrées",
+        resetDataDescription: "Supprime les couleurs, la langue, la mise en évidence et le thème sauvegardés.",
+        resetConfirmation: "Effacer les paramètres enregistrés du calendrier ? Cette action est irréversible."
     },
     es: {
         today: "Hoy",
@@ -79,7 +100,14 @@ export const TRANSLATIONS = {
         donateWithPaypal: "Donar con PayPal",
         highlightToday: "Resaltar el día actual",
         highlightTodayDescription: "Sombrea la columna de hoy con un degradado suave.",
-        todayHighlightColor: "Resaltado del día actual"
+        todayHighlightColor: "Resaltado del día actual",
+        themeLabel: "Apariencia",
+        themeSystem: "Usar el sistema",
+        themeLight: "Claro",
+        themeDark: "Oscuro",
+        resetData: "Restablecer datos guardados",
+        resetDataDescription: "Elimina los colores, el idioma, el resaltado y el tema guardados.",
+        resetConfirmation: "¿Borrar la configuración guardada del calendario? Esta acción no se puede deshacer."
     },
     it: {
         today: "Oggi",
@@ -99,7 +127,14 @@ export const TRANSLATIONS = {
         donateWithPaypal: "Dona con PayPal",
         highlightToday: "Evidenzia il giorno corrente",
         highlightTodayDescription: "Colora la colonna di oggi con un leggero gradiente.",
-        todayHighlightColor: "Evidenziazione del giorno corrente"
+        todayHighlightColor: "Evidenziazione del giorno corrente",
+        themeLabel: "Aspetto",
+        themeSystem: "Come sistema",
+        themeLight: "Chiaro",
+        themeDark: "Scuro",
+        resetData: "Reimposta i dati salvati",
+        resetDataDescription: "Rimuove colori, lingua, evidenziazione e tema salvati.",
+        resetConfirmation: "Eliminare le impostazioni salvate del calendario? L'operazione è irreversibile."
     },
     nl: {
         today: "Vandaag",
@@ -119,7 +154,14 @@ export const TRANSLATIONS = {
         donateWithPaypal: "Doneren met PayPal",
         highlightToday: "Markeer de huidige dag",
         highlightTodayDescription: "Kleur de kolom van vandaag met een subtiele gradiënt.",
-        todayHighlightColor: "Markering van de huidige dag"
+        todayHighlightColor: "Markering van de huidige dag",
+        themeLabel: "Weergave",
+        themeSystem: "Volg systeem",
+        themeLight: "Licht",
+        themeDark: "Donker",
+        resetData: "Opgeslagen gegevens resetten",
+        resetDataDescription: "Verwijdert opgeslagen kleuren, taal, markering en thema-instellingen.",
+        resetConfirmation: "Opgeslagen kalenderinstellingen wissen? Dit kan niet ongedaan worden gemaakt."
     }
 };
 
