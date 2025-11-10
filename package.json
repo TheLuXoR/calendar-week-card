@@ -1,9 +1,29 @@
 {
   "name": "calendar-week-card",
-  "version": "1.0.0",
-  "description": "Weekly calendar card for Home Assistant.",
+  "author": "Marco Hasselmeyer",
+  "version": "0.1.6",
+  "description": "Custom Weekly calendar card for Home Assistant.",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs"
-  }
+  },
+  "keywords": [
+    "calendar",
+    "panel",
+    "homeassistant",
+    "home-assistant",
+    "hacs",
+    "lovelace",
+    "custom",
+    "custom-card"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TheLuXoR/calendar-week-card.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TheLuXoR/calendar-week-card/issues"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/TheLuXoR/calendar-week-card#readme"
 }
