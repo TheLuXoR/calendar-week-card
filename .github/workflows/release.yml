@@ -1,0 +1,84 @@
+name: Validate and Auto Release
+
+on:
+  push:
+    branches: ["main"]
+  schedule:
+    - cron: "0 0 * * 0" # weekly check
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate HACS (Frontend Plugin)
+        uses: hacs/action@main
+        with:
+          category: plugin
+
+      - name: Determine Next Version
+        id: version
+        run: |
+          # Latest tag or default
+          LAST_TAG=$(git describe --tags `git rev-list --tags --max-count=1` 2>/dev/null || echo "v0.1.0")
+          VERSION="${LAST_TAG#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+
+          # Collect commits since last tag
+          COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s" || true)
+
+          BUMP="none"
+
+          echo "$COMMITS" | grep -qE '^BREAKING:' && BUMP="major"
+          if [ "$BUMP" = "none" ]; then
+            echo "$COMMITS" | grep -qE '^feat:' && BUMP="minor"
+          fi
+          if [ "$BUMP" = "none" ]; then
+            echo "$COMMITS" | grep -qE '^(fix:|fightingWith:)' && BUMP="patch"
+          fi
+
+          if [ "$BUMP" = "none" ]; then
+            echo "No version bump required. Exiting."
+            echo "new=none" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$BUMP" = "major" ]; then
+            MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0;
+          elif [ "$BUMP" = "minor" ]; then
+            MINOR=$((MINOR + 1)); PATCH=0;
+          else
+            PATCH=$((PATCH + 1));
+          fi
+
+          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+
+          echo "new=$NEW_TAG" >> "$GITHUB_OUTPUT"
+          echo "Bump: $BUMP → $NEW_TAG"
+
+      - name: Stop if no bump
+        if: ${{ steps.version.outputs.new == 'none' }}
+        run: echo "Nothing to release."
+
+      - name: Create Tag
+        if: ${{ steps.version.outputs.new != 'none' }}
+        run: |
+          git tag "${{ steps.version.outputs.new }}"
+          git push origin "${{ steps.version.outputs.new }}"
+
+      - name: Create Release
+        if: ${{ steps.version.outputs.new != 'none' }}
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.new }}
+          release_name: ${{ steps.version.outputs.new }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
