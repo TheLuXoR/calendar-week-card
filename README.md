@@ -87,6 +87,7 @@ you like it? you could support me =)</br>
 ## License
 
 This project is released under the MIT License.
+
 [hacs-img]: https://img.shields.io/badge/HACS-Custom-orange.svg
 [hacs-url]: https://github.com/TheLuXoR/calendar-week-card/actions/workflows/release.yml
 [github-release-img]: https://img.shields.io/github/release/TheLuXoR/calendar-week-card.svg
