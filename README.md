@@ -1,4 +1,8 @@
 # Calendar Week Card
+[![hacs][hacs-img]][hacs-url] 
+[![GitHub Release][github-release-img]][github-release-url] 
+[![Downloads][github-downloads-img]][github-release-url] 
+[![Downloads@latest][github-latest-downloads-img]][github-release-url]
 
 A a fully customizable Lovelace card that renders a weekly calendar grid for Home Assistant. The card discovers your calendars automatically and you can assign your preferred colors per calendar or change the main theme entirely.
 
@@ -45,6 +49,8 @@ currently the calendar card is meant to be used as a panel view.
 3. adjust it to Panel<br><img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_5.png" alt="drawing" width="300"/>
 </details>
 
+##### currently this is only tested as panel view
+
 ### Minimal setup
 ```yaml
 type: custom:calendar-week-card
@@ -58,7 +64,6 @@ entities:
   - calendar.family
   - calendar.work
 ```
-currently I set it up to work as a panel dashboard
 
 - `title` (optional): Override the header text.
 - `entities` (optional): Explicit list of calendar entities. When omitted, all available calendars are shown.
@@ -82,3 +87,9 @@ you like it? you could support me =)</br>
 ## License
 
 This project is released under the MIT License.
+[hacs-img]: https://img.shields.io/badge/HACS-Custom-orange.svg
+[hacs-url]: https://github.com/TheLuXoR/calendar-week-card/actions/workflows/release.yml
+[github-release-img]: https://img.shields.io/github/release/TheLuXoR/calendar-week-card.svg
+[github-downloads-img]: https://img.shields.io/github/downloads/TheLuXoR/calendar-week-card/total.svg
+[github-latest-downloads-img]: https://img.shields.io/github/downloads/TheLuXoR/calendar-week-card/latest/total.svg
+[github-release-url]: https://github.com/TheLuXoR/calendar-week-card/releases
