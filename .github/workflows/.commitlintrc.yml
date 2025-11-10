@@ -2,4 +2,4 @@ rules:
   header-match-team-pattern:
     - 2
     - always
-    - ^(feat|fix|fightingWith|BREAKING|merge)(\(.+\))?: .+
+    - ^(feat|fix|bugfix|fightingWith|BREAKING|merge)(\(.+\))?: .+
