@@ -3,6 +3,5 @@
   "filename": "calendar-week-card.js",
   "render_readme": true,
   "content_in_root": false,
-  "country": "DE",
   "homeassistant": "2023.5.0"
 }
