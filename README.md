@@ -3,8 +3,8 @@
 A a fully customizable Lovelace card that renders a weekly calendar grid for Home Assistant. The card discovers your calendars automatically and you can assign your preferred colors per calendar or change the main theme entirely.
 
 ### how it could look:
-<img src="img_2.png" alt="drawing" width="200"/>
-<img src="img_4.png" alt="drawing" width="200"/>
+<img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_2.png" alt="drawing" width="200"/>
+<img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_4.png" alt="drawing" width="200"/>
 
 ## Features
 - Weekly grid layout with current time indicator
@@ -14,11 +14,11 @@ A a fully customizable Lovelace card that renders a weekly calendar grid for Hom
 - Multilingual interface with browser or user-selected language
 
 
-<img src="img_3.png" alt="drawing" width="200"/>
+<img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_3.png" alt="drawing" width="200"/>
 
 ### Settings dialog
-<img src="img.png" alt="drawing" width="200"/>
-<img src="img_1.png" alt="drawing" width="200"/><br/>
+<img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img.png" alt="drawing" width="200"/>
+<img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_1.png" alt="drawing" width="200"/><br/>
 
 
 ## Installation
@@ -42,7 +42,7 @@ currently the calendar card is meant to be used as a panel view.
 
 1. add a new dashboard
 2. open the dashboard and open its settings
-3. adjust it to Panel<br><img src="img_5.png" alt="drawing" width="300"/>
+3. adjust it to Panel<br><img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_5.png" alt="drawing" width="300"/>
 </details>
 
 ### Minimal setup
