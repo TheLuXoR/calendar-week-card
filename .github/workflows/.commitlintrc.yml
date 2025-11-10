@@ -1,5 +1,0 @@
-rules:
-  header-match-team-pattern:
-    - 2
-    - always
-    - ^(feat|fix|fightingWith|BREAKING|merge)(\(.+\))?: .+
