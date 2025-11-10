@@ -1,17 +1,27 @@
 # Calendar Week Card
 
-A modern Lovelace card that renders a weekly calendar grid for Home Assistant. The card discovers your calendars automatically, lets you assign persistent colors per entity, and provides rich dialogs for inspecting events.
+A a fully customizable Lovelace card that renders a weekly calendar grid for Home Assistant. The card discovers your calendars automatically and you can assign your preferred colors per calendar or change the main theme entirely.
+
+### how it could look:
+<img src="img_2.png" alt="drawing" width="200"/>
+<img src="img_4.png" alt="drawing" width="200"/>
 
 ## Features
-
 - Weekly grid layout with current time indicator
 - Automatic calendar discovery with optional manual entity list
-- Persistent calendar colors with built-in picker
-- Event detail dialogs with location and description
+- Persistent calendar colors with built-in color picker
+- Event details dialog
 - Multilingual interface with browser or user-selected language
 
-## Installation
 
+<img src="img_3.png" alt="drawing" width="200"/>
+
+### Settings dialog
+<img src="img.png" alt="drawing" width="200"/>
+<img src="img_1.png" alt="drawing" width="200"/><br/>
+
+
+## Installation
 ### HACS (recommended)
 
 1. Ensure you are running Home Assistant 2023.5 or newer.
@@ -21,46 +31,48 @@ A modern Lovelace card that renders a weekly calendar grid for Home Assistant. T
 
 ### Manual installation
 
-1. Download the latest release assets and copy `dist/calendar-week-card.js` (and the optional `calendar-week-card.js` compatibility stub) into `<config>/www/community/calendar-week-card/`.
-2. Add the resource to Home Assistant:
-   ```yaml
-   url: /hacsfiles/calendar-week-card/dist/calendar-week-card.js
-   type: module
-   ```
-3. Reload the Lovelace dashboard.
+1. Add https://github.com/TheLuXoR/calendar-week-card to your custom HACS repositories
+2. Search for "Calendar Week Card"
+3. Download the latest release
 
-## Lovelace configuration
+## usage
+currently the calendar card is meant to be used as a panel view.
+#### how to do a panel view?
+<details>
+
+1. add a new dashboard
+2. open the dashboard and open its settings
+3. adjust it to Panel<br><img src="img_5.png" alt="drawing" width="300"/>
+</details>
 
 ### Minimal setup
 ```yaml
 type: custom:calendar-week-card
 ```
 
-### Configurable setup - !comming soon!
+### manual setup with predefined Calendars
 ```yaml
 type: custom:calendar-week-card
 title: Family calendar
 entities:
   - calendar.family
   - calendar.work
-colors:
-  calendar.family: "#6BCB77"
-  calendar.work: "#4D96FF"
 ```
+currently I set it up to work as a panel dashboard
 
 - `title` (optional): Override the header text.
 - `entities` (optional): Explicit list of calendar entities. When omitted, all available calendars are shown.
+#### comming soon
 - `colors` (optional): Map of entity IDs to hex color values. Values can also be adjusted from the card's settings dialog.
 
 ## Development
 
-This repository uses a small build script to generate the distributable bundle in `dist/`:
+This repository uses a small build script to generate the necessary output files:
 
 ```bash
 npm run build
 ```
 
-The command concatenates the source modules under `src/` into `dist/calendar-week-card.js`. Re-run it whenever you change the source files before creating a release.
 
 ## Support the project
 
