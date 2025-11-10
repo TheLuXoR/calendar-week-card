@@ -1,20 +1,5 @@
-name: Lint Commit Messages
-
-on:
-  pull_request:
-
-jobs:
-  commitlint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install commitlint
-        run: |
-          npm init -y >/dev/null 2>&1 || true
-          npm install @commitlint/{cli,config-conventional} --save-dev
-
-      - name: Run commitlint
-        run: npx commitlint --config .commitlintrc.yml --from=origin/main --to=HEAD
+rules:
+  header-match-team-pattern:
+    - 2
+    - always
+    - ^(feat|fix|fightingWith|BREAKING|merge)(\(.+\))?: .+
