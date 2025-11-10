@@ -67,8 +67,41 @@ entities:
 
 - `title` (optional): Override the header text.
 - `entities` (optional): Explicit list of calendar entities. When omitted, all available calendars are shown.
-#### comming soon
-- `colors` (optional): Map of entity IDs to hex color values. Values can also be adjusted from the card's settings dialog.
+
+### configuration options
+
+Every option that is available in the in-card settings dialog can also be controlled from YAML. This makes it easy to keep multiple dashboards consistent or to share a predefined look and feel with other users.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `title` | string | – | Optional title shown in the header bar. |
+| `entities` | list | auto-discover | Calendars to display. When omitted the card queries Home Assistant for all available calendars. |
+| `colors` | map | generated | Map of `calendar.entity_id` → color. Colors accept hex values or any CSS color string. Values defined here override colors chosen in the dialog. |
+| `hidden_entities` | list | `[]` | Calendars that should start hidden. When provided, this list takes precedence over any per-browser visibility stored from the dialog. |
+| `language` | string | `system` | Locale used for all labels. Use `system` or one of the supported language codes (see `src/localization.js`). |
+| `theme` | string | `system` | Force the light or dark theme (`light`, `dark`, or `system`). YAML values override the per-browser theme preference. |
+| `trim_unused_hours` | boolean | `false` | When `true`, collapses empty time slots outside the hours that contain events. |
+| `highlight_today` | boolean | `true` | Toggle the highlight around the current day column. |
+| `today_highlight_color` | string | `#4D96FF` | Color used for the “today” highlight. Accepts hex or CSS color strings. YAML value wins over any color picked in the dialog. |
+
+Example with custom options:
+
+```yaml
+type: custom:calendar-week-card
+title: Team Schedule
+language: de
+theme: dark
+trim_unused_hours: true
+highlight_today: true
+today_highlight_color: '#3366ff'
+entities:
+  - calendar.team
+  - calendar.holidays
+colors:
+  calendar.team: '#6bcf7d'
+hidden_entities:
+  - calendar.holidays
+```
 
 ## Development
 
