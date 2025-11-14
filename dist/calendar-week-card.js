@@ -476,6 +476,14 @@ const THEME_ACCENT_FALLBACK = {
 };
 
 class CalendarWeekCard extends HTMLElement {
+    static getConfigElement() {
+        return createCalendarWeekCardEditorElement();
+    }
+
+    static getStubConfig(hass) {
+        return createCalendarWeekCardStubConfig(hass);
+    }
+
     constructor() {
         super();
         this.weekOffset = 0;
@@ -2649,9 +2657,320 @@ class CalendarWeekCard extends HTMLElement {
         return 3;
     }
 
-    static getStubConfig() {
-        return { title: "Familien Kalender", entities: [], colors: {} };
+}
+
+class CalendarWeekCardEditor extends HTMLElement {
+    constructor() {
+        super();
+        this._config = { entities: [] };
+        this._hass = null;
+        this.attachShadow({ mode: "open" });
     }
+
+    set hass(value) {
+        this._hass = value;
+        this._render();
+    }
+
+    setConfig(config) {
+        const baseConfig = config && typeof config === "object" ? config : {};
+        const entities = Array.isArray(baseConfig.entities) ? baseConfig.entities : [];
+        this._config = {
+            ...baseConfig,
+            type: baseConfig.type || "custom:calendar-week-card",
+            entities: entities.map(entry => (entry && typeof entry === "object") ? { ...entry } : { entity: entry })
+        };
+        this._render();
+    }
+
+    _render() {
+        if (!this.shadowRoot || !this._config) {
+            return;
+        }
+
+        const root = this.shadowRoot;
+        const availableCalendars = getCalendarEntitiesFromHass(this._hass);
+        const hasCalendars = availableCalendars.length > 0;
+        root.innerHTML = `
+            <style>
+                :host {
+                    display: block;
+                    color: var(--primary-text-color);
+                }
+                .card-config {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 20px;
+                }
+                .section {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+                .section h3 {
+                    margin: 0;
+                    font-size: 1em;
+                    font-weight: 600;
+                }
+                .section p {
+                    margin: 0;
+                    color: var(--secondary-text-color);
+                    font-size: 0.9em;
+                    line-height: 1.4;
+                }
+                .entities {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+                .entity-row {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .entity-row ha-entity-picker,
+                .entity-row input[type="text"] {
+                    flex: 1;
+                }
+                button {
+                    font: inherit;
+                }
+                .add-btn,
+                .remove-btn {
+                    border-radius: 6px;
+                    border: 1px solid var(--divider-color);
+                    padding: 6px 10px;
+                    background: var(--ha-card-background, rgba(0,0,0,0.05));
+                    cursor: pointer;
+                    transition: background 0.2s ease;
+                }
+                .add-btn:hover,
+                .remove-btn:hover {
+                    background: rgba(77, 150, 255, 0.1);
+                }
+                .empty-state {
+                    padding: 12px;
+                    border-radius: 8px;
+                    border: 1px dashed var(--divider-color);
+                    color: var(--secondary-text-color);
+                }
+                .inline-input {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                }
+                .inline-input label {
+                    font-size: 0.85em;
+                    color: var(--secondary-text-color);
+                }
+                .toggles {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+                .toggle-row {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                }
+                .toggle-row span {
+                    font-weight: 500;
+                }
+                select,
+                input[type="color"],
+                input[type="text"] {
+                    font: inherit;
+                    padding: 6px 8px;
+                    border-radius: 6px;
+                    border: 1px solid var(--divider-color);
+                    background: var(--card-background-color, var(--ha-card-background));
+                    color: inherit;
+                }
+            </style>
+            <div class="card-config">
+                <div class="section">
+                    <h3>Calendars</h3>
+                    <p>Select the calendar entities that should appear in the week view.</p>
+                    <div class="entities" id="entities"></div>
+                    <button type="button" class="add-btn" id="add-entity">Add calendar</button>
+                    ${hasCalendars ? "" : "<div class=\"empty-state\">No calendar entities were found in your Home Assistant instance. You can still add entries manually or create calendars under Settings → Devices & services.</div>"}
+                </div>
+                <div class="section">
+                    <h3>Appearance</h3>
+                    <div class="toggles">
+                        <div class="toggle-row">
+                            <span>Highlight today</span>
+                            <ha-switch id="highlight-today"></ha-switch>
+                        </div>
+                        <div class="toggle-row">
+                            <span>Trim empty hours</span>
+                            <ha-switch id="trim-hours"></ha-switch>
+                        </div>
+                    </div>
+                    <div class="inline-input">
+                        <label for="highlight-color">Highlight color</label>
+                        <input type="color" id="highlight-color" name="highlight-color" />
+                    </div>
+                    <div class="inline-input">
+                        <label for="theme-select">Theme</label>
+                        <select id="theme-select">
+                            <option value="system">Match Home Assistant</option>
+                            <option value="light">Always light</option>
+                            <option value="dark">Always dark</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this._populateEntityRows();
+
+        const addButton = root.getElementById("add-entity");
+        if (addButton) {
+            addButton.addEventListener("click", () => this._handleAddEntity());
+        }
+
+        const highlightSwitch = root.getElementById("highlight-today");
+        if (highlightSwitch) {
+            highlightSwitch.checked = this._config.highlight_today !== false;
+            highlightSwitch.addEventListener("change", (event) => {
+                this._updateConfig({ highlight_today: event.target.checked });
+            });
+        }
+
+        const trimSwitch = root.getElementById("trim-hours");
+        if (trimSwitch) {
+            trimSwitch.checked = this._config.trim_unused_hours === true;
+            trimSwitch.addEventListener("change", (event) => {
+                this._updateConfig({ trim_unused_hours: event.target.checked });
+            });
+        }
+
+        const highlightColor = root.getElementById("highlight-color");
+        if (highlightColor) {
+            highlightColor.value = this._config.today_highlight_color || "#4D96FF";
+            highlightColor.addEventListener("input", (event) => {
+                this._updateConfig({ today_highlight_color: event.target.value });
+            });
+        }
+
+        const themeSelect = root.getElementById("theme-select");
+        if (themeSelect) {
+            themeSelect.value = this._config.theme || "system";
+            themeSelect.addEventListener("change", (event) => {
+                this._updateConfig({ theme: event.target.value });
+            });
+        }
+    }
+
+    _populateEntityRows() {
+        if (!this.shadowRoot) {
+            return;
+        }
+        const container = this.shadowRoot.getElementById("entities");
+        if (!container) {
+            return;
+        }
+        container.innerHTML = "";
+        const entities = Array.isArray(this._config.entities) ? this._config.entities : [];
+
+        if (!entities.length) {
+            const empty = document.createElement("div");
+            empty.className = "empty-state";
+            empty.textContent = "Add at least one calendar entity to finish the setup.";
+            container.appendChild(empty);
+            return;
+        }
+
+        entities.forEach((entityConfig, index) => {
+            const row = document.createElement("div");
+            row.className = "entity-row";
+
+            const picker = document.createElement("ha-entity-picker");
+            picker.classList.add("entity-picker");
+            picker.hass = this._hass;
+            picker.value = entityConfig?.entity || "";
+            picker.setAttribute("domain", "calendar");
+            picker.addEventListener("value-changed", (event) => this._handleEntityChanged(index, event));
+
+            const removeButton = document.createElement("button");
+            removeButton.type = "button";
+            removeButton.className = "remove-btn";
+            removeButton.textContent = "Remove";
+            removeButton.addEventListener("click", () => this._handleRemoveEntity(index));
+
+            row.appendChild(picker);
+            row.appendChild(removeButton);
+            container.appendChild(row);
+        });
+    }
+
+    _handleAddEntity() {
+        const entities = Array.isArray(this._config.entities) ? [...this._config.entities] : [];
+        const suggestion = this._suggestNextCalendarEntity();
+        entities.push({ entity: suggestion || "" });
+        this._updateConfig({ entities });
+    }
+
+    _handleRemoveEntity(index) {
+        const entities = Array.isArray(this._config.entities) ? [...this._config.entities] : [];
+        entities.splice(index, 1);
+        this._updateConfig({ entities });
+    }
+
+    _handleEntityChanged(index, event) {
+        const value = event?.detail?.value || event?.target?.value || "";
+        const entities = Array.isArray(this._config.entities) ? [...this._config.entities] : [];
+        if (!entities[index]) {
+            entities[index] = { entity: value };
+        } else {
+            entities[index] = { ...entities[index], entity: value };
+        }
+        this._updateConfig({ entities });
+    }
+
+    _suggestNextCalendarEntity() {
+        const available = getCalendarEntitiesFromHass(this._hass);
+        const used = new Set((this._config.entities || []).map(entry => entry.entity));
+        return available.find(entityId => !used.has(entityId));
+    }
+
+    _updateConfig(changes) {
+        this._config = {
+            ...this._config,
+            ...changes
+        };
+        this._render();
+        this.dispatchEvent(new CustomEvent("config-changed", {
+            detail: { config: this._config },
+            bubbles: true,
+            composed: true
+        }));
+    }
+}
+
+function createCalendarWeekCardEditorElement() {
+    if (!customElements.get("calendar-week-card-editor")) {
+        customElements.define("calendar-week-card-editor", CalendarWeekCardEditor);
+    }
+    return document.createElement("calendar-week-card-editor");
+}
+
+function createCalendarWeekCardStubConfig(hass) {
+    const calendarEntities = getCalendarEntitiesFromHass(hass);
+    const defaultEntities = calendarEntities.slice(0, 2);
+    const fallback = defaultEntities.length ? defaultEntities : ["calendar.family"];
+    return {
+        type: "custom:calendar-week-card",
+        entities: fallback.map(entityId => ({ entity: entityId }))
+    };
+}
+
+function getCalendarEntitiesFromHass(hass) {
+    if (!hass || !hass.states) {
+        return [];
+    }
+    return Object.keys(hass.states).filter(entityId => entityId.startsWith("calendar."));
 }
 
 if (!customElements.get("calendar-week-card")) {
