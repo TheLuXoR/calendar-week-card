@@ -13,6 +13,17 @@ const outputFile = path.join(distDir, "calendar-week-card.js");
 // zusätzlich: Ziel für HACS (Repo-Root)
 const hacsOutputFile = path.join(rootDir, "calendar-week-card.js");
 
+async function getBuildNumber() {
+    const file = path.join(rootDir, "scripts/build-number.txt");
+    let n = 0;
+    try {
+        n = parseInt(await readFile(file, "utf8"), 10) || 0;
+    } catch {}
+    n++;
+    await writeFile(file, String(n));
+    return n;
+}
+
 function stripExports(source) {
     return source
         .replace(/export\s+default\s+/g, "")
@@ -72,6 +83,13 @@ async function build() {
 
     console.log(`Built ${path.relative(rootDir, outputFile)}`);
     console.log(`Copied for HACS → ${path.relative(rootDir, hacsOutputFile)}`);
+
+    const buildNumber = await getBuildNumber();
+    const versionedPath = `local/calendar-week-card/calendar-week-card.js?v=${buildNumber}`;
+    await copyToClipboard(versionedPath);
+    console.log("\nPath:");
+    console.log(versionedPath);
+
 }
 
 build().catch(err => {
