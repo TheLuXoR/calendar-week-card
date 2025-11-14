@@ -55,43 +55,26 @@ function wrapSection(title, content) {
 }
 
 async function build() {
-    const [localizationSource, colorsSource, cardSource] = await Promise.all([
+    const [localizationSource, colorsSource, cardSource, entrySource] = await Promise.all([
         readSource("localization.js"),
         readSource("colors.js"),
-        readSource("calendar-week-card.js")
+        readSource("calendar-week-card.js"),
+        readSource("index.js")
     ]);
 
     const localization = stripExports(localizationSource);
     const colors = stripExports(colorsSource);
     const card = stripImports(stripExports(cardSource));
+    const entry = stripImports(stripExports(entrySource));
 
     const banner = "// Calendar Week Card – generated bundle";
-    const registration = [
-        'if (!customElements.get("calendar-week-card")) {',
-        '    customElements.define("calendar-week-card", CalendarWeekCard);',
-        '}',
-        '',
-        'if (typeof window !== "undefined") {',
-        '    window.customCards = window.customCards || [];',
-        '    const cardEntry = {',
-        '        type: "custom:calendar-week-card",',
-        '        name: "Calendar Week Card",',
-        '        description: "Week-based calendar view with multiple calendars and advanced styling."',
-        '    };',
-        '    if (!window.customCards.some(card => card.type === cardEntry.type)) {',
-        '        window.customCards.push(cardEntry);',
-        '    }',
-        '}',
-        '',
-        'export { CalendarWeekCard };'
-    ].join("\n");
 
     const sections = [
         banner,
         wrapSection("Localization", localization),
         wrapSection("Color utilities", colors),
         wrapSection("Calendar week card", card),
-        registration
+        wrapSection("Card registration", entry)
     ].filter(Boolean);
 
     await mkdir(distDir, { recursive: true });
