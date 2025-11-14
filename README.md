@@ -134,6 +134,11 @@ npm run build
   </a>
 </div>
 
+## Translation
+
+Translation was done by ChatGPT. You see some flaws I should fix? just open an issue in my Repository.
+
+
 ## License
 
 This project is released under the MIT License.
