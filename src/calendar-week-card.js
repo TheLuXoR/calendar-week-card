@@ -1786,14 +1786,6 @@ export class CalendarWeekCard extends HTMLElement {
 
         content.appendChild(list);
 
-        const refreshBtn = this.createDialogButton(this.t("refreshNow"));
-        refreshBtn.style.alignSelf = "flex-start";
-        refreshBtn.addEventListener("click", () => {
-            if (this._hass) this.loadEvents(this._hass);
-        });
-        content.appendChild(refreshBtn);
-        dialogButtons.push(refreshBtn);
-
         const trimSection = document.createElement("div");
         Object.assign(trimSection.style, {
             display: "flex",
@@ -2077,7 +2069,6 @@ export class CalendarWeekCard extends HTMLElement {
             themeSystemOption.textContent = this.t("themeSystem");
             themeLightOption.textContent = this.t("themeLight");
             themeDarkOption.textContent = this.t("themeDark");
-            refreshBtn.textContent = this.t("refreshNow");
             supportText.textContent = this.t("supportViaPaypal");
             const Text = this.t("supportWithPaypal");
             Button.textContent = Text;

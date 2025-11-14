@@ -12,7 +12,7 @@ const TRANSLATIONS = {
         location: "Location",
         description: "Description",
         calendarColors: "Calendar Colors",
-        supportViaPaypal: "Like it? Support me via PayPal:",
+        supportViaPaypal: "Like the card?",
         saveAndClose: "Save & Close",
         close: "Close",
         calendar: "Calendar",
@@ -21,7 +21,7 @@ const TRANSLATIONS = {
         noTitle: "(no title)",
         languageLabel: "Language",
         systemDefault: "System default",
-        supportWithPaypal: "Support with PayPal",
+        supportWithPaypal: "Support",
         highlightToday: "Highlight current day",
         highlightTodayDescription: "Shade today's column with a subtle color.",
         themeLabel: "Appearance",
@@ -42,7 +42,7 @@ const TRANSLATIONS = {
         location: "Ort",
         description: "Beschreibung",
         calendarColors: "Kalenderfarben",
-        supportViaPaypal: "Gefällt dir die Karte? Unterstütze mich via PayPal:",
+        supportViaPaypal: "Gefällt dir die Karte?",
         saveAndClose: "Speichern & Schließen",
         close: "Schließen",
         calendar: "Kalender",
@@ -51,7 +51,7 @@ const TRANSLATIONS = {
         noTitle: "(kein Titel)",
         languageLabel: "Sprache",
         systemDefault: "Systemstandard",
-        supportWithPaypal: "Mit PayPal spenden",
+        supportWithPaypal: "Unterstützen",
         highlightToday: "Aktuellen Tag hervorheben",
         highlightTodayDescription: "Markiert die heutige Spalte mit einer sanften Farbe.",
         themeLabel: "Darstellung",
@@ -72,7 +72,7 @@ const TRANSLATIONS = {
         location: "Lieu",
         description: "Description",
         calendarColors: "Couleurs du calendrier",
-        supportViaPaypal: "Vous aimez ? Soutenez-moi via PayPal :",
+        supportViaPaypal: "Vous aimez la carte ?",
         saveAndClose: "Enregistrer et fermer",
         close: "Fermer",
         calendar: "Calendrier",
@@ -81,7 +81,7 @@ const TRANSLATIONS = {
         noTitle: "(sans titre)",
         languageLabel: "Langue",
         systemDefault: "Langue du système",
-        supportWithPaypal: "Faire un don avec PayPal",
+        supportWithPaypal: "Soutenir",
         highlightToday: "Mettre en surbrillance aujourd'hui",
         highlightTodayDescription: "Colorer la colonne d'aujourd'hui avec une couleur subtile.",
         themeLabel: "Apparence",
@@ -102,7 +102,7 @@ const TRANSLATIONS = {
         location: "Ubicación",
         description: "Descripción",
         calendarColors: "Colores del calendario",
-        supportViaPaypal: "¿Te gusta? Apóyame vía PayPal:",
+        supportViaPaypal: "¿Te gusta la tarjeta?",
         saveAndClose: "Guardar y cerrar",
         close: "Cerrar",
         calendar: "Calendario",
@@ -111,7 +111,7 @@ const TRANSLATIONS = {
         noTitle: "(sin título)",
         languageLabel: "Idioma",
         systemDefault: "Predeterminado del sistema",
-        supportWithPaypal: "Donar con PayPal",
+        supportWithPaypal: "Apoyar",
         highlightToday: "Resaltar el día actual",
         highlightTodayDescription: "Sombrea la columna de hoy con un color sutil.",
         themeLabel: "Apariencia",
@@ -132,7 +132,7 @@ const TRANSLATIONS = {
         location: "Posizione",
         description: "Descrizione",
         calendarColors: "Colori del calendario",
-        supportViaPaypal: "Ti piace? Sostienimi tramite PayPal:",
+        supportViaPaypal: "Ti piace la card?",
         saveAndClose: "Salva e chiudi",
         close: "Chiudi",
         calendar: "Calendario",
@@ -141,7 +141,7 @@ const TRANSLATIONS = {
         noTitle: "(senza titolo)",
         languageLabel: "Lingua",
         systemDefault: "Predefinito di sistema",
-        supportWithPaypal: "Dona con PayPal",
+        supportWithPaypal: "Sostieni",
         highlightToday: "Evidenzia il giorno corrente",
         highlightTodayDescription: "Colora la colonna di oggi con un colore tenue.",
         themeLabel: "Aspetto",
@@ -162,7 +162,7 @@ const TRANSLATIONS = {
         location: "Locatie",
         description: "Beschrijving",
         calendarColors: "Kalenderkleuren",
-        supportViaPaypal: "Vind je het leuk? Steun me via PayPal:",
+        supportViaPaypal: "Vind je de kaart leuk?",
         saveAndClose: "Opslaan en sluiten",
         close: "Sluiten",
         calendar: "Agenda",
@@ -171,7 +171,7 @@ const TRANSLATIONS = {
         noTitle: "(geen titel)",
         languageLabel: "Taal",
         systemDefault: "Systeemstandaard",
-        supportWithPaypal: "Doneren met PayPal",
+        supportWithPaypal: "Steunen",
         highlightToday: "Markeer de huidige dag",
         highlightTodayDescription: "Kleur de kolom van vandaag met een subtiele kleur.",
         themeLabel: "Weergave",
@@ -2188,14 +2188,6 @@ class CalendarWeekCard extends HTMLElement {
 
         content.appendChild(list);
 
-        const refreshBtn = this.createDialogButton(this.t("refreshNow"));
-        refreshBtn.style.alignSelf = "flex-start";
-        refreshBtn.addEventListener("click", () => {
-            if (this._hass) this.loadEvents(this._hass);
-        });
-        content.appendChild(refreshBtn);
-        dialogButtons.push(refreshBtn);
-
         const trimSection = document.createElement("div");
         Object.assign(trimSection.style, {
             display: "flex",
@@ -2479,7 +2471,6 @@ class CalendarWeekCard extends HTMLElement {
             themeSystemOption.textContent = this.t("themeSystem");
             themeLightOption.textContent = this.t("themeLight");
             themeDarkOption.textContent = this.t("themeDark");
-            refreshBtn.textContent = this.t("refreshNow");
             supportText.textContent = this.t("supportViaPaypal");
             const Text = this.t("supportWithPaypal");
             Button.textContent = Text;
