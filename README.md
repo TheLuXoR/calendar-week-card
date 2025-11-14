@@ -11,6 +11,17 @@
 
 A fully customizable Lovelace card that displays your week at a glance in a clean, structured grid. It automatically finds all calendars available in Home Assistant, but you can also choose specific ones if you prefer. Each calendar can have its own color, and you can tweak the entire theme to match your setup.
 
+## Register calendars in Home Assistant
+
+The card can only display entities that Home Assistant already knows about. If the calendar picker in the settings dialog looks empty, first make sure at least one calendar is configured in Home Assistant:
+
+1. Open **Settings → Devices & Services → Integrations** in Home Assistant.
+2. Click **Add Integration** and search for a calendar source such as **Local Calendar**, **Google Calendar**, or another provider you use.
+3. Follow the on-screen prompts for the chosen integration and complete the authentication/authorization flow.
+4. When the integration finishes, confirm that a `calendar.*` entity appears under **Settings → Devices & Services → Entities**. That entity will now be auto-discovered by the Calendar Week Card (or you can list it manually via the `entities` option).
+
+Once at least one calendar entity exists, the card can discover it automatically or you can explicitly list the entities you want to show.
+
 ## Features
 - Weekly grid layout with current time indicator
 - Automatic calendar discovery with optional manual entity list
