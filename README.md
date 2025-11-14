@@ -1,14 +1,15 @@
+# !!! Rework needed !!!
 # Calendar Week Card
 [![hacs][hacs-img]][hacs-url] 
 [![GitHub Release][github-release-img]][github-release-url] 
 [![Downloads][github-downloads-img]][github-release-url] 
 [![Downloads@latest][github-latest-downloads-img]][github-release-url]
 
-A a fully customizable Lovelace card that renders a weekly calendar grid for Home Assistant. The card discovers your calendars automatically and you can assign your preferred colors per calendar or change the main theme entirely.
 
-### how it could look:
-<img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_2.png" alt="drawing" width="200"/>
-<img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_4.png" alt="drawing" width="200"/>
+<img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_2.png" alt="drawing" width="300"/>
+<img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_4.png" alt="drawing" width="300"/>
+
+A fully customizable Lovelace card that displays your week at a glance in a clean, structured grid. It automatically finds all calendars available in Home Assistant, but you can also choose specific ones if you prefer. Each calendar can have its own color, and you can tweak the entire theme to match your setup.
 
 ## Features
 - Weekly grid layout with current time indicator
@@ -55,26 +56,14 @@ currently the calendar card is meant to be used as a panel view.
 ```yaml
 type: custom:calendar-week-card
 ```
+Setting it up in this way it will start with a default setup. You can customize it via settings screen.
 
-### manual setup with predefined Calendars
-```yaml
-type: custom:calendar-week-card
-title: Family calendar
-entities:
-  - calendar.family
-  - calendar.work
-```
-
-- `title` (optional): Override the header text.
-- `entities` (optional): Explicit list of calendar entities. When omitted, all available calendars are shown.
-
-### configuration options
+### configuarable setup
 
 Every option that is available in the in-card settings dialog can also be controlled from YAML. This makes it easy to keep multiple dashboards consistent or to share a predefined look and feel with other users.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `title` | string | – | Optional title shown in the header bar. |
 | `entities` | list | auto-discover | Calendars to display. When omitted the card queries Home Assistant for all available calendars. |
 | `colors` | map | generated | Map of `calendar.entity_id` → color. Colors accept hex values or any CSS color string. Values defined here override colors chosen in the dialog. |
 | `hidden_entities` | list | `[]` | Calendars that should start hidden. When provided, this list takes precedence over any per-browser visibility stored from the dialog. |
@@ -84,11 +73,10 @@ Every option that is available in the in-card settings dialog can also be contro
 | `highlight_today` | boolean | `true` | Toggle the highlight around the current day column. |
 | `today_highlight_color` | string | `#4D96FF` | Color used for the “today” highlight. Accepts hex or CSS color strings. YAML value wins over any color picked in the dialog. |
 
-Example with custom options:
+#### Example with custom options:
 
 ```yaml
 type: custom:calendar-week-card
-title: Team Schedule
 language: de
 theme: dark
 trim_unused_hours: true
