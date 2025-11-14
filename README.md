@@ -100,10 +100,36 @@ npm run build
 ```
 
 
-## Support the project
+## you like it?
 
-you like it? you could support me =)</br>
-[![Donate with PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4)
+<div style="
+  display:flex;
+  margin-top:12px;
+">
+  <a href="https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4"
+     target="_blank"
+     style="
+        background: linear-gradient(120deg, #F9D423, #FFCF00);
+        color: #ffffff;
+        padding: 10px 18px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1em;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        cursor: pointer;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+        transition: transform .15s ease, box-shadow .25s ease, filter .2s ease;
+     "
+     onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.35)';"
+     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.25)';"
+  >
+    💛 Support 💛
+  </a>
+</div>
 
 ## License
 

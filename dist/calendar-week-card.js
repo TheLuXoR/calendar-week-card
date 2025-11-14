@@ -21,7 +21,7 @@ const TRANSLATIONS = {
         noTitle: "(no title)",
         languageLabel: "Language",
         systemDefault: "System default",
-        donateWithPaypal: "Donate with PayPal",
+        supportWithPaypal: "Support with PayPal",
         highlightToday: "Highlight current day",
         highlightTodayDescription: "Shade today's column with a subtle color.",
         themeLabel: "Appearance",
@@ -51,7 +51,7 @@ const TRANSLATIONS = {
         noTitle: "(kein Titel)",
         languageLabel: "Sprache",
         systemDefault: "Systemstandard",
-        donateWithPaypal: "Mit PayPal spenden",
+        supportWithPaypal: "Mit PayPal spenden",
         highlightToday: "Aktuellen Tag hervorheben",
         highlightTodayDescription: "Markiert die heutige Spalte mit einer sanften Farbe.",
         themeLabel: "Darstellung",
@@ -81,7 +81,7 @@ const TRANSLATIONS = {
         noTitle: "(sans titre)",
         languageLabel: "Langue",
         systemDefault: "Langue du système",
-        donateWithPaypal: "Faire un don avec PayPal",
+        supportWithPaypal: "Faire un don avec PayPal",
         highlightToday: "Mettre en surbrillance aujourd'hui",
         highlightTodayDescription: "Colorer la colonne d'aujourd'hui avec une couleur subtile.",
         themeLabel: "Apparence",
@@ -111,7 +111,7 @@ const TRANSLATIONS = {
         noTitle: "(sin título)",
         languageLabel: "Idioma",
         systemDefault: "Predeterminado del sistema",
-        donateWithPaypal: "Donar con PayPal",
+        supportWithPaypal: "Donar con PayPal",
         highlightToday: "Resaltar el día actual",
         highlightTodayDescription: "Sombrea la columna de hoy con un color sutil.",
         themeLabel: "Apariencia",
@@ -141,7 +141,7 @@ const TRANSLATIONS = {
         noTitle: "(senza titolo)",
         languageLabel: "Lingua",
         systemDefault: "Predefinito di sistema",
-        donateWithPaypal: "Dona con PayPal",
+        supportWithPaypal: "Dona con PayPal",
         highlightToday: "Evidenzia il giorno corrente",
         highlightTodayDescription: "Colora la colonna di oggi con un colore tenue.",
         themeLabel: "Aspetto",
@@ -171,7 +171,7 @@ const TRANSLATIONS = {
         noTitle: "(geen titel)",
         languageLabel: "Taal",
         systemDefault: "Systeemstandaard",
-        donateWithPaypal: "Doneren met PayPal",
+        supportWithPaypal: "Doneren met PayPal",
         highlightToday: "Markeer de huidige dag",
         highlightTodayDescription: "Kleur de kolom van vandaag met een subtiele kleur.",
         themeLabel: "Weergave",
@@ -793,7 +793,9 @@ class CalendarWeekCard extends HTMLElement {
             justifyContent: "center",
             gap: "6px",
             textDecoration: "none",
-            minHeight: "40px"
+            minHeight: "40px",
+            textShadow: "1px 1px rgba(0,0,0, 0.5)"
+
         });
 
         this.applyDialogButtonStyles(button);
@@ -2343,7 +2345,6 @@ class CalendarWeekCard extends HTMLElement {
                 startColor: "#ff6b6b",
                 endColor: "#ffaf7b"
             });
-            resetButton.style.alignSelf = "flex-start";
 
             resetButton.addEventListener("click", () => {
                 if (!window.confirm(this.t("resetConfirmation"))) {
@@ -2376,8 +2377,8 @@ class CalendarWeekCard extends HTMLElement {
             dialogButtons.push(resetButton);
         }
 
-        const donateSection = document.createElement("div");
-        Object.assign(donateSection.style, {
+        const Section = document.createElement("div");
+        Object.assign(Section.style, {
             marginTop: "8px",
             display: "flex",
             justifyContent: "center",
@@ -2389,22 +2390,22 @@ class CalendarWeekCard extends HTMLElement {
 
         const supportText = document.createElement("span");
         supportText.style.fontSize = "0.9em";
-        donateSection.appendChild(supportText);
+        Section.appendChild(supportText);
 
-        const donateUrl = "https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4";
-        const donateButton = this.createDialogButton(this.t("donateWithPaypal"), {
-            startColor: "#003087",
-            endColor: "#009cde"
+        const Url = "https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4";
+        const Button = this.createDialogButton(this.t("supportWithPaypal"), {
+            startColor: "#F9D423",
+            endColor: "#FFCF00"
         });
-        donateButton.style.minWidth = "200px";
-        donateButton.addEventListener("click", () => {
+        Button.style.minWidth = "200px";
+        Button.addEventListener("click", () => {
             if (typeof window !== "undefined") {
-                window.open(donateUrl, "_blank", "noopener,noreferrer");
+                window.open(Url, "_blank", "noopener,noreferrer");
             }
         });
-        donateSection.appendChild(donateButton);
-        content.appendChild(donateSection);
-        dialogButtons.push(donateButton);
+        Section.appendChild(Button);
+        content.appendChild(Section);
+        dialogButtons.push(Button);
 
         const closeBtn = this.createDialogButton(this.t("saveAndClose"));
         closeBtn.style.marginTop = "16px";
@@ -2480,10 +2481,10 @@ class CalendarWeekCard extends HTMLElement {
             themeDarkOption.textContent = this.t("themeDark");
             refreshBtn.textContent = this.t("refreshNow");
             supportText.textContent = this.t("supportViaPaypal");
-            const donateText = this.t("donateWithPaypal");
-            donateButton.textContent = donateText;
-            donateButton.setAttribute("aria-label", donateText);
-            donateButton.setAttribute("title", donateText);
+            const Text = this.t("supportWithPaypal");
+            Button.textContent = Text;
+            Button.setAttribute("aria-label", Text);
+            Button.setAttribute("title", Text);
             closeBtn.textContent = this.t("saveAndClose");
             const trimLabelText = this.t("trimUnusedHours");
             trimLabel.textContent = trimLabelText;

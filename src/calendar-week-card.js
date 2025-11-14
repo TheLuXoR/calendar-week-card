@@ -391,7 +391,9 @@ export class CalendarWeekCard extends HTMLElement {
             justifyContent: "center",
             gap: "6px",
             textDecoration: "none",
-            minHeight: "40px"
+            minHeight: "40px",
+            textShadow: "1px 1px rgba(0,0,0, 0.5)"
+
         });
 
         this.applyDialogButtonStyles(button);
@@ -1941,7 +1943,6 @@ export class CalendarWeekCard extends HTMLElement {
                 startColor: "#ff6b6b",
                 endColor: "#ffaf7b"
             });
-            resetButton.style.alignSelf = "flex-start";
 
             resetButton.addEventListener("click", () => {
                 if (!window.confirm(this.t("resetConfirmation"))) {
@@ -1974,8 +1975,8 @@ export class CalendarWeekCard extends HTMLElement {
             dialogButtons.push(resetButton);
         }
 
-        const donateSection = document.createElement("div");
-        Object.assign(donateSection.style, {
+        const Section = document.createElement("div");
+        Object.assign(Section.style, {
             marginTop: "8px",
             display: "flex",
             justifyContent: "center",
@@ -1987,22 +1988,22 @@ export class CalendarWeekCard extends HTMLElement {
 
         const supportText = document.createElement("span");
         supportText.style.fontSize = "0.9em";
-        donateSection.appendChild(supportText);
+        Section.appendChild(supportText);
 
-        const donateUrl = "https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4";
-        const donateButton = this.createDialogButton(this.t("donateWithPaypal"), {
-            startColor: "#003087",
-            endColor: "#009cde"
+        const Url = "https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4";
+        const Button = this.createDialogButton(this.t("supportWithPaypal"), {
+            startColor: "#F9D423",
+            endColor: "#FFCF00"
         });
-        donateButton.style.minWidth = "200px";
-        donateButton.addEventListener("click", () => {
+        Button.style.minWidth = "200px";
+        Button.addEventListener("click", () => {
             if (typeof window !== "undefined") {
-                window.open(donateUrl, "_blank", "noopener,noreferrer");
+                window.open(Url, "_blank", "noopener,noreferrer");
             }
         });
-        donateSection.appendChild(donateButton);
-        content.appendChild(donateSection);
-        dialogButtons.push(donateButton);
+        Section.appendChild(Button);
+        content.appendChild(Section);
+        dialogButtons.push(Button);
 
         const closeBtn = this.createDialogButton(this.t("saveAndClose"));
         closeBtn.style.marginTop = "16px";
@@ -2078,10 +2079,10 @@ export class CalendarWeekCard extends HTMLElement {
             themeDarkOption.textContent = this.t("themeDark");
             refreshBtn.textContent = this.t("refreshNow");
             supportText.textContent = this.t("supportViaPaypal");
-            const donateText = this.t("donateWithPaypal");
-            donateButton.textContent = donateText;
-            donateButton.setAttribute("aria-label", donateText);
-            donateButton.setAttribute("title", donateText);
+            const Text = this.t("supportWithPaypal");
+            Button.textContent = Text;
+            Button.setAttribute("aria-label", Text);
+            Button.setAttribute("title", Text);
             closeBtn.textContent = this.t("saveAndClose");
             const trimLabelText = this.t("trimUnusedHours");
             trimLabel.textContent = trimLabelText;
