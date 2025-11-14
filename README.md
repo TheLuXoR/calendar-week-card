@@ -30,15 +30,18 @@ A fully customizable Lovelace card that displays your week at a glance in a clea
 ### HACS (recommended)
 
 1. Ensure you are running Home Assistant 2023.5 or newer.
-2. In HACS, add this repository as a custom repository of type **Lovelace**.
-3. Install **Calendar Week Card** from the custom repositories list.
-4. After installation, reload your Lovelace resources or restart Home Assistant if prompted.
+2. Open **HACS → Frontend**, search for **Calendar Week Card**, and install it.
+3. HACS will register the resource automatically; reload your dashboard resources or restart Home Assistant if prompted.
 
 ### Manual installation
 
-1. Add https://github.com/TheLuXoR/calendar-week-card to your custom HACS repositories
-2. Search for "Calendar Week Card"
-3. Download the latest release
+1. Download the latest release from [GitHub](https://github.com/TheLuXoR/calendar-week-card/releases).
+2. Copy `calendar-week-card.js` into your `config/www` folder (or another location served by Home Assistant).
+3. Add a Lovelace resource that points to the copied file, for example:
+   ```yaml
+   url: /local/calendar-week-card.js
+   type: module
+   ```
 
 ## usage
 currently the calendar card is meant to be used as a panel view.
@@ -100,10 +103,41 @@ npm run build
 ```
 
 
-## Support the project
+## you like it?
 
-you like it? you could support me =)</br>
-[![Donate with PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4)
+<div style="
+  display:flex;
+  margin-top:12px;
+">
+  <a href="https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4"
+     target="_blank"
+     style="
+        background: linear-gradient(120deg, #F9D423, #FFCF00);
+        color: #ffffff;
+        padding: 10px 18px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1em;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        cursor: pointer;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+        transition: transform .15s ease, box-shadow .25s ease, filter .2s ease;
+     "
+     onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.35)';"
+     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.25)';"
+  >
+    💛 Support 💛
+  </a>
+</div>
+
+## Translation
+
+Translation was done by ChatGPT. You see some flaws I should fix? just open an issue in my Repository.
+
 
 ## License
 

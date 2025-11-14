@@ -12,7 +12,7 @@ const TRANSLATIONS = {
         location: "Location",
         description: "Description",
         calendarColors: "Calendar Colors",
-        supportViaPaypal: "Like it? Support me via PayPal:",
+        supportViaPaypal: "Like the card?",
         saveAndClose: "Save & Close",
         close: "Close",
         calendar: "Calendar",
@@ -21,7 +21,7 @@ const TRANSLATIONS = {
         noTitle: "(no title)",
         languageLabel: "Language",
         systemDefault: "System default",
-        donateWithPaypal: "Donate with PayPal",
+        supportWithPaypal: "Support",
         highlightToday: "Highlight current day",
         highlightTodayDescription: "Shade today's column with a subtle color.",
         themeLabel: "Appearance",
@@ -42,7 +42,7 @@ const TRANSLATIONS = {
         location: "Ort",
         description: "Beschreibung",
         calendarColors: "Kalenderfarben",
-        supportViaPaypal: "Gefällt dir die Karte? Unterstütze mich via PayPal:",
+        supportViaPaypal: "Gefällt dir die Karte?",
         saveAndClose: "Speichern & Schließen",
         close: "Schließen",
         calendar: "Kalender",
@@ -51,7 +51,7 @@ const TRANSLATIONS = {
         noTitle: "(kein Titel)",
         languageLabel: "Sprache",
         systemDefault: "Systemstandard",
-        donateWithPaypal: "Mit PayPal spenden",
+        supportWithPaypal: "Unterstützen",
         highlightToday: "Aktuellen Tag hervorheben",
         highlightTodayDescription: "Markiert die heutige Spalte mit einer sanften Farbe.",
         themeLabel: "Darstellung",
@@ -72,7 +72,7 @@ const TRANSLATIONS = {
         location: "Lieu",
         description: "Description",
         calendarColors: "Couleurs du calendrier",
-        supportViaPaypal: "Vous aimez ? Soutenez-moi via PayPal :",
+        supportViaPaypal: "Vous aimez la carte ?",
         saveAndClose: "Enregistrer et fermer",
         close: "Fermer",
         calendar: "Calendrier",
@@ -81,7 +81,7 @@ const TRANSLATIONS = {
         noTitle: "(sans titre)",
         languageLabel: "Langue",
         systemDefault: "Langue du système",
-        donateWithPaypal: "Faire un don avec PayPal",
+        supportWithPaypal: "Soutenir",
         highlightToday: "Mettre en surbrillance aujourd'hui",
         highlightTodayDescription: "Colorer la colonne d'aujourd'hui avec une couleur subtile.",
         themeLabel: "Apparence",
@@ -102,7 +102,7 @@ const TRANSLATIONS = {
         location: "Ubicación",
         description: "Descripción",
         calendarColors: "Colores del calendario",
-        supportViaPaypal: "¿Te gusta? Apóyame vía PayPal:",
+        supportViaPaypal: "¿Te gusta la tarjeta?",
         saveAndClose: "Guardar y cerrar",
         close: "Cerrar",
         calendar: "Calendario",
@@ -111,7 +111,7 @@ const TRANSLATIONS = {
         noTitle: "(sin título)",
         languageLabel: "Idioma",
         systemDefault: "Predeterminado del sistema",
-        donateWithPaypal: "Donar con PayPal",
+        supportWithPaypal: "Apoyar",
         highlightToday: "Resaltar el día actual",
         highlightTodayDescription: "Sombrea la columna de hoy con un color sutil.",
         themeLabel: "Apariencia",
@@ -132,7 +132,7 @@ const TRANSLATIONS = {
         location: "Posizione",
         description: "Descrizione",
         calendarColors: "Colori del calendario",
-        supportViaPaypal: "Ti piace? Sostienimi tramite PayPal:",
+        supportViaPaypal: "Ti piace la card?",
         saveAndClose: "Salva e chiudi",
         close: "Chiudi",
         calendar: "Calendario",
@@ -141,7 +141,7 @@ const TRANSLATIONS = {
         noTitle: "(senza titolo)",
         languageLabel: "Lingua",
         systemDefault: "Predefinito di sistema",
-        donateWithPaypal: "Dona con PayPal",
+        supportWithPaypal: "Sostieni",
         highlightToday: "Evidenzia il giorno corrente",
         highlightTodayDescription: "Colora la colonna di oggi con un colore tenue.",
         themeLabel: "Aspetto",
@@ -162,7 +162,7 @@ const TRANSLATIONS = {
         location: "Locatie",
         description: "Beschrijving",
         calendarColors: "Kalenderkleuren",
-        supportViaPaypal: "Vind je het leuk? Steun me via PayPal:",
+        supportViaPaypal: "Vind je de kaart leuk?",
         saveAndClose: "Opslaan en sluiten",
         close: "Sluiten",
         calendar: "Agenda",
@@ -171,7 +171,7 @@ const TRANSLATIONS = {
         noTitle: "(geen titel)",
         languageLabel: "Taal",
         systemDefault: "Systeemstandaard",
-        donateWithPaypal: "Doneren met PayPal",
+        supportWithPaypal: "Steunen",
         highlightToday: "Markeer de huidige dag",
         highlightTodayDescription: "Kleur de kolom van vandaag met een subtiele kleur.",
         themeLabel: "Weergave",
@@ -736,6 +736,89 @@ class CalendarWeekCard extends HTMLElement {
             border: read("--cwc-dialog-divider", isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"),
             inputBackground: isDark ? "#232735" : "#ffffff"
         };
+    }
+
+    getAccentColors() {
+        return {
+            primary: this.readCssColor("--primary-color", "#4D96FF"),
+            secondary: this.readCssColor("--secondary-color", "#6BCB77")
+        };
+    }
+
+    applyDialogButtonStyles(button) {
+        if (!button) {
+            return;
+        }
+
+        const gradientMeta = button.__cwcButtonGradient || {};
+        const accent = this.getAccentColors();
+        const usesDefault = gradientMeta.usesDefaultGradient !== false && !gradientMeta.startColor && !gradientMeta.endColor;
+        const gradientStart = usesDefault ? accent.primary : (gradientMeta.startColor || accent.primary);
+        const gradientEnd = usesDefault ? accent.secondary : (gradientMeta.endColor || accent.secondary);
+        const textColor = gradientMeta.textColor || "#ffffff";
+
+        button.style.background = `linear-gradient(120deg, ${gradientStart}, ${gradientEnd})`;
+        button.style.color = textColor;
+    }
+
+    createDialogButton(label, options = {}) {
+        const {
+            startColor = null,
+            endColor = null,
+            textColor = "#ffffff",
+            onClick = null
+        } = options;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = label;
+
+        button.__cwcButtonGradient = {
+            usesDefaultGradient: !startColor && !endColor,
+            startColor,
+            endColor,
+            textColor
+        };
+
+        Object.assign(button.style, {
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: "600",
+            fontSize: "1em",
+            padding: "10px 18px",
+            transition: "transform 0.15s ease, box-shadow 0.25s ease, filter 0.2s ease",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "6px",
+            textDecoration: "none",
+            minHeight: "40px",
+            textShadow: "1px 1px rgba(0,0,0, 0.5)"
+
+        });
+
+        this.applyDialogButtonStyles(button);
+
+        const elevate = () => {
+            button.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)";
+            button.style.transform = "translateY(-1px)";
+        };
+        const reset = () => {
+            button.style.boxShadow = "none";
+            button.style.transform = "translateY(0)";
+        };
+
+        button.addEventListener("mouseenter", elevate);
+        button.addEventListener("mouseleave", reset);
+        button.addEventListener("focus", elevate);
+        button.addEventListener("blur", reset);
+
+        if (typeof onClick === "function") {
+            button.addEventListener("click", onClick);
+        }
+
+        return button;
     }
 
     clearStoredData() {
@@ -1939,6 +2022,7 @@ class CalendarWeekCard extends HTMLElement {
         const calendarNameLabels = [];
         const colorPickers = [];
         const calendarToggles = [];
+        const dialogButtons = [];
 
         const languageRow = document.createElement("div");
         Object.assign(languageRow.style, {
@@ -2104,20 +2188,6 @@ class CalendarWeekCard extends HTMLElement {
 
         content.appendChild(list);
 
-        const refreshBtn = document.createElement("button");
-        refreshBtn.textContent = this.t("refreshNow");
-        Object.assign(refreshBtn.style, {
-            padding: "8px 14px",
-            borderRadius: "6px",
-            border: "none",
-            cursor: "pointer",
-            fontWeight: "600"
-        });
-        refreshBtn.addEventListener("click", () => {
-            if (this._hass) this.loadEvents(this._hass);
-        });
-        content.appendChild(refreshBtn);
-
         const trimSection = document.createElement("div");
         Object.assign(trimSection.style, {
             display: "flex",
@@ -2263,24 +2333,9 @@ class CalendarWeekCard extends HTMLElement {
             resetDescription = document.createElement("span");
             resetDescription.style.fontSize = "0.9em";
 
-            resetButton = document.createElement("button");
-            Object.assign(resetButton.style, {
-                alignSelf: "flex-start",
-                padding: "8px 14px",
-                borderRadius: "6px",
-                border: "none",
-                cursor: "pointer",
-                fontWeight: "600",
-                transition: "transform 0.1s ease, box-shadow 0.2s ease"
-            });
-
-            resetButton.addEventListener("mouseenter", () => {
-                resetButton.style.transform = "translateY(-1px)";
-                resetButton.style.boxShadow = "0 4px 12px rgba(0,0,0,0.25)";
-            });
-            resetButton.addEventListener("mouseleave", () => {
-                resetButton.style.transform = "translateY(0)";
-                resetButton.style.boxShadow = "none";
+            resetButton = this.createDialogButton(this.t("resetData"), {
+                startColor: "#ff6b6b",
+                endColor: "#ffaf7b"
             });
 
             resetButton.addEventListener("click", () => {
@@ -2311,10 +2366,11 @@ class CalendarWeekCard extends HTMLElement {
             resetSection.appendChild(resetDescription);
             resetSection.appendChild(resetButton);
             content.appendChild(resetSection);
+            dialogButtons.push(resetButton);
         }
 
-        const donateSection = document.createElement("div");
-        Object.assign(donateSection.style, {
+        const Section = document.createElement("div");
+        Object.assign(Section.style, {
             marginTop: "8px",
             display: "flex",
             justifyContent: "center",
@@ -2326,40 +2382,30 @@ class CalendarWeekCard extends HTMLElement {
 
         const supportText = document.createElement("span");
         supportText.style.fontSize = "0.9em";
-        donateSection.appendChild(supportText);
+        Section.appendChild(supportText);
 
-        const donateLink = document.createElement("a");
-        donateLink.href = "https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4";
-        donateLink.target = "_blank";
-        donateLink.rel = "noopener noreferrer";
-        donateLink.style.display = "inline-flex";
-        donateLink.style.alignItems = "center";
-
-        const donateImage = document.createElement("img");
-        donateImage.src = "https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif";
-        donateImage.style.border = "0";
-
-        donateLink.appendChild(donateImage);
-        donateSection.appendChild(donateLink);
-        content.appendChild(donateSection);
-
-        const closeBtn = document.createElement("button");
-        Object.assign(closeBtn.style, {
-            marginTop: "16px", padding: "10px 18px", fontSize: "1em",
-            borderRadius: "8px", border: "none", cursor: "pointer",
-            background: "linear-gradient(90deg,#4D96FF,#6BCB77)", color: "#fff",
-            fontWeight: "600", transition: "transform 0.1s, box-shadow 0.2s"
+        const Url = "https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4";
+        const Button = this.createDialogButton(this.t("supportWithPaypal"), {
+            startColor: "#F9D423",
+            endColor: "#FFCF00"
         });
-        closeBtn.addEventListener("mouseenter", () => {
-            closeBtn.style.boxShadow = "0 4px 12px rgba(0,0,0,0.25)";
-            closeBtn.style.transform = "translateY(-1px)";
+        Button.style.minWidth = "200px";
+        Button.addEventListener("click", () => {
+            if (typeof window !== "undefined") {
+                window.open(Url, "_blank", "noopener,noreferrer");
+            }
         });
-        closeBtn.addEventListener("mouseleave", () => {
-            closeBtn.style.boxShadow = "none";
-            closeBtn.style.transform = "translateY(0)";
-        });
+        Section.appendChild(Button);
+        content.appendChild(Section);
+        dialogButtons.push(Button);
+
+        const closeBtn = this.createDialogButton(this.t("saveAndClose"));
+        closeBtn.style.marginTop = "16px";
+        closeBtn.style.alignSelf = "stretch";
+        closeBtn.style.width = "100%";
         closeBtn.addEventListener("click", () => dialog.remove());
         content.appendChild(closeBtn);
+        dialogButtons.push(closeBtn);
 
         const applyDialogTheme = () => {
             const palette = this.getDialogPalette();
@@ -2406,12 +2452,7 @@ class CalendarWeekCard extends HTMLElement {
             if (resetDescription) {
                 resetDescription.style.color = palette.muted;
             }
-            if (resetButton) {
-                resetButton.style.background = this.theme === "dark"
-                    ? "linear-gradient(90deg,#ff7a85,#ffb074)"
-                    : "linear-gradient(90deg,#ff6b6b,#ffaf7b)";
-                resetButton.style.color = "#ffffff";
-            }
+            dialogButtons.forEach(btn => this.applyDialogButtonStyles(btn));
         };
 
         applyDialogTheme();
@@ -2431,7 +2472,10 @@ class CalendarWeekCard extends HTMLElement {
             themeLightOption.textContent = this.t("themeLight");
             themeDarkOption.textContent = this.t("themeDark");
             supportText.textContent = this.t("supportViaPaypal");
-            donateImage.alt = this.t("donateWithPaypal");
+            const Text = this.t("supportWithPaypal");
+            Button.textContent = Text;
+            Button.setAttribute("aria-label", Text);
+            Button.setAttribute("title", Text);
             closeBtn.textContent = this.t("saveAndClose");
             const trimLabelText = this.t("trimUnusedHours");
             trimLabel.textContent = trimLabelText;
