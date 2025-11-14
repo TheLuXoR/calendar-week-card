@@ -1,0 +1,36 @@
+name: Validate HACS
+
+on:
+  push:
+    branches:
+      - "develop"
+      - "feature/*"
+      - "feat/*"
+      - "bugfix/*"
+      - "hotfix/*"
+
+jobs:
+  validate-hacs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Strict validation on develop
+      - name: Validate HACS (Strict)
+        if: startsWith(github.ref, 'refs/heads/develop')
+        uses: hacs/action@main
+        with:
+          category: plugin
+
+      # Non-blocking validation on feature-like branches
+      - name: Validate HACS (Warn only)
+        if: startsWith(github.ref, 'refs/heads/feature/') ||
+            startsWith(github.ref, 'refs/heads/feat/') ||
+            startsWith(github.ref, 'refs/heads/bugfix/') ||
+            startsWith(github.ref, 'refs/heads/hotfix/')
+        uses: hacs/action@main
+        continue-on-error: true
+        with:
+          category: plugin
