@@ -481,6 +481,7 @@ export class CalendarWeekCard extends HTMLElement {
         this.config = structuredClone(rawConfig) || {};
         this.config.colors = this.config.colors && typeof this.config.colors === "object" ? this.config.colors : {};
         this.config.hidden_entities = Array.isArray(this.config.hidden_entities) ? this.config.hidden_entities : [];
+        this.config.entities = this.normalizeEntityList(this.config.entities);
 
         let storedLanguagePreference = null;
         try {
@@ -1490,8 +1491,8 @@ export class CalendarWeekCard extends HTMLElement {
                 const calendars = await hass.callApi("get", "calendars");
                 const list = Array.isArray(calendars) ? calendars : [];
                 this.availableCalendars = list.filter(cal => cal?.entity_id);
-                this.dynamicEntities = this.availableCalendars.map(cal => cal.entity_id);
-                this.assignDefaultColors(this.dynamicEntities);
+        this.dynamicEntities = this.availableCalendars.map(cal => cal.entity_id);
+        this.assignDefaultColors(this.dynamicEntities);
             } catch (err) {
                 console.error("calendar-week-card: Failed to load calendars", err);
                 this.availableCalendars = [];
@@ -1506,11 +1507,28 @@ export class CalendarWeekCard extends HTMLElement {
         }
     }
 
+    normalizeEntityList(list) {
+        if (!Array.isArray(list)) {
+            return [];
+        }
+        return list
+            .map((entry) => {
+                if (typeof entry === "string") {
+                    return entry.trim();
+                }
+                if (entry && typeof entry === "object" && typeof entry.entity === "string") {
+                    return entry.entity.trim();
+                }
+                return "";
+            })
+            .filter(Boolean);
+    }
+
     getActiveEntities() {
         if (this.config?.entities?.length) {
-            return this.config.entities;
+            return this.normalizeEntityList(this.config.entities);
         }
-        return this.dynamicEntities;
+        return Array.isArray(this.dynamicEntities) ? this.dynamicEntities : [];
     }
 
     getHiddenEntities() {
@@ -1539,9 +1557,10 @@ export class CalendarWeekCard extends HTMLElement {
     }
 
     assignDefaultColors(entities = []) {
-        if (!Array.isArray(entities)) return;
+        const normalized = this.normalizeEntityList(entities);
+        if (!normalized.length) return;
         const distinctHues = [0, 35, 70, 140, 210, 275, 320];
-        entities.forEach((entity, i) => {
+        normalized.forEach((entity, i) => {
             if (!this.config.colors[entity]) {
                 const hue = distinctHues[i % distinctHues.length];
                 this.config.colors[entity] = `hsl(${hue}, 70%, 70%)`;
@@ -2278,7 +2297,7 @@ class CalendarWeekCardEditor extends HTMLElement {
         this._config = {
             ...baseConfig,
             type: baseConfig.type || "custom:calendar-week-card",
-            entities: entities.map(entry => (entry && typeof entry === "object") ? { ...entry } : { entity: entry })
+            entities: this._normalizeEntityList(entities)
         };
         this._render();
     }
@@ -2383,7 +2402,6 @@ class CalendarWeekCardEditor extends HTMLElement {
                 button {
                     font: inherit;
                 }
-                .add-btn,
                 .remove-btn {
                     border-radius: 6px;
                     border: 1px solid var(--divider-color);
@@ -2392,7 +2410,6 @@ class CalendarWeekCardEditor extends HTMLElement {
                     cursor: pointer;
                     transition: background 0.2s ease;
                 }
-                .add-btn:hover,
                 .remove-btn:hover {
                     background: rgba(77, 150, 255, 0.1);
                 }
@@ -2438,9 +2455,8 @@ class CalendarWeekCardEditor extends HTMLElement {
             <div class="card-config">
                 <div class="section">
                     <h3>Calendars</h3>
-                    <p>Enable the calendars you want to show. If something is missing you can still add it manually.</p>
+                    <p>Enable the calendars you want to show.</p>
                     <div class="entities" id="entities"></div>
-                    <button type="button" class="add-btn" id="add-custom-entity">Add custom calendar</button>
                 </div>
                 <div class="section">
                     <h3>Appearance</h3>
@@ -2471,11 +2487,6 @@ class CalendarWeekCardEditor extends HTMLElement {
         `;
 
         this._populateEntityRows();
-
-        const addButton = root.getElementById("add-custom-entity");
-        if (addButton) {
-            addButton.addEventListener("click", () => this._handleAddCustomEntity());
-        }
 
         const highlightSwitch = root.getElementById("highlight-today");
         if (highlightSwitch) {
@@ -2519,7 +2530,7 @@ class CalendarWeekCardEditor extends HTMLElement {
             return;
         }
         container.innerHTML = "";
-        const entities = Array.isArray(this._config.entities) ? this._config.entities : [];
+        const entities = this._normalizeEntityList(this._config.entities);
         const availableCalendars = this._availableCalendars?.length ? this._availableCalendars : getCalendarEntitiesFromHass(this._hass);
         const availableSet = new Set(availableCalendars);
 
@@ -2543,7 +2554,7 @@ class CalendarWeekCardEditor extends HTMLElement {
                 }
 
                 const toggle = document.createElement("ha-switch");
-                toggle.checked = entities.some(entry => entry?.entity === entityId);
+                toggle.checked = entities.includes(entityId);
                 toggle.addEventListener("change", (event) => {
                     this._handleCalendarToggle(entityId, event.target.checked);
                 });
@@ -2556,12 +2567,12 @@ class CalendarWeekCardEditor extends HTMLElement {
         } else {
             const empty = document.createElement("div");
             empty.className = "empty-state";
-            empty.textContent = "No calendar entities were found in your Home Assistant instance. You can still add them manually or create calendars under Settings → Devices & services.";
+            empty.textContent = "No calendar entities were found in your Home Assistant instance. Create calendars under Settings → Devices & services.";
             container.appendChild(empty);
         }
 
         const entriesWithIndex = entities.map((entry, index) => ({ entry, index }));
-        const customEntries = entriesWithIndex.filter(({ entry }) => !entry?.entity || !availableSet.has(entry.entity));
+        const customEntries = entriesWithIndex.filter(({ entry }) => !availableSet.has(entry));
 
         if (customEntries.length) {
             const customWrapper = document.createElement("div");
@@ -2589,12 +2600,12 @@ class CalendarWeekCardEditor extends HTMLElement {
         }
     }
 
-    _createEntityControl(entityConfig, index, availableCalendars) {
+    _createEntityControl(entityId, index, availableCalendars) {
         if (customElements.get("ha-entity-picker")) {
             const picker = document.createElement("ha-entity-picker");
             picker.classList.add("entity-picker");
             picker.hass = this._hass;
-            picker.value = entityConfig?.entity || "";
+            picker.value = entityId || "";
             picker.setAttribute("domain", "calendar");
             picker.addEventListener("value-changed", (event) => this._handleEntityChanged(index, event));
             picker.addEventListener("change", (event) => this._handleEntityChanged(index, event));
@@ -2606,7 +2617,7 @@ class CalendarWeekCardEditor extends HTMLElement {
         input.type = "text";
         input.className = "entity-input";
         input.placeholder = availableCalendars.length ? "Select a calendar entity" : "Enter a calendar entity id (e.g. calendar.family)";
-        input.value = entityConfig?.entity || "";
+        input.value = entityId || "";
         const updateValue = (value) => {
             this._handleEntityChanged(index, { detail: { value } });
         };
@@ -2630,38 +2641,46 @@ class CalendarWeekCardEditor extends HTMLElement {
         return fragment;
     }
 
-    _handleAddCustomEntity() {
-        const entities = Array.isArray(this._config.entities) ? [...this._config.entities] : [];
-        entities.push({ entity: "" });
-        this._updateConfig({ entities });
-    }
-
     _handleCalendarToggle(entityId, enabled) {
-        const entities = Array.isArray(this._config.entities) ? [...this._config.entities] : [];
-        const index = entities.findIndex(entry => entry?.entity === entityId);
+        const entities = this._normalizeEntityList(this._config.entities);
+        const next = [...entities];
+        const index = next.indexOf(entityId);
         if (enabled && index === -1) {
-            entities.push({ entity: entityId });
+            next.push(entityId);
         } else if (!enabled && index !== -1) {
-            entities.splice(index, 1);
+            next.splice(index, 1);
         }
-        this._updateConfig({ entities });
+        this._updateConfig({ entities: next });
     }
 
     _handleRemoveEntity(index) {
-        const entities = Array.isArray(this._config.entities) ? [...this._config.entities] : [];
+        const entities = this._normalizeEntityList(this._config.entities);
         entities.splice(index, 1);
         this._updateConfig({ entities });
     }
 
     _handleEntityChanged(index, event) {
-        const value = event?.detail?.value || event?.target?.value || "";
-        const entities = Array.isArray(this._config.entities) ? [...this._config.entities] : [];
-        if (!entities[index]) {
-            entities[index] = { entity: value };
-        } else {
-            entities[index] = { ...entities[index], entity: value };
-        }
+        const value = (event?.detail?.value || event?.target?.value || "").trim();
+        const entities = this._normalizeEntityList(this._config.entities);
+        entities[index] = value;
         this._updateConfig({ entities });
+    }
+
+    _normalizeEntityList(list) {
+        if (!Array.isArray(list)) {
+            return [];
+        }
+        return list
+            .map((entry) => {
+                if (typeof entry === "string") {
+                    return entry.trim();
+                }
+                if (entry && typeof entry === "object" && typeof entry.entity === "string") {
+                    return entry.entity.trim();
+                }
+                return "";
+            })
+            .filter(Boolean);
     }
 
     _updateConfig(changes) {
@@ -2669,6 +2688,9 @@ class CalendarWeekCardEditor extends HTMLElement {
             ...this._config,
             ...changes
         };
+        if (Object.prototype.hasOwnProperty.call(changes || {}, "entities")) {
+            this._config.entities = this._normalizeEntityList(this._config.entities);
+        }
         this._render();
         this.dispatchEvent(new CustomEvent("config-changed", {
             detail: { config: this._config },
@@ -2691,7 +2713,7 @@ function createCalendarWeekCardStubConfig(hass) {
     const fallback = defaultEntities.length ? defaultEntities : ["calendar.family"];
     return {
         type: "custom:calendar-week-card",
-        entities: fallback.map(entityId => ({ entity: entityId }))
+        entities: fallback
     };
 }
 
