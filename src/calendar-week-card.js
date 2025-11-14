@@ -100,6 +100,7 @@ export class CalendarWeekCard extends HTMLElement {
         this.baseColors = {};
         this.baseHiddenEntities = [];
         this._configOverrides = {};
+        this._noCalendarsDialogVisible = false;
     }
     resolveLanguage(preference) {
         return resolveLanguage(preference, {
@@ -417,6 +418,209 @@ export class CalendarWeekCard extends HTMLElement {
         }
 
         return button;
+    }
+
+    dismissNoCalendarsDialog() {
+        if (typeof document === "undefined") {
+            this._noCalendarsDialogVisible = false;
+            return;
+        }
+
+        const existing = document.querySelector("#calendar-week-card-no-calendars");
+        if (existing) {
+            existing.remove();
+        }
+        this._noCalendarsDialogVisible = false;
+    }
+
+    showNoCalendarsDialog() {
+        const hasConfiguredEntities = Array.isArray(this.config?.entities) && this.config.entities.length > 0;
+        const hasAvailableCalendars = Array.isArray(this.availableCalendars) && this.availableCalendars.length > 0;
+
+        if (typeof document === "undefined" || hasConfiguredEntities || hasAvailableCalendars || this._noCalendarsDialogVisible) {
+            return;
+        }
+
+        const palette = this.getDialogPalette();
+        const dialogId = "calendar-week-card-no-calendars";
+        const existing = document.querySelector(`#${dialogId}`);
+        if (existing) {
+            existing.remove();
+        }
+
+        const overlay = document.createElement("div");
+        overlay.id = dialogId;
+        Object.assign(overlay.style, {
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: palette.overlay,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px",
+            zIndex: 10000,
+            fontFamily: "sans-serif"
+        });
+
+        const closeDialog = () => {
+            overlay.remove();
+            this._noCalendarsDialogVisible = false;
+        };
+
+        overlay.addEventListener("click", event => {
+            if (event.target === overlay) {
+                closeDialog();
+            }
+        });
+
+        const content = document.createElement("div");
+        Object.assign(content.style, {
+            background: palette.background,
+            color: palette.text,
+            borderRadius: "16px",
+            padding: "24px",
+            maxWidth: "520px",
+            width: "100%",
+            boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+            border: `1px solid ${palette.border}`
+        });
+        content.addEventListener("click", event => event.stopPropagation());
+
+        const title = document.createElement("h2");
+        title.textContent = this.t("noCalendarsTitle");
+        Object.assign(title.style, {
+            margin: 0,
+            fontSize: "1.35em",
+            fontWeight: 700
+        });
+
+        const description = document.createElement("p");
+        description.textContent = this.t("noCalendarsDescription");
+        Object.assign(description.style, {
+            margin: 0,
+            color: palette.muted,
+            lineHeight: 1.5
+        });
+
+        const stepsIntro = document.createElement("p");
+        stepsIntro.textContent = this.t("noCalendarsStepsIntro");
+        Object.assign(stepsIntro.style, {
+            margin: 0,
+            fontWeight: 600
+        });
+
+        const stepsList = document.createElement("ol");
+        Object.assign(stepsList.style, {
+            margin: 0,
+            paddingLeft: "20px",
+            color: palette.text,
+            lineHeight: 1.5
+        });
+
+        [
+            this.t("noCalendarsStepIntegrations"),
+            this.t("noCalendarsStepAdd"),
+            this.t("noCalendarsStepVerify")
+        ].forEach(text => {
+            const item = document.createElement("li");
+            item.textContent = text;
+            stepsList.appendChild(item);
+        });
+
+        const linksHeading = document.createElement("h3");
+        linksHeading.textContent = this.t("noCalendarsLinksTitle");
+        Object.assign(linksHeading.style, {
+            margin: "12px 0 0 0",
+            fontSize: "1em",
+            fontWeight: 600
+        });
+
+        const linksList = document.createElement("ul");
+        Object.assign(linksList.style, {
+            margin: 0,
+            paddingLeft: "20px",
+            color: palette.muted,
+            lineHeight: 1.4
+        });
+
+        const integrationUrl = "https://my.home-assistant.io/redirect/integrations/";
+        const docsUrl = "https://github.com/TheLuXoR/calendar-week-card?tab=readme-ov-file#register-calendars-in-home-assistant";
+
+        const addLink = (label, url) => {
+            const li = document.createElement("li");
+            const link = document.createElement("a");
+            link.textContent = label;
+            link.href = url;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.style.color = this.readCssColor("--accent-color", "#4D96FF");
+            link.style.fontWeight = 600;
+            li.appendChild(link);
+            linksList.appendChild(li);
+        };
+
+        addLink(this.t("noCalendarsOpenIntegrations"), integrationUrl);
+        addLink(this.t("noCalendarsReadGuide"), docsUrl);
+
+        const buttonRow = document.createElement("div");
+        Object.assign(buttonRow.style, {
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "8px",
+            marginTop: "16px"
+        });
+
+        const openIntegrationsButton = this.createDialogButton(this.t("noCalendarsOpenIntegrations"));
+        openIntegrationsButton.addEventListener("click", () => {
+            if (typeof window !== "undefined") {
+                window.open(integrationUrl, "_blank", "noopener,noreferrer");
+            }
+        });
+
+        const guideButton = this.createDialogButton(this.t("noCalendarsReadGuide"));
+        guideButton.addEventListener("click", () => {
+            if (typeof window !== "undefined") {
+                window.open(docsUrl, "_blank", "noopener,noreferrer");
+            }
+        });
+
+        const refreshButton = this.createDialogButton(this.t("noCalendarsRefresh"));
+        refreshButton.addEventListener("click", () => {
+            closeDialog();
+            if (this._hass) {
+                this.ensureEntities(this._hass).then(() => this.loadEvents(this._hass));
+            }
+        });
+
+        const closeButton = this.createDialogButton(this.t("close"));
+        closeButton.addEventListener("click", closeDialog);
+
+        [openIntegrationsButton, guideButton, refreshButton, closeButton].forEach(btn => {
+            btn.style.flex = "1 1 200px";
+        });
+
+        buttonRow.appendChild(openIntegrationsButton);
+        buttonRow.appendChild(guideButton);
+        buttonRow.appendChild(refreshButton);
+        buttonRow.appendChild(closeButton);
+
+        content.appendChild(title);
+        content.appendChild(description);
+        content.appendChild(stepsIntro);
+        content.appendChild(stepsList);
+        content.appendChild(linksHeading);
+        content.appendChild(linksList);
+        content.appendChild(buttonRow);
+
+        overlay.appendChild(content);
+        document.body.appendChild(overlay);
+        this._noCalendarsDialogVisible = true;
     }
 
     clearStoredData() {
@@ -1073,9 +1277,14 @@ export class CalendarWeekCard extends HTMLElement {
         const visibleEntities = entities.filter(entity => !this.isEntityHidden(entity));
 
         if (!visibleEntities.length) {
+            if (!entities.length && !this.config?.entities?.length) {
+                this.showNoCalendarsDialog();
+            }
             this.renderList([]);
             return;
         }
+
+        this.dismissNoCalendarsDialog();
 
         const [start, end] = this.getWeekRange();
         let allEvents = [];
@@ -1484,10 +1693,18 @@ export class CalendarWeekCard extends HTMLElement {
                 this.availableCalendars = list.filter(cal => cal?.entity_id);
                 this.dynamicEntities = this.availableCalendars.map(cal => cal.entity_id);
                 this.assignDefaultColors(this.dynamicEntities);
+                if (this.dynamicEntities.length) {
+                    this.dismissNoCalendarsDialog();
+                } else if (!this.config?.entities?.length) {
+                    this.showNoCalendarsDialog();
+                }
             } catch (err) {
                 console.error("calendar-week-card: Failed to load calendars", err);
                 this.availableCalendars = [];
                 this.dynamicEntities = [];
+                if (!this.config?.entities?.length) {
+                    this.showNoCalendarsDialog();
+                }
             }
         })();
 

@@ -29,7 +29,17 @@ export const TRANSLATIONS = {
         resetDataDescription: "Remove saved colors, language, highlight, and theme preferences.",
         resetConfirmation: "Clear stored calendar settings? This cannot be undone.",
         trimUnusedHours: "Trim blank hours",
-        trimUnusedHoursDescription: "Hide early and late hours without events."
+        trimUnusedHoursDescription: "Hide early and late hours without events.",
+        noCalendarsTitle: "No calendars found",
+        noCalendarsDescription: "Home Assistant has not registered any calendar entities yet, so the card has nothing to display.",
+        noCalendarsStepsIntro: "To fix this, please:",
+        noCalendarsStepIntegrations: "Open Settings → Devices & Services → Integrations.",
+        noCalendarsStepAdd: "Add a calendar integration such as Local Calendar, Google Calendar, CalDAV, or any other provider you use.",
+        noCalendarsStepVerify: "Wait until at least one `calendar.*` entity appears, then return to this dashboard and refresh the card.",
+        noCalendarsLinksTitle: "Need help?",
+        noCalendarsOpenIntegrations: "Open Integrations",
+        noCalendarsReadGuide: "Read setup guide",
+        noCalendarsRefresh: "Check again"
     },
     de: {
         today: "Heute",
@@ -59,7 +69,17 @@ export const TRANSLATIONS = {
         resetDataDescription: "Entfernt gespeicherte Farben, Sprache, Hervorhebung und Theme-Einstellungen.",
         resetConfirmation: "Gespeicherte Kalender-Einstellungen wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
         trimUnusedHours: "Unbenutzte Randstunden kürzen",
-        trimUnusedHoursDescription: "Blendet frühe und späte Stunden ohne Termine aus."
+        trimUnusedHoursDescription: "Blendet frühe und späte Stunden ohne Termine aus.",
+        noCalendarsTitle: "Keine Kalender gefunden",
+        noCalendarsDescription: "Home Assistant hat noch keine Kalender-Entitäten registriert, daher kann die Karte nichts anzeigen.",
+        noCalendarsStepsIntro: "So löst du das Problem:",
+        noCalendarsStepIntegrations: "Öffne Einstellungen → Geräte & Dienste → Integrationen.",
+        noCalendarsStepAdd: "Füge eine Kalender-Integration wie Lokaler Kalender, Google Kalender, CalDAV oder einen anderen Anbieter hinzu.",
+        noCalendarsStepVerify: "Warte, bis mindestens eine `calendar.*`-Entität erscheint, und kehre dann zu diesem Dashboard zurück und aktualisiere die Karte.",
+        noCalendarsLinksTitle: "Brauchst du Hilfe?",
+        noCalendarsOpenIntegrations: "Integrationen öffnen",
+        noCalendarsReadGuide: "Setup-Anleitung lesen",
+        noCalendarsRefresh: "Erneut prüfen"
     },
     fr: {
         today: "Aujourd'hui",
@@ -89,7 +109,17 @@ export const TRANSLATIONS = {
         resetDataDescription: "Supprime les couleurs, la langue, la mise en évidence et le thème sauvegardés.",
         resetConfirmation: "Effacer les paramètres enregistrés du calendrier ? Cette action est irréversible.",
         trimUnusedHours: "Réduire les heures vides",
-        trimUnusedHoursDescription: "Masque les heures matinales et tardives sans événements."
+        trimUnusedHoursDescription: "Masque les heures matinales et tardives sans événements.",
+        noCalendarsTitle: "Aucun calendrier trouvé",
+        noCalendarsDescription: "Home Assistant n'a pas encore enregistré d'entités de calendrier, la carte ne peut donc rien afficher.",
+        noCalendarsStepsIntro: "Pour résoudre le problème :",
+        noCalendarsStepIntegrations: "Ouvrez Paramètres → Appareils et services → Intégrations.",
+        noCalendarsStepAdd: "Ajoutez une intégration de calendrier telle que Calendrier local, Google Calendar, CalDAV ou tout autre fournisseur utilisé.",
+        noCalendarsStepVerify: "Attendez qu'au moins une entité `calendar.*` apparaisse, puis revenez sur ce tableau de bord et actualisez la carte.",
+        noCalendarsLinksTitle: "Besoin d'aide ?",
+        noCalendarsOpenIntegrations: "Ouvrir les intégrations",
+        noCalendarsReadGuide: "Lire le guide d'installation",
+        noCalendarsRefresh: "Vérifier à nouveau"
     },
     es: {
         today: "Hoy",
@@ -119,7 +149,17 @@ export const TRANSLATIONS = {
         resetDataDescription: "Elimina los colores, el idioma, el resaltado y el tema guardados.",
         resetConfirmation: "¿Borrar la configuración guardada del calendario? Esta acción no se puede deshacer.",
         trimUnusedHours: "Recortar horas vacías",
-        trimUnusedHoursDescription: "Oculta las horas tempranas y tardías sin eventos."
+        trimUnusedHoursDescription: "Oculta las horas tempranas y tardías sin eventos.",
+        noCalendarsTitle: "No se encontraron calendarios",
+        noCalendarsDescription: "Home Assistant todavía no ha registrado entidades de calendario, por lo que la tarjeta no puede mostrar nada.",
+        noCalendarsStepsIntro: "Para solucionarlo:",
+        noCalendarsStepIntegrations: "Abre Ajustes → Dispositivos y servicios → Integraciones.",
+        noCalendarsStepAdd: "Añade una integración de calendario como Calendario local, Google Calendar, CalDAV u otro proveedor que utilices.",
+        noCalendarsStepVerify: "Espera a que aparezca al menos una entidad `calendar.*`, luego regresa a este panel y actualiza la tarjeta.",
+        noCalendarsLinksTitle: "¿Necesitas ayuda?",
+        noCalendarsOpenIntegrations: "Abrir Integraciones",
+        noCalendarsReadGuide: "Leer guía de configuración",
+        noCalendarsRefresh: "Volver a comprobar"
     },
     it: {
         today: "Oggi",
@@ -149,7 +189,17 @@ export const TRANSLATIONS = {
         resetDataDescription: "Rimuove colori, lingua, evidenziazione e tema salvati.",
         resetConfirmation: "Eliminare le impostazioni salvate del calendario? L'operazione è irreversibile.",
         trimUnusedHours: "Riduci ore vuote",
-        trimUnusedHoursDescription: "Nasconde le ore mattutine e serali senza eventi."
+        trimUnusedHoursDescription: "Nasconde le ore mattutine e serali senza eventi.",
+        noCalendarsTitle: "Nessun calendario trovato",
+        noCalendarsDescription: "Home Assistant non ha ancora registrato entità calendario, quindi la scheda non può mostrare nulla.",
+        noCalendarsStepsIntro: "Per risolvere:",
+        noCalendarsStepIntegrations: "Apri Impostazioni → Dispositivi e servizi → Integrazioni.",
+        noCalendarsStepAdd: "Aggiungi un'integrazione calendario come Calendario locale, Google Calendar, CalDAV o un altro provider utilizzato.",
+        noCalendarsStepVerify: "Attendi che compaia almeno un'entità `calendar.*`, poi torna a questa dashboard e aggiorna la scheda.",
+        noCalendarsLinksTitle: "Hai bisogno di aiuto?",
+        noCalendarsOpenIntegrations: "Apri Integrazioni",
+        noCalendarsReadGuide: "Leggi la guida di configurazione",
+        noCalendarsRefresh: "Controlla di nuovo"
     },
     nl: {
         today: "Vandaag",
@@ -179,7 +229,17 @@ export const TRANSLATIONS = {
         resetDataDescription: "Verwijdert opgeslagen kleuren, taal, markering en thema-instellingen.",
         resetConfirmation: "Opgeslagen kalenderinstellingen wissen? Dit kan niet ongedaan worden gemaakt.",
         trimUnusedHours: "Lege uren inkorten",
-        trimUnusedHoursDescription: "Verbergt vroege en late uren zonder afspraken."
+        trimUnusedHoursDescription: "Verbergt vroege en late uren zonder afspraken.",
+        noCalendarsTitle: "Geen agenda's gevonden",
+        noCalendarsDescription: "Home Assistant heeft nog geen agenda-entiteiten geregistreerd, waardoor de kaart niets kan tonen.",
+        noCalendarsStepsIntro: "Los dit op door het volgende te doen:",
+        noCalendarsStepIntegrations: "Open Instellingen → Apparaten en services → Integraties.",
+        noCalendarsStepAdd: "Voeg een agenda-integratie toe, zoals Lokale agenda, Google Agenda, CalDAV of een andere aanbieder.",
+        noCalendarsStepVerify: "Wacht tot er minstens één `calendar.*`-entiteit verschijnt en keer dan terug naar dit dashboard om de kaart te vernieuwen.",
+        noCalendarsLinksTitle: "Hulp nodig?",
+        noCalendarsOpenIntegrations: "Integraties openen",
+        noCalendarsReadGuide: "Setup-handleiding lezen",
+        noCalendarsRefresh: "Opnieuw controleren"
     }
 };
 
