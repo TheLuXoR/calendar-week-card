@@ -87,7 +87,7 @@ export class CalendarWeekCard extends HTMLElement {
         this.columnPaddingTop = 0;
         this.columnPaddingBottom = 0;
         this.allDayRowHeight = 22;
-        this.allDayRowOverlap = 8;
+        this.allDayRowOverlap = 4;
         this.visibleStartMinute = 0;
         this.visibleEndMinute = 24 * 60;
         this.trimUnusedHoursKey = "calendar-week-card-trim-hours";
@@ -1196,6 +1196,8 @@ export class CalendarWeekCard extends HTMLElement {
                 }
             });
 
+            // 1) First pass: assign columns and track max column index
+            let maxColumnIndex = -1;
             for (const ev of dayEvents) {
                 for (let i = activeStack.length - 1; i >= 0; i--) {
                     if (activeStack[i].end <= ev.start) activeStack.splice(i, 1);
@@ -1206,6 +1208,16 @@ export class CalendarWeekCard extends HTMLElement {
                 ev.column = maxCol + 1;
                 activeStack.push(ev);
 
+                if (ev.column > maxColumnIndex) {
+                    maxColumnIndex = ev.column;
+                }
+            }
+
+            const totalColumns = Math.max(maxColumnIndex + 1, 1);
+            const containerWidth = timedContainer.clientWidth || timedContainer.offsetWidth || 0;
+
+            // 2) Second pass: actually render with dynamic left indentation
+            for (const ev of dayEvents) {
                 const startMinutes = ev.start.getHours() * 60 + ev.start.getMinutes();
                 let endMinutes = ev.end.getHours() * 60 + ev.end.getMinutes();
                 if (endMinutes <= startMinutes) {
@@ -1217,7 +1229,27 @@ export class CalendarWeekCard extends HTMLElement {
                 const minHeight = 32 * this.pixelsPerMinute;
                 const height = Math.max(durationMinutes * this.pixelsPerMinute, minHeight);
 
-                const leftIndent = 2 + ev.column * 12;
+                // --- dynamic indentation logic ---
+                let indentPercent = 0;
+
+                if (totalColumns > 1) {
+                    if (totalColumns < 4) {
+                        // 0%, 15%, 30%, 45%
+                        indentPercent = Math.min(ev.column * 15, 45);
+                    } else {
+                        // share 0–50% equally across columns
+                        const step = 50 / (totalColumns - 1);
+                        indentPercent = Math.min(ev.column * step, 50);
+                    }
+                }
+
+                // convert % of day column width to px (with a small base offset)
+                let leftIndent = 2;
+                if (containerWidth > 0) {
+                    leftIndent += (containerWidth * indentPercent) / 100;
+                }
+
+                // keep your right indent logic exactly as before
                 const rightIndent = 2 + ev.column * 2;
 
                 const eventDiv = document.createElement("div");
@@ -1226,6 +1258,7 @@ export class CalendarWeekCard extends HTMLElement {
                 eventDiv.style.height = `${height}px`;
                 eventDiv.style.left = `${leftIndent}px`;
                 eventDiv.style.right = `${rightIndent}px`;
+
                 const baseColor = this.config.colors[ev.calendar] || ev.color || "#4287f5";
                 const gradientStart = this.mixColor(baseColor, "#000000", 0.2) || baseColor;
                 const gradientEnd = this.mixColor(baseColor, "#ffffff", 0.3) || baseColor;
@@ -1237,10 +1270,10 @@ export class CalendarWeekCard extends HTMLElement {
 
                 const locale = this.getLocale();
                 const eventSurface = document.createElement("div");
-
                 eventSurface.className = "event-surface";
                 const startStr = ev.start.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
                 const endStr = ev.end.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+
                 const titleEl = document.createElement("div");
                 titleEl.className = "event-title";
                 titleEl.textContent = ev.isUntitled ? this.t("noTitle") : ev.title;
@@ -1258,7 +1291,6 @@ export class CalendarWeekCard extends HTMLElement {
                 }
 
                 eventDiv.addEventListener("click", () => this.showEventDialog(ev));
-
                 timedContainer.appendChild(eventDiv);
             }
         }
@@ -1669,6 +1701,20 @@ export class CalendarWeekCard extends HTMLElement {
         });
 
         content.appendChild(list);
+
+        const refreshBtn = document.createElement("button");
+        refreshBtn.textContent = this.t("refreshNow");
+        Object.assign(refreshBtn.style, {
+            padding: "8px 14px",
+            borderRadius: "6px",
+            border: "none",
+            cursor: "pointer",
+            fontWeight: "600"
+        });
+        refreshBtn.addEventListener("click", () => {
+            if (this._hass) this.loadEvents(this._hass);
+        });
+        content.appendChild(refreshBtn);
 
         const trimSection = document.createElement("div");
         Object.assign(trimSection.style, {
