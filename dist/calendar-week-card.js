@@ -476,6 +476,14 @@ const THEME_ACCENT_FALLBACK = {
 };
 
 class CalendarWeekCard extends HTMLElement {
+    static getConfigElement() {
+        return createCalendarWeekCardEditorElement();
+    }
+
+    static getStubConfig(hass) {
+        return createCalendarWeekCardStubConfig(hass);
+    }
+
     constructor() {
         super();
         this.weekOffset = 0;
@@ -875,6 +883,7 @@ class CalendarWeekCard extends HTMLElement {
         this.config = structuredClone(rawConfig) || {};
         this.config.colors = this.config.colors && typeof this.config.colors === "object" ? this.config.colors : {};
         this.config.hidden_entities = Array.isArray(this.config.hidden_entities) ? this.config.hidden_entities : [];
+        this.config.entities = this.normalizeEntityList(this.config.entities);
 
         let storedLanguagePreference = null;
         try {
@@ -1884,8 +1893,8 @@ class CalendarWeekCard extends HTMLElement {
                 const calendars = await hass.callApi("get", "calendars");
                 const list = Array.isArray(calendars) ? calendars : [];
                 this.availableCalendars = list.filter(cal => cal?.entity_id);
-                this.dynamicEntities = this.availableCalendars.map(cal => cal.entity_id);
-                this.assignDefaultColors(this.dynamicEntities);
+        this.dynamicEntities = this.availableCalendars.map(cal => cal.entity_id);
+        this.assignDefaultColors(this.dynamicEntities);
             } catch (err) {
                 console.error("calendar-week-card: Failed to load calendars", err);
                 this.availableCalendars = [];
@@ -1900,11 +1909,28 @@ class CalendarWeekCard extends HTMLElement {
         }
     }
 
+    normalizeEntityList(list) {
+        if (!Array.isArray(list)) {
+            return [];
+        }
+        return list
+            .map((entry) => {
+                if (typeof entry === "string") {
+                    return entry.trim();
+                }
+                if (entry && typeof entry === "object" && typeof entry.entity === "string") {
+                    return entry.entity.trim();
+                }
+                return "";
+            })
+            .filter(Boolean);
+    }
+
     getActiveEntities() {
         if (this.config?.entities?.length) {
-            return this.config.entities;
+            return this.normalizeEntityList(this.config.entities);
         }
-        return this.dynamicEntities;
+        return Array.isArray(this.dynamicEntities) ? this.dynamicEntities : [];
     }
 
     getHiddenEntities() {
@@ -1933,9 +1959,10 @@ class CalendarWeekCard extends HTMLElement {
     }
 
     assignDefaultColors(entities = []) {
-        if (!Array.isArray(entities)) return;
+        const normalized = this.normalizeEntityList(entities);
+        if (!normalized.length) return;
         const distinctHues = [0, 35, 70, 140, 210, 275, 320];
-        entities.forEach((entity, i) => {
+        normalized.forEach((entity, i) => {
             if (!this.config.colors[entity]) {
                 const hue = distinctHues[i % distinctHues.length];
                 this.config.colors[entity] = `hsl(${hue}, 70%, 70%)`;
@@ -2649,9 +2676,454 @@ class CalendarWeekCard extends HTMLElement {
         return 3;
     }
 
-    static getStubConfig() {
-        return { title: "Familien Kalender", entities: [], colors: {} };
+}
+
+class CalendarWeekCardEditor extends HTMLElement {
+    constructor() {
+        super();
+        this._config = { entities: [] };
+        this._hass = null;
+        this._availableCalendars = [];
+        this._waitingForEntityPicker = false;
+        this.attachShadow({ mode: "open" });
     }
+
+    set hass(value) {
+        this._hass = value;
+        this._render();
+    }
+
+    setConfig(config) {
+        const baseConfig = config && typeof config === "object" ? config : {};
+        const entities = Array.isArray(baseConfig.entities) ? baseConfig.entities : [];
+        this._config = {
+            ...baseConfig,
+            type: baseConfig.type || "custom:calendar-week-card",
+            entities: this._normalizeEntityList(entities)
+        };
+        this._render();
+    }
+
+    _render() {
+        if (!this.shadowRoot || !this._config) {
+            return;
+        }
+
+        const root = this.shadowRoot;
+        if (!customElements.get("ha-entity-picker") && !this._waitingForEntityPicker && typeof customElements.whenDefined === "function") {
+            this._waitingForEntityPicker = true;
+            customElements.whenDefined("ha-entity-picker").then(() => {
+                this._waitingForEntityPicker = false;
+                this._render();
+            }).catch(() => {
+                this._waitingForEntityPicker = false;
+            });
+        }
+
+        const availableCalendars = getCalendarEntitiesFromHass(this._hass);
+        this._availableCalendars = availableCalendars;
+        root.innerHTML = `
+            <style>
+                :host {
+                    display: block;
+                    color: var(--primary-text-color);
+                }
+                .card-config {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 20px;
+                }
+                .section {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+                .section h3 {
+                    margin: 0;
+                    font-size: 1em;
+                    font-weight: 600;
+                }
+                .section p {
+                    margin: 0;
+                    color: var(--secondary-text-color);
+                    font-size: 0.9em;
+                    line-height: 1.4;
+                }
+                .section-note {
+                    margin: 0;
+                    color: var(--secondary-text-color);
+                    font-size: 0.9em;
+                }
+                .entities {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+                .custom-entities {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+                .calendar-toggle-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+                .calendar-toggle-row {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 8px 12px;
+                    border-radius: 8px;
+                    border: 1px solid var(--divider-color);
+                    background: var(--ha-card-background, rgba(0,0,0,0.03));
+                    gap: 12px;
+                }
+                .calendar-toggle-label {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                    min-width: 0;
+                }
+                .calendar-toggle-label span {
+                    font-size: 0.85em;
+                    color: var(--secondary-text-color);
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+                .entity-row {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .entity-row ha-entity-picker,
+                .entity-row input[type="text"] {
+                    flex: 1;
+                }
+                button {
+                    font: inherit;
+                }
+                .remove-btn {
+                    border-radius: 6px;
+                    border: 1px solid var(--divider-color);
+                    padding: 6px 10px;
+                    background: var(--ha-card-background, rgba(0,0,0,0.05));
+                    cursor: pointer;
+                    transition: background 0.2s ease;
+                }
+                .remove-btn:hover {
+                    background: rgba(77, 150, 255, 0.1);
+                }
+                .empty-state {
+                    padding: 12px;
+                    border-radius: 8px;
+                    border: 1px dashed var(--divider-color);
+                    color: var(--secondary-text-color);
+                }
+                .inline-input {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                }
+                .inline-input label {
+                    font-size: 0.85em;
+                    color: var(--secondary-text-color);
+                }
+                .toggles {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+                .toggle-row {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                }
+                .toggle-row span {
+                    font-weight: 500;
+                }
+                select,
+                input[type="color"],
+                input[type="text"] {
+                    font: inherit;
+                    padding: 6px 8px;
+                    border-radius: 6px;
+                    border: 1px solid var(--divider-color);
+                    background: var(--card-background-color, var(--ha-card-background));
+                    color: inherit;
+                }
+            </style>
+            <div class="card-config">
+                <div class="section">
+                    <h3>Calendars</h3>
+                    <p>Enable the calendars you want to show.</p>
+                    <div class="entities" id="entities"></div>
+                </div>
+                <div class="section">
+                    <h3>Appearance</h3>
+                    <div class="toggles">
+                        <div class="toggle-row">
+                            <span>Highlight today</span>
+                            <ha-switch id="highlight-today"></ha-switch>
+                        </div>
+                        <div class="toggle-row">
+                            <span>Trim empty hours</span>
+                            <ha-switch id="trim-hours"></ha-switch>
+                        </div>
+                    </div>
+                    <div class="inline-input">
+                        <label for="highlight-color">Highlight color</label>
+                        <input type="color" id="highlight-color" name="highlight-color" />
+                    </div>
+                    <div class="inline-input">
+                        <label for="theme-select">Theme</label>
+                        <select id="theme-select">
+                            <option value="system">Match Home Assistant</option>
+                            <option value="light">Always light</option>
+                            <option value="dark">Always dark</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this._populateEntityRows();
+
+        const highlightSwitch = root.getElementById("highlight-today");
+        if (highlightSwitch) {
+            highlightSwitch.checked = this._config.highlight_today !== false;
+            highlightSwitch.addEventListener("change", (event) => {
+                this._updateConfig({ highlight_today: event.target.checked });
+            });
+        }
+
+        const trimSwitch = root.getElementById("trim-hours");
+        if (trimSwitch) {
+            trimSwitch.checked = this._config.trim_unused_hours === true;
+            trimSwitch.addEventListener("change", (event) => {
+                this._updateConfig({ trim_unused_hours: event.target.checked });
+            });
+        }
+
+        const highlightColor = root.getElementById("highlight-color");
+        if (highlightColor) {
+            highlightColor.value = this._config.today_highlight_color || "#4D96FF";
+            highlightColor.addEventListener("input", (event) => {
+                this._updateConfig({ today_highlight_color: event.target.value });
+            });
+        }
+
+        const themeSelect = root.getElementById("theme-select");
+        if (themeSelect) {
+            themeSelect.value = this._config.theme || "system";
+            themeSelect.addEventListener("change", (event) => {
+                this._updateConfig({ theme: event.target.value });
+            });
+        }
+    }
+
+    _populateEntityRows() {
+        if (!this.shadowRoot) {
+            return;
+        }
+        const container = this.shadowRoot.getElementById("entities");
+        if (!container) {
+            return;
+        }
+        container.innerHTML = "";
+        const entities = this._normalizeEntityList(this._config.entities);
+        const availableCalendars = this._availableCalendars?.length ? this._availableCalendars : getCalendarEntitiesFromHass(this._hass);
+        const availableSet = new Set(availableCalendars);
+
+        if (availableCalendars.length) {
+            const toggleList = document.createElement("div");
+            toggleList.className = "calendar-toggle-list";
+            availableCalendars.forEach((entityId) => {
+                const row = document.createElement("div");
+                row.className = "calendar-toggle-row";
+
+                const label = document.createElement("div");
+                label.className = "calendar-toggle-label";
+                const friendlyName = this._hass?.states?.[entityId]?.attributes?.friendly_name;
+                const nameEl = document.createElement("strong");
+                nameEl.textContent = friendlyName || entityId;
+                label.appendChild(nameEl);
+                if (friendlyName) {
+                    const subtitle = document.createElement("span");
+                    subtitle.textContent = entityId;
+                    label.appendChild(subtitle);
+                }
+
+                const toggle = document.createElement("ha-switch");
+                toggle.checked = entities.includes(entityId);
+                toggle.addEventListener("change", (event) => {
+                    this._handleCalendarToggle(entityId, event.target.checked);
+                });
+
+                row.appendChild(label);
+                row.appendChild(toggle);
+                toggleList.appendChild(row);
+            });
+            container.appendChild(toggleList);
+        } else {
+            const empty = document.createElement("div");
+            empty.className = "empty-state";
+            empty.textContent = "No calendar entities were found in your Home Assistant instance. Create calendars under Settings → Devices & services.";
+            container.appendChild(empty);
+        }
+
+        const entriesWithIndex = entities.map((entry, index) => ({ entry, index }));
+        const customEntries = entriesWithIndex.filter(({ entry }) => !availableSet.has(entry));
+
+        if (customEntries.length) {
+            const customWrapper = document.createElement("div");
+            customWrapper.className = "custom-entities";
+            const note = document.createElement("p");
+            note.className = "section-note";
+            note.textContent = "Custom calendars (not auto-detected)";
+            customWrapper.appendChild(note);
+
+            customEntries.forEach(({ entry, index }) => {
+                const row = document.createElement("div");
+                row.className = "entity-row";
+                const inputControl = this._createEntityControl(entry, index, availableCalendars);
+                const removeButton = document.createElement("button");
+                removeButton.type = "button";
+                removeButton.className = "remove-btn";
+                removeButton.textContent = "Remove";
+                removeButton.addEventListener("click", () => this._handleRemoveEntity(index));
+                row.appendChild(inputControl);
+                row.appendChild(removeButton);
+                customWrapper.appendChild(row);
+            });
+
+            container.appendChild(customWrapper);
+        }
+    }
+
+    _createEntityControl(entityId, index, availableCalendars) {
+        if (customElements.get("ha-entity-picker")) {
+            const picker = document.createElement("ha-entity-picker");
+            picker.classList.add("entity-picker");
+            picker.hass = this._hass;
+            picker.value = entityId || "";
+            picker.setAttribute("domain", "calendar");
+            picker.addEventListener("value-changed", (event) => this._handleEntityChanged(index, event));
+            picker.addEventListener("change", (event) => this._handleEntityChanged(index, event));
+            return picker;
+        }
+
+        const fragment = document.createDocumentFragment();
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "entity-input";
+        input.placeholder = availableCalendars.length ? "Select a calendar entity" : "Enter a calendar entity id (e.g. calendar.family)";
+        input.value = entityId || "";
+        const updateValue = (value) => {
+            this._handleEntityChanged(index, { detail: { value } });
+        };
+        input.addEventListener("change", (event) => updateValue(event.target.value));
+        input.addEventListener("blur", (event) => updateValue(event.target.value));
+        fragment.appendChild(input);
+
+        if (availableCalendars.length) {
+            const datalistId = `calendar-week-card-calendars-${index}`;
+            input.setAttribute("list", datalistId);
+            const datalist = document.createElement("datalist");
+            datalist.id = datalistId;
+            availableCalendars.forEach((entityId) => {
+                const option = document.createElement("option");
+                option.value = entityId;
+                datalist.appendChild(option);
+            });
+            fragment.appendChild(datalist);
+        }
+
+        return fragment;
+    }
+
+    _handleCalendarToggle(entityId, enabled) {
+        const entities = this._normalizeEntityList(this._config.entities);
+        const next = [...entities];
+        const index = next.indexOf(entityId);
+        if (enabled && index === -1) {
+            next.push(entityId);
+        } else if (!enabled && index !== -1) {
+            next.splice(index, 1);
+        }
+        this._updateConfig({ entities: next });
+    }
+
+    _handleRemoveEntity(index) {
+        const entities = this._normalizeEntityList(this._config.entities);
+        entities.splice(index, 1);
+        this._updateConfig({ entities });
+    }
+
+    _handleEntityChanged(index, event) {
+        const value = (event?.detail?.value || event?.target?.value || "").trim();
+        const entities = this._normalizeEntityList(this._config.entities);
+        entities[index] = value;
+        this._updateConfig({ entities });
+    }
+
+    _normalizeEntityList(list) {
+        if (!Array.isArray(list)) {
+            return [];
+        }
+        return list
+            .map((entry) => {
+                if (typeof entry === "string") {
+                    return entry.trim();
+                }
+                if (entry && typeof entry === "object" && typeof entry.entity === "string") {
+                    return entry.entity.trim();
+                }
+                return "";
+            })
+            .filter(Boolean);
+    }
+
+    _updateConfig(changes) {
+        this._config = {
+            ...this._config,
+            ...changes
+        };
+        if (Object.prototype.hasOwnProperty.call(changes || {}, "entities")) {
+            this._config.entities = this._normalizeEntityList(this._config.entities);
+        }
+        this._render();
+        this.dispatchEvent(new CustomEvent("config-changed", {
+            detail: { config: this._config },
+            bubbles: true,
+            composed: true
+        }));
+    }
+}
+
+function createCalendarWeekCardEditorElement() {
+    if (!customElements.get("calendar-week-card-editor")) {
+        customElements.define("calendar-week-card-editor", CalendarWeekCardEditor);
+    }
+    return document.createElement("calendar-week-card-editor");
+}
+
+function createCalendarWeekCardStubConfig(hass) {
+    const calendarEntities = getCalendarEntitiesFromHass(hass);
+    const defaultEntities = calendarEntities.slice(0, 2);
+    const fallback = defaultEntities.length ? defaultEntities : ["calendar.family"];
+    return {
+        type: "custom:calendar-week-card",
+        entities: fallback
+    };
+}
+
+function getCalendarEntitiesFromHass(hass) {
+    if (!hass || !hass.states) {
+        return [];
+    }
+    return Object.keys(hass.states).filter(entityId => entityId.startsWith("calendar."));
 }
 
 if (!customElements.get("calendar-week-card")) {
