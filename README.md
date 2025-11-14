@@ -30,15 +30,18 @@ A fully customizable Lovelace card that displays your week at a glance in a clea
 ### HACS (recommended)
 
 1. Ensure you are running Home Assistant 2023.5 or newer.
-2. In HACS, add this repository as a custom repository of type **Lovelace**.
-3. Install **Calendar Week Card** from the custom repositories list.
-4. After installation, reload your Lovelace resources or restart Home Assistant if prompted.
+2. Open **HACS → Frontend**, search for **Calendar Week Card**, and install it.
+3. HACS will register the resource automatically; reload your dashboard resources or restart Home Assistant if prompted.
 
 ### Manual installation
 
-1. Add https://github.com/TheLuXoR/calendar-week-card to your custom HACS repositories
-2. Search for "Calendar Week Card"
-3. Download the latest release
+1. Download the latest release from [GitHub](https://github.com/TheLuXoR/calendar-week-card/releases).
+2. Copy `calendar-week-card.js` into your `config/www` folder (or another location served by Home Assistant).
+3. Add a Lovelace resource that points to the copied file, for example:
+   ```yaml
+   url: /local/calendar-week-card.js
+   type: module
+   ```
 
 ## usage
 currently the calendar card is meant to be used as a panel view.
