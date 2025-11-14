@@ -3126,7 +3126,6 @@ function getCalendarEntitiesFromHass(hass) {
     return Object.keys(hass.states).filter(entityId => entityId.startsWith("calendar."));
 }
 
-// Card registration
 if (!customElements.get("calendar-week-card")) {
     customElements.define("calendar-week-card", CalendarWeekCard);
 }
@@ -3142,3 +3141,6 @@ if (typeof window !== "undefined") {
         window.customCards.push(cardEntry);
     }
 }
+
+// Card registration
+from "./calendar-week-card.js";
