@@ -1,4 +1,8 @@
 import { mkdir, readFile, writeFile, copyFile } from "fs/promises";
+import { exec } from "child_process";
+const copyToClipboard = text =>
+    new Promise(res => exec(`printf "${text}" | pbcopy`, () => res()));
+
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -15,13 +19,16 @@ const hacsOutputFile = path.join(rootDir, "calendar-week-card.js");
 
 async function getBuildNumber() {
     const file = path.join(rootDir, "scripts/build-number.txt");
-    let n = 0;
     try {
-        n = parseInt(await readFile(file, "utf8"), 10) || 0;
-    } catch {}
-    n++;
-    await writeFile(file, String(n));
-    return n;
+        const current = parseInt(await readFile(file, "utf8"), 10);
+        const next = (isNaN(current) ? 1 : current + 1);
+        await writeFile(file, String(next));
+        return next;
+    } catch {
+        // Datei existiert nicht → neu anlegen mit 1
+        await writeFile(file, "1");
+        return 1;
+    }
 }
 
 function stripExports(source) {
@@ -85,7 +92,7 @@ async function build() {
     console.log(`Copied for HACS → ${path.relative(rootDir, hacsOutputFile)}`);
 
     const buildNumber = await getBuildNumber();
-    const versionedPath = `local/calendar-week-card/calendar-week-card.js?v=${buildNumber}`;
+    const versionedPath = `/local/calendar-week-card/calendar-week-card.js?v=${buildNumber}`;
     await copyToClipboard(versionedPath);
     console.log("\nPath:");
     console.log(versionedPath);
