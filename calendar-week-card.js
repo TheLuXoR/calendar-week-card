@@ -501,6 +501,7 @@ class CalendarWeekCard extends HTMLElement {
         this._systemThemeListener = null;
         this.baseColors = {};
         this.baseHiddenEntities = [];
+        this._configOverrides = {};
     }
     resolveLanguage(preference) {
         return resolveLanguage(preference, {
@@ -586,8 +587,16 @@ class CalendarWeekCard extends HTMLElement {
         } catch (err) {
             storedThemePreference = null;
         }
+        const hasThemeOverride = this._configOverrides?.theme === true;
         const configTheme = typeof this.config?.theme === "string" ? this.config.theme : null;
-        const initialThemePreference = storedThemePreference || configTheme || "system";
+        let initialThemePreference = "system";
+        if (hasThemeOverride && configTheme) {
+            initialThemePreference = configTheme;
+        } else if (storedThemePreference) {
+            initialThemePreference = storedThemePreference;
+        } else if (configTheme) {
+            initialThemePreference = configTheme;
+        }
         const validThemes = ["light", "dark", "system"];
         this.themePreference = validThemes.includes(initialThemePreference) ? initialThemePreference : "system";
         this.config.theme = this.themePreference;
@@ -768,12 +777,34 @@ class CalendarWeekCard extends HTMLElement {
     }
 
     setConfig(config) {
-        this.config = structuredClone(config) || {};
-        this.config.colors = this.config.colors || {};
+        const rawConfig = config || {};
+        const hasOwn = (key) => Object.prototype.hasOwnProperty.call(rawConfig, key);
+        this._configOverrides = {
+            colors: hasOwn("colors"),
+            hidden_entities: hasOwn("hidden_entities"),
+            language: hasOwn("language"),
+            theme: hasOwn("theme"),
+            highlight_today: hasOwn("highlight_today"),
+            today_highlight_color: hasOwn("today_highlight_color"),
+            trim_unused_hours: hasOwn("trim_unused_hours")
+        };
+
+        this.config = structuredClone(rawConfig) || {};
+        this.config.colors = this.config.colors && typeof this.config.colors === "object" ? this.config.colors : {};
         this.config.hidden_entities = Array.isArray(this.config.hidden_entities) ? this.config.hidden_entities : [];
-        const storedLanguagePreference = localStorage.getItem("calendar-week-card-language");
+
+        let storedLanguagePreference = null;
+        try {
+            storedLanguagePreference = localStorage.getItem("calendar-week-card-language");
+        } catch (err) {
+            storedLanguagePreference = null;
+        }
         const configLanguage = typeof this.config.language === "string" ? this.config.language : null;
-        this.languagePreference = configLanguage || storedLanguagePreference || "system";
+        const hasLanguageOverride = this._configOverrides.language && configLanguage;
+        const languagePreferenceCandidate = hasLanguageOverride
+            ? configLanguage
+            : (configLanguage || storedLanguagePreference || "system");
+        this.languagePreference = languagePreferenceCandidate || "system";
         if (this.languagePreference !== "system") {
             const normalized = normalizeLanguage(this.languagePreference);
             this.languagePreference = SUPPORTED_LANGUAGES.includes(normalized) ? normalized : "system";
@@ -789,13 +820,25 @@ class CalendarWeekCard extends HTMLElement {
         this.initializeThemePreference();
 
         // Load saved colors
-        const savedColors = localStorage.getItem("calendar-week-card-colors");
+        let savedColors = null;
+        try {
+            savedColors = localStorage.getItem("calendar-week-card-colors");
+        } catch (err) {
+            savedColors = null;
+        }
         if (savedColors) {
-            this.config.colors = { ...this.config.colors, ...JSON.parse(savedColors) };
+            try {
+                const parsedColors = JSON.parse(savedColors);
+                if (parsedColors && typeof parsedColors === "object") {
+                    this.config.colors = { ...parsedColors, ...this.config.colors };
+                }
+            } catch (err) {
+                console.warn("calendar-week-card: Failed to parse saved colors", err);
+            }
         }
 
         const savedHidden = localStorage.getItem(this.configHiddenKey);
-        if (savedHidden) {
+        if (savedHidden && !this._configOverrides.hidden_entities) {
             try {
                 const parsedHidden = JSON.parse(savedHidden);
                 if (Array.isArray(parsedHidden)) {
@@ -815,22 +858,58 @@ class CalendarWeekCard extends HTMLElement {
             this.assignDefaultColors(this.config.entities);
         }
 
-        const savedHighlightColor = localStorage.getItem("calendar-week-card-today-highlight-color");
-        if (savedHighlightColor) {
-            this.config.today_highlight_color = savedHighlightColor;
-        } else if (!this.config.today_highlight_color) {
+        let savedHighlightColor = null;
+        try {
+            savedHighlightColor = localStorage.getItem("calendar-week-card-today-highlight-color");
+        } catch (err) {
+            savedHighlightColor = null;
+        }
+        const hasHighlightColorOverride = this._configOverrides.today_highlight_color;
+        if (hasHighlightColorOverride && typeof this.config.today_highlight_color === "string") {
+            this.config.today_highlight_color = getHexColor(this.config.today_highlight_color, "#4D96FF");
+        } else if (savedHighlightColor) {
+            this.config.today_highlight_color = getHexColor(savedHighlightColor, this.config.today_highlight_color || "#4D96FF");
+        } else if (typeof this.config.today_highlight_color === "string") {
+            this.config.today_highlight_color = getHexColor(this.config.today_highlight_color, "#4D96FF");
+        } else {
             this.config.today_highlight_color = "#4D96FF";
         }
 
-        const savedHighlightEnabled = localStorage.getItem("calendar-week-card-highlight-enabled");
-        if (savedHighlightEnabled !== null) {
+        let savedHighlightEnabled = null;
+        try {
+            savedHighlightEnabled = localStorage.getItem("calendar-week-card-highlight-enabled");
+        } catch (err) {
+            savedHighlightEnabled = null;
+        }
+        const hasHighlightOverride = this._configOverrides.highlight_today;
+        if (hasHighlightOverride) {
+            if (typeof this.config.highlight_today === "string") {
+                this.config.highlight_today = this.config.highlight_today !== "false";
+            } else {
+                this.config.highlight_today = this.config.highlight_today !== false;
+            }
+        } else if (savedHighlightEnabled !== null) {
             this.config.highlight_today = savedHighlightEnabled !== "false";
+        } else if (typeof this.config.highlight_today === "string") {
+            this.config.highlight_today = this.config.highlight_today !== "false";
         } else if (typeof this.config.highlight_today !== "boolean") {
             this.config.highlight_today = true;
         }
 
-        const savedTrimUnused = localStorage.getItem(this.trimUnusedHoursKey);
-        if (savedTrimUnused !== null) {
+        let savedTrimUnused = null;
+        try {
+            savedTrimUnused = localStorage.getItem(this.trimUnusedHoursKey);
+        } catch (err) {
+            savedTrimUnused = null;
+        }
+        const hasTrimOverride = this._configOverrides.trim_unused_hours;
+        if (hasTrimOverride) {
+            if (typeof this.config.trim_unused_hours === "string") {
+                this.config.trim_unused_hours = this.config.trim_unused_hours !== "false";
+            } else {
+                this.config.trim_unused_hours = this.config.trim_unused_hours === true;
+            }
+        } else if (savedTrimUnused !== null) {
             this.config.trim_unused_hours = savedTrimUnused !== "false";
         } else if (typeof this.config.trim_unused_hours === "string") {
             this.config.trim_unused_hours = this.config.trim_unused_hours !== "false";
