@@ -2664,6 +2664,8 @@ class CalendarWeekCardEditor extends HTMLElement {
         super();
         this._config = { entities: [] };
         this._hass = null;
+        this._availableCalendars = [];
+        this._waitingForEntityPicker = false;
         this.attachShadow({ mode: "open" });
     }
 
@@ -2689,7 +2691,18 @@ class CalendarWeekCardEditor extends HTMLElement {
         }
 
         const root = this.shadowRoot;
+        if (!customElements.get("ha-entity-picker") && !this._waitingForEntityPicker && typeof customElements.whenDefined === "function") {
+            this._waitingForEntityPicker = true;
+            customElements.whenDefined("ha-entity-picker").then(() => {
+                this._waitingForEntityPicker = false;
+                this._render();
+            }).catch(() => {
+                this._waitingForEntityPicker = false;
+            });
+        }
+
         const availableCalendars = getCalendarEntitiesFromHass(this._hass);
+        this._availableCalendars = availableCalendars;
         const hasCalendars = availableCalendars.length > 0;
         root.innerHTML = `
             <style>
@@ -2873,6 +2886,7 @@ class CalendarWeekCardEditor extends HTMLElement {
         }
         container.innerHTML = "";
         const entities = Array.isArray(this._config.entities) ? this._config.entities : [];
+        const availableCalendars = this._availableCalendars?.length ? this._availableCalendars : getCalendarEntitiesFromHass(this._hass);
 
         if (!entities.length) {
             const empty = document.createElement("div");
@@ -2886,12 +2900,7 @@ class CalendarWeekCardEditor extends HTMLElement {
             const row = document.createElement("div");
             row.className = "entity-row";
 
-            const picker = document.createElement("ha-entity-picker");
-            picker.classList.add("entity-picker");
-            picker.hass = this._hass;
-            picker.value = entityConfig?.entity || "";
-            picker.setAttribute("domain", "calendar");
-            picker.addEventListener("value-changed", (event) => this._handleEntityChanged(index, event));
+            const inputControl = this._createEntityControl(entityConfig, index, availableCalendars);
 
             const removeButton = document.createElement("button");
             removeButton.type = "button";
@@ -2899,10 +2908,51 @@ class CalendarWeekCardEditor extends HTMLElement {
             removeButton.textContent = "Remove";
             removeButton.addEventListener("click", () => this._handleRemoveEntity(index));
 
-            row.appendChild(picker);
+            row.appendChild(inputControl);
             row.appendChild(removeButton);
             container.appendChild(row);
         });
+    }
+
+    _createEntityControl(entityConfig, index, availableCalendars) {
+        if (customElements.get("ha-entity-picker")) {
+            const picker = document.createElement("ha-entity-picker");
+            picker.classList.add("entity-picker");
+            picker.hass = this._hass;
+            picker.value = entityConfig?.entity || "";
+            picker.setAttribute("domain", "calendar");
+            picker.addEventListener("value-changed", (event) => this._handleEntityChanged(index, event));
+            picker.addEventListener("change", (event) => this._handleEntityChanged(index, event));
+            return picker;
+        }
+
+        const fragment = document.createDocumentFragment();
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "entity-input";
+        input.placeholder = availableCalendars.length ? "Select a calendar entity" : "Enter a calendar entity id (e.g. calendar.family)";
+        input.value = entityConfig?.entity || "";
+        const updateValue = (value) => {
+            this._handleEntityChanged(index, { detail: { value } });
+        };
+        input.addEventListener("change", (event) => updateValue(event.target.value));
+        input.addEventListener("blur", (event) => updateValue(event.target.value));
+        fragment.appendChild(input);
+
+        if (availableCalendars.length) {
+            const datalistId = `calendar-week-card-calendars-${index}`;
+            input.setAttribute("list", datalistId);
+            const datalist = document.createElement("datalist");
+            datalist.id = datalistId;
+            availableCalendars.forEach((entityId) => {
+                const option = document.createElement("option");
+                option.value = entityId;
+                datalist.appendChild(option);
+            });
+            fragment.appendChild(datalist);
+        }
+
+        return fragment;
     }
 
     _handleAddEntity() {
