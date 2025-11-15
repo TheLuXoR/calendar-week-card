@@ -418,6 +418,47 @@ function getHexColor(color, fallback = "#4287f5", resolverElement) {
     return "#4287f5";
 }
 
+// Lit shim
+const globalScope = typeof globalThis !== "undefined"
+    ? globalThis
+    : (typeof window !== "undefined" ? window : undefined);
+
+function resolveLitExports() {
+    if (!globalScope) {
+        throw new Error("LitElement is not available in the current environment.");
+    }
+
+    const direct = {
+        LitElement: globalScope.LitElement,
+        html: globalScope.html,
+        css: globalScope.css,
+        nothing: globalScope.nothing
+    };
+
+    if (direct.LitElement && direct.html && direct.css) {
+        return {
+            LitElement: direct.LitElement,
+            html: direct.html,
+            css: direct.css,
+            nothing: direct.nothing ?? globalScope.litHtml?.nothing ?? undefined
+        };
+    }
+
+    const lit = globalScope.litHtml || globalScope.lit;
+    if (lit && lit.LitElement && lit.html && lit.css) {
+        return {
+            LitElement: lit.LitElement,
+            html: lit.html,
+            css: lit.css,
+            nothing: lit.nothing ?? undefined
+        };
+    }
+
+    throw new Error("Unable to locate LitElement. Please ensure Home Assistant exposes Lit on the window object.");
+}
+
+const { LitElement, html, css, nothing } = resolveLitExports();
+
 // Calendar week card
 const THEME_VARIABLES = {
     light: {
@@ -2678,19 +2719,172 @@ class CalendarWeekCard extends HTMLElement {
 
 }
 
-class CalendarWeekCardEditor extends HTMLElement {
+
+class CalendarWeekCardEditor extends LitElement {
+    static properties = {
+        _config: { attribute: false },
+        _waitingForEntityPicker: { attribute: false }
+    };
+
+    static styles = css`
+        :host {
+            display: block;
+            color: var(--primary-text-color);
+        }
+        .card-config {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .section h3 {
+            margin: 0;
+            font-size: 1em;
+            font-weight: 600;
+        }
+        .section p {
+            margin: 0;
+            color: var(--secondary-text-color);
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        .section-note {
+            margin: 0;
+            color: var(--secondary-text-color);
+            font-size: 0.9em;
+        }
+        .entities {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .custom-entities {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .calendar-toggle-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .calendar-toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--divider-color);
+            background: var(--ha-card-background, rgba(0,0,0,0.03));
+            gap: 12px;
+        }
+        .calendar-toggle-label {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+        .calendar-toggle-label span {
+            font-size: 0.85em;
+            color: var(--secondary-text-color);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .entity-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .entity-picker {
+            flex: 1;
+        }
+        .entity-input-wrapper {
+            flex: 1;
+        }
+        .entity-input {
+            flex: 1;
+            padding: 6px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--divider-color);
+        }
+        button {
+            font: inherit;
+        }
+        .remove-btn {
+            border-radius: 6px;
+            border: 1px solid var(--divider-color);
+            padding: 6px 10px;
+            background: var(--ha-card-background, rgba(0,0,0,0.05));
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .remove-btn:hover {
+            background: rgba(77, 150, 255, 0.1);
+        }
+        .empty-state {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px dashed var(--divider-color);
+            color: var(--secondary-text-color);
+        }
+        .inline-input {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .inline-input label {
+            font-size: 0.85em;
+            color: var(--secondary-text-color);
+        }
+        .toggles {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .toggle-row span {
+            font-weight: 500;
+        }
+        select,
+        input[type="color"],
+        input[type="text"] {
+            font: inherit;
+            padding: 6px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--divider-color);
+            background: var(--card-background-color, var(--ha-card-background));
+            color: inherit;
+        }
+    `;
+
     constructor() {
         super();
         this._config = { entities: [] };
-        this._hass = null;
-        this._availableCalendars = [];
         this._waitingForEntityPicker = false;
-        this.attachShadow({ mode: "open" });
+        this._hass = null;
     }
 
     set hass(value) {
         this._hass = value;
-        this._render();
+        this.requestUpdate();
+    }
+
+    get hass() {
+        return this._hass;
+    }
+
+    connectedCallback() {
+        super.connectedCallback();
+        this._ensureEntityPickerDefinition();
     }
 
     setConfig(config) {
@@ -2701,184 +2895,66 @@ class CalendarWeekCardEditor extends HTMLElement {
             type: baseConfig.type || "custom:calendar-week-card",
             entities: this._normalizeEntityList(entities)
         };
-        this._render();
+        this.requestUpdate();
     }
 
-    _render() {
-        if (!this.shadowRoot || !this._config) {
-            return;
-        }
-
-        const root = this.shadowRoot;
-        if (!customElements.get("ha-entity-picker") && !this._waitingForEntityPicker && typeof customElements.whenDefined === "function") {
-            this._waitingForEntityPicker = true;
-            customElements.whenDefined("ha-entity-picker").then(() => {
-                this._waitingForEntityPicker = false;
-                this._render();
-            }).catch(() => {
-                this._waitingForEntityPicker = false;
-            });
+    render() {
+        if (!this._config) {
+            return nothing;
         }
 
         const availableCalendars = getCalendarEntitiesFromHass(this._hass);
-        this._availableCalendars = availableCalendars;
-        root.innerHTML = `
-            <style>
-                :host {
-                    display: block;
-                    color: var(--primary-text-color);
-                }
-                .card-config {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 20px;
-                }
-                .section {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 12px;
-                }
-                .section h3 {
-                    margin: 0;
-                    font-size: 1em;
-                    font-weight: 600;
-                }
-                .section p {
-                    margin: 0;
-                    color: var(--secondary-text-color);
-                    font-size: 0.9em;
-                    line-height: 1.4;
-                }
-                .section-note {
-                    margin: 0;
-                    color: var(--secondary-text-color);
-                    font-size: 0.9em;
-                }
-                .entities {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 12px;
-                }
-                .custom-entities {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                }
-                .calendar-toggle-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                }
-                .calendar-toggle-row {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 8px 12px;
-                    border-radius: 8px;
-                    border: 1px solid var(--divider-color);
-                    background: var(--ha-card-background, rgba(0,0,0,0.03));
-                    gap: 12px;
-                }
-                .calendar-toggle-label {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2px;
-                    min-width: 0;
-                }
-                .calendar-toggle-label span {
-                    font-size: 0.85em;
-                    color: var(--secondary-text-color);
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                }
-                .entity-row {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                .entity-row ha-entity-picker,
-                .entity-row input[type="text"] {
-                    flex: 1;
-                }
-                button {
-                    font: inherit;
-                }
-                .remove-btn {
-                    border-radius: 6px;
-                    border: 1px solid var(--divider-color);
-                    padding: 6px 10px;
-                    background: var(--ha-card-background, rgba(0,0,0,0.05));
-                    cursor: pointer;
-                    transition: background 0.2s ease;
-                }
-                .remove-btn:hover {
-                    background: rgba(77, 150, 255, 0.1);
-                }
-                .empty-state {
-                    padding: 12px;
-                    border-radius: 8px;
-                    border: 1px dashed var(--divider-color);
-                    color: var(--secondary-text-color);
-                }
-                .inline-input {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 6px;
-                }
-                .inline-input label {
-                    font-size: 0.85em;
-                    color: var(--secondary-text-color);
-                }
-                .toggles {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 12px;
-                }
-                .toggle-row {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                }
-                .toggle-row span {
-                    font-weight: 500;
-                }
-                select,
-                input[type="color"],
-                input[type="text"] {
-                    font: inherit;
-                    padding: 6px 8px;
-                    border-radius: 6px;
-                    border: 1px solid var(--divider-color);
-                    background: var(--card-background-color, var(--ha-card-background));
-                    color: inherit;
-                }
-            </style>
+        const entities = this._normalizeEntityList(this._config.entities);
+        const availableSet = new Set(availableCalendars);
+        const customEntries = entities
+            .map((entry, index) => ({ entry, index }))
+            .filter(({ entry }) => !availableSet.has(entry));
+
+        return html`
             <div class="card-config">
                 <div class="section">
                     <h3>Calendars</h3>
                     <p>Enable the calendars you want to show.</p>
-                    <div class="entities" id="entities"></div>
+                    <div class="entities">
+                        ${this._renderCalendarToggleList(availableCalendars, entities)}
+                        ${this._renderCustomEntries(customEntries, availableCalendars)}
+                    </div>
                 </div>
                 <div class="section">
                     <h3>Appearance</h3>
                     <div class="toggles">
                         <div class="toggle-row">
                             <span>Highlight today</span>
-                            <ha-switch id="highlight-today"></ha-switch>
+                            <ha-switch
+                                .checked=${this._config.highlight_today !== false}
+                                @change=${(event) => this._updateConfig({ highlight_today: event.target.checked })}
+                            ></ha-switch>
                         </div>
                         <div class="toggle-row">
                             <span>Trim empty hours</span>
-                            <ha-switch id="trim-hours"></ha-switch>
+                            <ha-switch
+                                .checked=${this._config.trim_unused_hours === true}
+                                @change=${(event) => this._updateConfig({ trim_unused_hours: event.target.checked })}
+                            ></ha-switch>
                         </div>
                     </div>
                     <div class="inline-input">
                         <label for="highlight-color">Highlight color</label>
-                        <input type="color" id="highlight-color" name="highlight-color" />
+                        <input
+                            type="color"
+                            id="highlight-color"
+                            name="highlight-color"
+                            .value=${this._config.today_highlight_color || "#4D96FF"}
+                            @input=${(event) => this._updateConfig({ today_highlight_color: event.target.value })}
+                        />
                     </div>
                     <div class="inline-input">
                         <label for="theme-select">Theme</label>
-                        <select id="theme-select">
+                        <select
+                            id="theme-select"
+                            .value=${this._config.theme || "system"}
+                            @change=${(event) => this._updateConfig({ theme: event.target.value })}
+                        >
                             <option value="system">Match Home Assistant</option>
                             <option value="light">Always light</option>
                             <option value="dark">Always dark</option>
@@ -2887,160 +2963,98 @@ class CalendarWeekCardEditor extends HTMLElement {
                 </div>
             </div>
         `;
-
-        this._populateEntityRows();
-
-        const highlightSwitch = root.getElementById("highlight-today");
-        if (highlightSwitch) {
-            highlightSwitch.checked = this._config.highlight_today !== false;
-            highlightSwitch.addEventListener("change", (event) => {
-                this._updateConfig({ highlight_today: event.target.checked });
-            });
-        }
-
-        const trimSwitch = root.getElementById("trim-hours");
-        if (trimSwitch) {
-            trimSwitch.checked = this._config.trim_unused_hours === true;
-            trimSwitch.addEventListener("change", (event) => {
-                this._updateConfig({ trim_unused_hours: event.target.checked });
-            });
-        }
-
-        const highlightColor = root.getElementById("highlight-color");
-        if (highlightColor) {
-            highlightColor.value = this._config.today_highlight_color || "#4D96FF";
-            highlightColor.addEventListener("input", (event) => {
-                this._updateConfig({ today_highlight_color: event.target.value });
-            });
-        }
-
-        const themeSelect = root.getElementById("theme-select");
-        if (themeSelect) {
-            themeSelect.value = this._config.theme || "system";
-            themeSelect.addEventListener("change", (event) => {
-                this._updateConfig({ theme: event.target.value });
-            });
-        }
     }
 
-    _populateEntityRows() {
-        if (!this.shadowRoot) {
-            return;
-        }
-        const container = this.shadowRoot.getElementById("entities");
-        if (!container) {
-            return;
-        }
-        container.innerHTML = "";
-        const entities = this._normalizeEntityList(this._config.entities);
-        const availableCalendars = this._availableCalendars?.length ? this._availableCalendars : getCalendarEntitiesFromHass(this._hass);
-        const availableSet = new Set(availableCalendars);
-
-        if (availableCalendars.length) {
-            const toggleList = document.createElement("div");
-            toggleList.className = "calendar-toggle-list";
-            availableCalendars.forEach((entityId) => {
-                const row = document.createElement("div");
-                row.className = "calendar-toggle-row";
-
-                const label = document.createElement("div");
-                label.className = "calendar-toggle-label";
-                const friendlyName = this._hass?.states?.[entityId]?.attributes?.friendly_name;
-                const nameEl = document.createElement("strong");
-                nameEl.textContent = friendlyName || entityId;
-                label.appendChild(nameEl);
-                if (friendlyName) {
-                    const subtitle = document.createElement("span");
-                    subtitle.textContent = entityId;
-                    label.appendChild(subtitle);
-                }
-
-                const toggle = document.createElement("ha-switch");
-                toggle.checked = entities.includes(entityId);
-                toggle.addEventListener("change", (event) => {
-                    this._handleCalendarToggle(entityId, event.target.checked);
-                });
-
-                row.appendChild(label);
-                row.appendChild(toggle);
-                toggleList.appendChild(row);
-            });
-            container.appendChild(toggleList);
-        } else {
-            const empty = document.createElement("div");
-            empty.className = "empty-state";
-            empty.textContent = "No calendar entities were found in your Home Assistant instance. Create calendars under Settings → Devices & services.";
-            container.appendChild(empty);
+    _renderCalendarToggleList(availableCalendars, selectedEntities) {
+        if (!availableCalendars.length) {
+            return html`
+                <div class="empty-state">
+                    No calendar entities were found in your Home Assistant instance. Create calendars under Settings → Devices & services.
+                </div>
+            `;
         }
 
-        const entriesWithIndex = entities.map((entry, index) => ({ entry, index }));
-        const customEntries = entriesWithIndex.filter(({ entry }) => !availableSet.has(entry));
-
-        if (customEntries.length) {
-            const customWrapper = document.createElement("div");
-            customWrapper.className = "custom-entities";
-            const note = document.createElement("p");
-            note.className = "section-note";
-            note.textContent = "Custom calendars (not auto-detected)";
-            customWrapper.appendChild(note);
-
-            customEntries.forEach(({ entry, index }) => {
-                const row = document.createElement("div");
-                row.className = "entity-row";
-                const inputControl = this._createEntityControl(entry, index, availableCalendars);
-                const removeButton = document.createElement("button");
-                removeButton.type = "button";
-                removeButton.className = "remove-btn";
-                removeButton.textContent = "Remove";
-                removeButton.addEventListener("click", () => this._handleRemoveEntity(index));
-                row.appendChild(inputControl);
-                row.appendChild(removeButton);
-                customWrapper.appendChild(row);
-            });
-
-            container.appendChild(customWrapper);
-        }
+        return html`
+            <div class="calendar-toggle-list">
+                ${availableCalendars.map((entityId) => {
+                    const friendlyName = this._hass?.states?.[entityId]?.attributes?.friendly_name;
+                    return html`
+                        <div class="calendar-toggle-row">
+                            <div class="calendar-toggle-label">
+                                <strong>${friendlyName || entityId}</strong>
+                                ${friendlyName
+                                    ? html`<span>${entityId}</span>`
+                                    : nothing}
+                            </div>
+                            <ha-switch
+                                .checked=${selectedEntities.includes(entityId)}
+                                @change=${(event) => this._handleCalendarToggle(entityId, event.target.checked)}
+                            ></ha-switch>
+                        </div>
+                    `;
+                })}
+            </div>
+        `;
     }
 
-    _createEntityControl(entityId, index, availableCalendars) {
+    _renderCustomEntries(customEntries, availableCalendars) {
+        if (!customEntries.length) {
+            return nothing;
+        }
+
+        return html`
+            <div class="custom-entities">
+                <p class="section-note">Custom calendars (not auto-detected)</p>
+                ${customEntries.map(({ entry, index }) => html`
+                    <div class="entity-row">
+                        ${this._renderEntityControl(entry, index, availableCalendars)}
+                        <button type="button" class="remove-btn" @click=${() => this._handleRemoveEntity(index)}>Remove</button>
+                    </div>
+                `)}
+            </div>
+        `;
+    }
+
+    _renderEntityControl(entityId, index, availableCalendars) {
         if (customElements.get("ha-entity-picker")) {
-            const picker = document.createElement("ha-entity-picker");
-            picker.classList.add("entity-picker");
-            picker.hass = this._hass;
-            picker.value = entityId || "";
-            picker.setAttribute("domain", "calendar");
-            picker.addEventListener("value-changed", (event) => this._handleEntityChanged(index, event));
-            picker.addEventListener("change", (event) => this._handleEntityChanged(index, event));
-            return picker;
+            return html`
+                <ha-entity-picker
+                    class="entity-picker"
+                    .hass=${this._hass}
+                    .value=${entityId || ""}
+                    domain="calendar"
+                    @value-changed=${(event) => this._handleEntityChanged(index, event)}
+                    @change=${(event) => this._handleEntityChanged(index, event)}
+                ></ha-entity-picker>
+            `;
         }
 
-        const fragment = document.createDocumentFragment();
-        const input = document.createElement("input");
-        input.type = "text";
-        input.className = "entity-input";
-        input.placeholder = availableCalendars.length ? "Select a calendar entity" : "Enter a calendar entity id (e.g. calendar.family)";
-        input.value = entityId || "";
-        const updateValue = (value) => {
-            this._handleEntityChanged(index, { detail: { value } });
-        };
-        input.addEventListener("change", (event) => updateValue(event.target.value));
-        input.addEventListener("blur", (event) => updateValue(event.target.value));
-        fragment.appendChild(input);
+        const datalistId = `calendar-week-card-calendars-${index}`;
+        const hasOptions = Boolean(availableCalendars.length);
+        const placeholder = hasOptions
+            ? "Select a calendar entity"
+            : "Enter a calendar entity id (e.g. calendar.family)";
 
-        if (availableCalendars.length) {
-            const datalistId = `calendar-week-card-calendars-${index}`;
-            input.setAttribute("list", datalistId);
-            const datalist = document.createElement("datalist");
-            datalist.id = datalistId;
-            availableCalendars.forEach((entityId) => {
-                const option = document.createElement("option");
-                option.value = entityId;
-                datalist.appendChild(option);
-            });
-            fragment.appendChild(datalist);
-        }
-
-        return fragment;
+        return html`
+            <div class="entity-picker entity-input-wrapper">
+                <input
+                    type="text"
+                    class="entity-input"
+                    .value=${entityId || ""}
+                    placeholder=${placeholder}
+                    list=${hasOptions ? datalistId : nothing}
+                    @change=${(event) => this._handleEntityChanged(index, event)}
+                    @blur=${(event) => this._handleEntityChanged(index, event)}
+                />
+                ${hasOptions
+                    ? html`
+                        <datalist id=${datalistId}>
+                            ${availableCalendars.map((calendarId) => html`<option value=${calendarId}></option>`) }
+                        </datalist>
+                    `
+                    : nothing}
+            </div>
+        `;
     }
 
     _handleCalendarToggle(entityId, enabled) {
@@ -3093,12 +3107,26 @@ class CalendarWeekCardEditor extends HTMLElement {
         if (Object.prototype.hasOwnProperty.call(changes || {}, "entities")) {
             this._config.entities = this._normalizeEntityList(this._config.entities);
         }
-        this._render();
         this.dispatchEvent(new CustomEvent("config-changed", {
             detail: { config: this._config },
             bubbles: true,
             composed: true
         }));
+    }
+
+    _ensureEntityPickerDefinition() {
+        if (customElements.get("ha-entity-picker") || this._waitingForEntityPicker || typeof customElements.whenDefined !== "function") {
+            return;
+        }
+        this._waitingForEntityPicker = true;
+        customElements.whenDefined("ha-entity-picker")
+            .then(() => {
+                this._waitingForEntityPicker = false;
+                this.requestUpdate();
+            })
+            .catch(() => {
+                this._waitingForEntityPicker = false;
+            });
     }
 }
 
