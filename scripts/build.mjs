@@ -34,14 +34,21 @@ async function getBuildNumber() {
 function stripExports(source) {
     return source
         .replace(/export\s+default\s+/g, "")
-        .replace(/export\s+class\s+/g, "class ")
-        .replace(/export\s+const\s+/g, "const ")
-        .replace(/export\s+function\s+/g, "function ")
+        .replace(/export\s+(class|function)\s+/g, (_, keyword) => `${keyword} `)
+        .replace(/export\s+(const|let|var)\s+/g, (_, keyword) => `${keyword} `)
         .replace(/export\s+\{[^}]+\};?/g, "");
 }
 
 function stripImports(source) {
-    return source.replace(/^import[^;]+;\n?/gm, "").trimStart();
+    return source.replace(/^\s*import[\s\S]*?;\s*/gm, "").trimStart();
+}
+
+function indent(text, spaces = 4) {
+    const pad = " ".repeat(spaces);
+    return text
+        .split("\n")
+        .map(line => (line ? pad + line : line))
+        .join("\n");
 }
 
 async function readSource(relativePath) {
@@ -70,15 +77,17 @@ async function build() {
     const banner = "// Calendar Week Card – generated bundle";
 
     const sections = [
-        banner,
         wrapSection("Localization", localization),
         wrapSection("Color utilities", colors),
         wrapSection("Lit shim", litShim),
         wrapSection("Calendar week card", card)
     ].filter(Boolean);
 
+    const body = indent(sections.join("\n\n"));
+    const wrapped = `${banner}\n(async () => {\n${body}\n})();\n`;
+
     await mkdir(distDir, { recursive: true });
-    await writeFile(outputFile, sections.join("\n\n") + "\n", "utf8");
+    await writeFile(outputFile, wrapped, "utf8");
 
     // *** HIER: Datei zusätzlich an HACS-Ziel kopieren ***
     await copyFile(outputFile, hacsOutputFile);
