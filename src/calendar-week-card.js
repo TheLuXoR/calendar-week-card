@@ -206,6 +206,7 @@ export class CalendarWeekCard extends HTMLElement {
         this.baseHiddenEntities = [];
         this._configOverrides = {};
         this.inlineNoCalendarsContainer = null;
+        this._isEditorPreview = false;
     }
     resolveLanguage(preference) {
         return resolveLanguage(preference, {
@@ -410,6 +411,10 @@ export class CalendarWeekCard extends HTMLElement {
         this._systemThemeListener = handler;
     }
 
+    connectedCallback() {
+        this.updateEditorPreviewState();
+    }
+
     disconnectedCallback() {
         if (this._systemThemeMedia && this._systemThemeListener) {
             if (typeof this._systemThemeMedia.removeEventListener === "function") {
@@ -420,6 +425,19 @@ export class CalendarWeekCard extends HTMLElement {
         }
         this._systemThemeMedia = null;
         this._systemThemeListener = null;
+        this._isEditorPreview = false;
+    }
+
+    updateEditorPreviewState() {
+        if (typeof this.closest !== "function") {
+            this._isEditorPreview = false;
+            return;
+        }
+        this._isEditorPreview = !!this.closest("hui-card-preview");
+    }
+
+    isEditorPreview() {
+        return !!this._isEditorPreview;
     }
 
     refreshDisplay() {
@@ -546,6 +564,10 @@ export class CalendarWeekCard extends HTMLElement {
     }
 
     presentNoCalendarsState() {
+        if (this.isEditorPreview()) {
+            this.hideInlineNoCalendarsState();
+            return;
+        }
         this.showInlineNoCalendarsState();
     }
 
@@ -1338,6 +1360,8 @@ export class CalendarWeekCard extends HTMLElement {
 
     set hass(hass) {
         this._hass = hass;
+        this.updateEditorPreviewState();
+        this.updateCalendarsFromStates(hass);
         this.loadEvents(hass);
     }
 
@@ -1348,12 +1372,13 @@ export class CalendarWeekCard extends HTMLElement {
         const visibleEntities = entities.filter(entity => !this.isEntityHidden(entity));
 
         if (!visibleEntities.length) {
-            if (!entities.length && !this.config?.entities?.length) {
-                this.presentNoCalendarsState();
-            } else {
+            if (this.isEditorPreview()) {
                 this.hideInlineNoCalendarsState();
+                this.renderList(this.buildPreviewExampleEvents());
+            } else {
+                this.presentNoCalendarsState();
+                this.renderList([]);
             }
-            this.renderList([]);
             return;
         }
 
@@ -1406,6 +1431,92 @@ export class CalendarWeekCard extends HTMLElement {
 
         allEvents.sort((a, b) => a.start - b.start);
         this.renderList(allEvents);
+    }
+
+    buildPreviewExampleEvents() {
+        const [startOfWeek] = this.getWeekRange();
+        if (!startOfWeek) {
+            return [];
+        }
+
+        const base = new Date(startOfWeek);
+        const toDate = (dayOffset, hours, minutes) => {
+            const date = new Date(base);
+            date.setDate(base.getDate() + dayOffset);
+            date.setHours(hours, minutes, 0, 0);
+            return date;
+        };
+
+        const templates = [
+            {
+                title: "Team Sync",
+                calendar: "calendar.preview_work",
+                dayOffset: 0,
+                start: { h: 9, m: 0 },
+                end: { h: 10, m: 30 },
+                color: "#4D96FF",
+                location: "Conference Room",
+                description: "Quarterly planning and open questions."
+            },
+            {
+                title: "School Holidays",
+                calendar: "calendar.preview_family",
+                dayOffset: 1,
+                isAllDay: true,
+                color: "#F6C343",
+                description: "All-day break for the kids."
+            },
+            {
+                title: "Client Presentation",
+                calendar: "calendar.preview_work",
+                dayOffset: 2,
+                start: { h: 13, m: 0 },
+                end: { h: 14, m: 0 },
+                color: "#9B51E0",
+                location: "Downtown Office",
+                description: "Show the latest roadmap and collect feedback."
+            },
+            {
+                title: "Date Night",
+                calendar: "calendar.preview_personal",
+                dayOffset: 4,
+                start: { h: 19, m: 0 },
+                end: { h: 21, m: 30 },
+                color: "#EB5757",
+                location: "Favorite Restaurant",
+                description: "Dinner and movie night."
+            },
+            {
+                title: "Long Run",
+                calendar: "calendar.preview_personal",
+                dayOffset: 5,
+                start: { h: 8, m: 0 },
+                end: { h: 10, m: 30 },
+                color: "#27AE60",
+                location: "Riverside Trail",
+                description: "Training for the upcoming marathon."
+            }
+        ];
+
+        return templates.map(template => {
+            const isAllDay = template.isAllDay === true;
+            const start = isAllDay
+                ? toDate(template.dayOffset, 0, 0)
+                : toDate(template.dayOffset, template.start.h, template.start.m);
+            const end = isAllDay
+                ? toDate(template.dayOffset + 1, 0, 0)
+                : toDate(template.dayOffset, template.end.h, template.end.m);
+            return {
+                title: template.title,
+                calendar: template.calendar,
+                start,
+                end,
+                isAllDay,
+                color: template.color,
+                location: template.location,
+                description: template.description
+            };
+        });
     }
     renderList(events) {
         this.lastEvents = events;
@@ -1824,6 +1935,46 @@ export class CalendarWeekCard extends HTMLElement {
         const calendar = this.availableCalendars?.find(cal => cal.entity_id === entityId);
         if (calendar?.name) return calendar.name;
         return entityId?.replace(/^calendar\./, "").replace(/_/g, " ") || "";
+    }
+
+    updateCalendarsFromStates(hass) {
+        if (!hass || !hass.states) {
+            return;
+        }
+
+        const locale = this.getLocale();
+        const calendars = Object.entries(hass.states)
+            .filter(([entityId]) => typeof entityId === "string" && entityId.startsWith("calendar."))
+            .map(([entityId, stateObj]) => ({
+                entity_id: entityId,
+                name: stateObj?.attributes?.friendly_name || entityId
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name, locale));
+
+        const prev = Array.isArray(this.availableCalendars) ? this.availableCalendars : [];
+        const prevIds = prev.map(cal => cal.entity_id);
+        const nextIds = calendars.map(cal => cal.entity_id);
+        const changedLength = prevIds.length !== nextIds.length;
+        const changedOrder = !changedLength && prevIds.some((id, index) => id !== nextIds[index]);
+        const namesChanged = prev.length === calendars.length
+            ? calendars.some((cal, index) => cal.name !== prev[index]?.name)
+            : false;
+
+        if (!changedLength && !changedOrder && !namesChanged) {
+            return;
+        }
+
+        this.availableCalendars = calendars;
+
+        if (!this.config?.entities?.length) {
+            this.dynamicEntities = nextIds;
+            this.assignDefaultColors(this.dynamicEntities);
+            if (!this.dynamicEntities.length) {
+                this.presentNoCalendarsState();
+            } else {
+                this.hideInlineNoCalendarsState();
+            }
+        }
     }
 
     assignDefaultColors(entities = []) {
@@ -2679,13 +2830,6 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
         }
     }
 
-    refreshCalendars() {
-        this._calendarsLoaded = false;
-        this._calendars = [];
-        this._calendarsError = null;
-        this.loadCalendars(true);
-    }
-
     maybeAdoptHiddenEntities() {
         if (!Array.isArray(this._config?.entities) || !this._config.entities.length) {
             return;
@@ -2699,34 +2843,6 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
         const available = this._calendars.map(calendar => calendar.entity_id);
         const hidden = available.filter(entityId => !this._config.entities.includes(entityId));
         this._config.hidden_entities = hidden;
-    }
-
-    shouldShowNoCalendarsState() {
-        return this._calendarsLoaded
-            && !this._loadingCalendars
-            && !this._calendarsError
-            && this._calendars.length === 0;
-    }
-
-    getNoCalendarsContent() {
-        return buildNoCalendarsCopy(key => this.t(key));
-    }
-
-    createPickerNoCalendarsLayout() {
-        const copy = this.getNoCalendarsContent();
-        return createNoCalendarsLayout(copy, {
-            onOpenIntegrations: () => {
-                if (typeof window !== "undefined") {
-                    window.open(HOME_ASSISTANT_INTEGRATIONS_URL, "_blank", "noopener,noreferrer");
-                }
-            },
-            onReadGuide: () => {
-                if (typeof window !== "undefined") {
-                    window.open(CARD_DOCUMENTATION_URL, "_blank", "noopener,noreferrer");
-                }
-            },
-            onRefresh: () => this.refreshCalendars()
-        });
     }
 
     render() {
@@ -2808,96 +2924,8 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
             .placeholder.error {
                 color: var(--error-color, #c62828);
             }
-            .no-calendars-inline {
-                width: 100%;
-                box-sizing: border-box;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 24px;
-            }
-            .no-calendars-card {
-                width: min(640px, 100%);
-                background: var(--ha-card-background, var(--card-background-color, #ffffff));
-                border-radius: 16px;
-                border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
-                padding: 24px;
-                box-shadow: var(--ha-card-box-shadow, 0 12px 30px rgba(15, 15, 30, 0.08));
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-                color: var(--primary-text-color, #1f1f1f);
-            }
-            .no-calendars-card h2 {
-                margin: 0;
-                font-size: 1.35em;
-                font-weight: 700;
-            }
-            .no-calendars-card h3 {
-                margin: 8px 0 0;
-                font-size: 1em;
-                font-weight: 600;
-            }
-            .no-calendars-card p {
-                margin: 0;
-                line-height: 1.5;
-                color: var(--secondary-text-color, #5f6368);
-            }
-            .no-calendars-settings-hint {
-                font-weight: 600;
-                color: var(--primary-text-color, #1f1f1f);
-            }
-            .no-calendars-steps {
-                margin: 0;
-                padding-left: 20px;
-                color: var(--primary-text-color, #1f1f1f);
-                line-height: 1.5;
-            }
-            .no-calendars-links {
-                margin: 0;
-                padding-left: 20px;
-                color: var(--secondary-text-color, #5f6368);
-                line-height: 1.4;
-            }
-            .no-calendars-links a {
-                color: var(--accent-color, #4D96FF);
-                font-weight: 600;
-                text-decoration: none;
-            }
-            .no-calendars-buttons {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 8px;
-                margin-top: 8px;
-            }
-            .no-calendars-buttons button {
-                flex: 1 1 180px;
-                border: none;
-                border-radius: 999px;
-                padding: 10px 16px;
-                font-weight: 600;
-                cursor: pointer;
-                background: var(--cwc-button-bg, rgba(66, 135, 245, 0.08));
-                color: var(--accent-color, #4D96FF);
-                transition: background 0.2s ease, transform 0.2s ease;
-            }
-            .no-calendars-buttons button:hover {
-                background: var(--cwc-button-bg-hover, rgba(66, 135, 245, 0.15));
-                transform: translateY(-1px);
-            }
         `;
         this.shadowRoot.appendChild(style);
-
-        if (this.shouldShowNoCalendarsState()) {
-            const empty = document.createElement("div");
-            empty.className = "no-calendars-inline";
-            const layout = this.createPickerNoCalendarsLayout();
-            if (layout) {
-                empty.appendChild(layout);
-            }
-            this.shadowRoot.appendChild(empty);
-            return;
-        }
 
         const grid = document.createElement("div");
         grid.className = "picker-grid";
