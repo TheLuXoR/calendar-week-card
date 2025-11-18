@@ -1392,10 +1392,9 @@ export class CalendarWeekCard extends HTMLElement {
             return;
         }
 
-        this.hideInlineNoCalendarsState();
-
         const [start, end] = this.getWeekRange();
         let allEvents = [];
+        const unavailableCalendars = new Set();
 
         for (const entity of visibleEntities) {
             try {
@@ -1436,11 +1435,47 @@ export class CalendarWeekCard extends HTMLElement {
                 });
             } catch (e) {
                 console.error("Error fetching events:", entity, e);
+                if (this.isCalendarUnavailableError(e)) {
+                    unavailableCalendars.add(entity);
+                }
             }
         }
 
+        if (allEvents.length === 0 && unavailableCalendars.size === visibleEntities.length) {
+            this.presentNoCalendarsState();
+            this.renderList([]);
+            return;
+        }
+
+        this.hideInlineNoCalendarsState();
         allEvents.sort((a, b) => a.start - b.start);
         this.renderList(allEvents);
+    }
+
+    isCalendarUnavailableError(error) {
+        if (!error) {
+            return false;
+        }
+
+        const status = Number(error?.status ?? error?.code);
+        if (status === 400 || status === 404) {
+            return true;
+        }
+
+        const code = typeof error?.code === "string" ? error.code.toLowerCase() : "";
+        if (code === "not_found" || code === "404") {
+            return true;
+        }
+
+        const messageSources = [
+            error?.message,
+            error?.error,
+            typeof error?.body === "string" ? error.body : error?.body?.message
+        ];
+
+        return messageSources.some(msg =>
+            typeof msg === "string" && /not found|no calendar|unable to find/.test(msg.toLowerCase())
+        );
     }
 
     buildPreviewExampleEvents() {
