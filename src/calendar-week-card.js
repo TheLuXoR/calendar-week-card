@@ -179,6 +179,20 @@ export class CalendarWeekCard extends HTMLElement {
         }
     }
 
+    parseAllDayDate(dateString) {
+        if (!dateString || typeof dateString !== "string") {
+            return new Date(dateString || Date.now());
+        }
+
+        const parts = dateString.split("-").map(Number);
+        if (parts.length === 3 && parts.every(num => Number.isFinite(num))) {
+            const [year, month, day] = parts;
+            return new Date(year, month - 1, day);
+        }
+
+        return new Date(dateString);
+    }
+
     initializeThemePreference() {
         let storedThemePreference = null;
         try {
@@ -1294,9 +1308,15 @@ export class CalendarWeekCard extends HTMLElement {
                 const url = `calendars/${entity}?start=${start.toISOString()}&end=${end.toISOString()}`;
                 const events = await hass.callApi("get", url);
                 events.forEach(ev => {
-                    const startDate = new Date(ev.start.dateTime || ev.start.date);
-                    const endDate = new Date(ev.end.dateTime || ev.end.date);
-                    let isAllDay = !!ev.start?.date && !ev.start?.dateTime;
+                    const startIsDateOnly = !!ev.start?.date && !ev.start?.dateTime;
+                    const endIsDateOnly = !!ev.end?.date && !ev.end?.dateTime;
+                    const startDate = startIsDateOnly
+                        ? this.parseAllDayDate(ev.start.date)
+                        : new Date(ev.start.dateTime || ev.start.date);
+                    const endDate = endIsDateOnly
+                        ? this.parseAllDayDate(ev.end.date)
+                        : new Date(ev.end.dateTime || ev.end.date);
+                    let isAllDay = startIsDateOnly || endIsDateOnly;
 
                     if (!isAllDay && ev.start?.dateTime && ev.end?.dateTime) {
                         const durationMinutes = (endDate - startDate) / (1000 * 60);
