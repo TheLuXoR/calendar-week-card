@@ -1,6 +1,6 @@
 // Calendar Week Card – generated bundle
 
-// Localization
+// File: localization.js
 const FALLBACK_LANGUAGE = "en";
 
 const TRANSLATIONS = {
@@ -316,7 +316,7 @@ function getLanguageOptions() {
     return SUPPORTED_LANGUAGES.map(code => ({ code, label: LANGUAGE_NAMES[code] || code }));
 }
 
-// Color utilities
+// File: colors.js
 const HEX_PATTERN = /^#([0-9a-fA-F]{3,8})$/;
 
 function clampColorValue(value) {
@@ -478,7 +478,7 @@ function getHexColor(color, fallback = "#4287f5", resolverElement) {
     return "#4287f5";
 }
 
-// Calendar week card
+// File: calendar-week-card.js
 const THEME_VARIABLES = {
     light: {
         "--cwc-primary-text": "#1f1f1f",
@@ -2951,8 +2951,10 @@ class CalendarWeekCard extends HTMLElement {
     }
 }
 
+// File: index.js
 if (!customElements.get("calendar-week-card")) {
     customElements.define("calendar-week-card", CalendarWeekCard);
 }
+
 
 export { CalendarWeekCard };
