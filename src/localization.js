@@ -312,3 +312,34 @@ export function translate(locale, key) {
 export function getLanguageOptions() {
     return SUPPORTED_LANGUAGES.map(code => ({ code, label: LANGUAGE_NAMES[code] || code }));
 }
+
+export function getHassLanguageCandidate(hass) {
+    if (!hass || typeof hass !== "object") {
+        return null;
+    }
+
+    const candidates = [
+        hass.locale && typeof hass.locale === "object" ? hass.locale.language : null,
+        hass.locale && typeof hass.locale === "object" ? hass.locale.languageCode : null,
+        hass.language,
+        hass.selectedLanguage,
+        hass.user && typeof hass.user === "object" ? hass.user.language : null
+    ];
+
+    for (const candidate of candidates) {
+        if (typeof candidate === "string" && candidate.trim()) {
+            return candidate;
+        }
+    }
+
+    return null;
+}
+
+export function getSupportedLanguageForHass(hass) {
+    const rawLanguage = getHassLanguageCandidate(hass);
+    const normalized = normalizeLanguage(rawLanguage);
+    if (normalized && SUPPORTED_LANGUAGES.includes(normalized)) {
+        return normalized;
+    }
+    return FALLBACK_LANGUAGE;
+}

@@ -2,6 +2,7 @@ import {
     FALLBACK_LANGUAGE,
     LANGUAGE_NAMES,
     SUPPORTED_LANGUAGES,
+    getSupportedLanguageForHass,
     normalizeLanguage,
     resolveLanguage,
     translate
@@ -2484,7 +2485,50 @@ export class CalendarWeekCard extends HTMLElement {
         return 3;
     }
 
-    static getStubConfig() {
-        return { title: "Familien Kalender", entities: [], colors: {} };
+    static getStubConfig(hass) {
+        const language = getSupportedLanguageForHass(hass);
+        return { title: "Calendar Week", entities: [], colors: {}, language };
     }
 }
+
+const CARD_PICKER_TYPE = "calendar-week-card";
+
+function registerCardPickerMetadata() {
+    if (typeof window === "undefined") {
+        return;
+    }
+
+    window.customCards = window.customCards || [];
+    const alreadyRegistered = window.customCards.some(card => card && card.type === CARD_PICKER_TYPE);
+    if (alreadyRegistered) {
+        return;
+    }
+
+    const setLanguageAction = {
+        name: "Match Home Assistant language",
+        description: "Set the card language to your Home Assistant language or English if unsupported.",
+        handle(cardElement, hass, currentConfig = {}) {
+            const language = getSupportedLanguageForHass(hass);
+            const nextConfig = { ...currentConfig, language };
+            if (cardElement && typeof cardElement.setConfig === "function") {
+                try {
+                    cardElement.setConfig(nextConfig);
+                } catch (err) {
+                    console.warn("calendar-week-card: Failed to apply language action", err);
+                }
+            }
+            return nextConfig;
+        }
+    };
+
+    window.customCards.push({
+        type: CARD_PICKER_TYPE,
+        name: "Calendar Week Card",
+        description: "Weekly calendar grid with automatic entity discovery and color management.",
+        documentationURL: "https://github.com/TheLuXoR/calendar-week-card",
+        preview: true,
+        actions: [setLanguageAction]
+    });
+}
+
+registerCardPickerMetadata();

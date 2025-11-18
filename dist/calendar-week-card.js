@@ -316,6 +316,37 @@ function getLanguageOptions() {
     return SUPPORTED_LANGUAGES.map(code => ({ code, label: LANGUAGE_NAMES[code] || code }));
 }
 
+function getHassLanguageCandidate(hass) {
+    if (!hass || typeof hass !== "object") {
+        return null;
+    }
+
+    const candidates = [
+        hass.locale && typeof hass.locale === "object" ? hass.locale.language : null,
+        hass.locale && typeof hass.locale === "object" ? hass.locale.languageCode : null,
+        hass.language,
+        hass.selectedLanguage,
+        hass.user && typeof hass.user === "object" ? hass.user.language : null
+    ];
+
+    for (const candidate of candidates) {
+        if (typeof candidate === "string" && candidate.trim()) {
+            return candidate;
+        }
+    }
+
+    return null;
+}
+
+function getSupportedLanguageForHass(hass) {
+    const rawLanguage = getHassLanguageCandidate(hass);
+    const normalized = normalizeLanguage(rawLanguage);
+    if (normalized && SUPPORTED_LANGUAGES.includes(normalized)) {
+        return normalized;
+    }
+    return FALLBACK_LANGUAGE;
+}
+
 // Color utilities
 const HEX_PATTERN = /^#([0-9a-fA-F]{3,8})$/;
 
@@ -2946,10 +2977,53 @@ class CalendarWeekCard extends HTMLElement {
         return 3;
     }
 
-    static getStubConfig() {
-        return { title: "Familien Kalender", entities: [], colors: {} };
+    static getStubConfig(hass) {
+        const language = getSupportedLanguageForHass(hass);
+        return { title: "Calendar Week", entities: [], colors: {}, language };
     }
 }
+
+const CARD_PICKER_TYPE = "calendar-week-card";
+
+function registerCardPickerMetadata() {
+    if (typeof window === "undefined") {
+        return;
+    }
+
+    window.customCards = window.customCards || [];
+    const alreadyRegistered = window.customCards.some(card => card && card.type === CARD_PICKER_TYPE);
+    if (alreadyRegistered) {
+        return;
+    }
+
+    const setLanguageAction = {
+        name: "Match Home Assistant language",
+        description: "Set the card language to your Home Assistant language or English if unsupported.",
+        handle(cardElement, hass, currentConfig = {}) {
+            const language = getSupportedLanguageForHass(hass);
+            const nextConfig = { ...currentConfig, language };
+            if (cardElement && typeof cardElement.setConfig === "function") {
+                try {
+                    cardElement.setConfig(nextConfig);
+                } catch (err) {
+                    console.warn("calendar-week-card: Failed to apply language action", err);
+                }
+            }
+            return nextConfig;
+        }
+    };
+
+    window.customCards.push({
+        type: CARD_PICKER_TYPE,
+        name: "Calendar Week Card",
+        description: "Weekly calendar grid with automatic entity discovery and color management.",
+        documentationURL: "https://github.com/TheLuXoR/calendar-week-card",
+        preview: true,
+        actions: [setLanguageAction]
+    });
+}
+
+registerCardPickerMetadata();
 
 if (!customElements.get("calendar-week-card")) {
     customElements.define("calendar-week-card", CalendarWeekCard);
