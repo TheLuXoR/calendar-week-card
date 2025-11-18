@@ -2,6 +2,7 @@ import {
     FALLBACK_LANGUAGE,
     LANGUAGE_NAMES,
     SUPPORTED_LANGUAGES,
+    getLanguageOptions,
     getSupportedLanguageForHass,
     normalizeLanguage,
     resolveLanguage,
@@ -2489,6 +2490,10 @@ export class CalendarWeekCard extends HTMLElement {
         const language = getSupportedLanguageForHass(hass);
         return { title: "Calendar Week", entities: [], colors: {}, language };
     }
+
+    static getConfigElement() {
+        return document.createElement("calendar-week-card-picker");
+    }
 }
 
 const CARD_PICKER_TYPE = "calendar-week-card";
@@ -2532,3 +2537,335 @@ function registerCardPickerMetadata() {
 }
 
 registerCardPickerMetadata();
+
+class CalendarWeekCardPickerEditor extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = { entities: [], language: "system" };
+        this._hass = null;
+        this._calendars = [];
+        this._calendarsError = null;
+        this._loadingCalendars = false;
+        this._calendarsLoaded = false;
+        this._languageOptions = getLanguageOptions();
+    }
+
+    connectedCallback() {
+        this.render();
+    }
+
+    set hass(value) {
+        this._hass = value;
+        if (value && !this._calendarsLoaded && !this._loadingCalendars) {
+            this.loadCalendars();
+        } else {
+            this.render();
+        }
+    }
+
+    setConfig(config = {}) {
+        const entities = Array.isArray(config.entities) ? [...config.entities] : [];
+        const normalizedLanguage = typeof config.language === "string" && config.language !== "system"
+            ? normalizeLanguage(config.language)
+            : "system";
+        const language = normalizedLanguage === "system" || !SUPPORTED_LANGUAGES.includes(normalizedLanguage)
+            ? "system"
+            : normalizedLanguage;
+        this._config = { ...config, entities, language };
+        this.render();
+    }
+
+    get valueLanguage() {
+        const pref = this._config?.language || "system";
+        if (pref && pref !== "system") {
+            return normalizeLanguage(pref);
+        }
+        if (this._hass) {
+            return getSupportedLanguageForHass(this._hass);
+        }
+        return FALLBACK_LANGUAGE;
+    }
+
+    t(key) {
+        return translate(this.valueLanguage, key);
+    }
+
+    async loadCalendars() {
+        if (!this._hass || this._loadingCalendars || this._calendarsLoaded) {
+            return;
+        }
+        this._loadingCalendars = true;
+        this._calendarsError = null;
+        this.render();
+        try {
+            const api = this._hass.callApi;
+            const calendars = typeof api === "function" ? await api("get", "calendars") : [];
+            const list = Array.isArray(calendars) ? calendars : [];
+            this._calendars = list
+                .filter(item => item && item.entity_id)
+                .map(item => ({
+                    entity_id: item.entity_id,
+                    name: item.name || item.entity_id
+                }))
+                .sort((a, b) => a.name.localeCompare(b.name, this.valueLanguage));
+            this._calendarsLoaded = true;
+        } catch (err) {
+            console.warn("calendar-week-card: Failed to load calendars for picker", err);
+            this._calendars = [];
+            this._calendarsError = err;
+        } finally {
+            this._loadingCalendars = false;
+            this.render();
+        }
+    }
+
+    render() {
+        if (!this.shadowRoot) return;
+        this.shadowRoot.innerHTML = "";
+        const style = document.createElement("style");
+        style.textContent = `
+            :host {
+                display: block;
+                font-family: var(--primary-font-family, "Roboto", sans-serif);
+                color: var(--primary-text-color, #1c1c1c);
+            }
+            .picker-grid {
+                display: grid;
+                gap: 16px;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            }
+            .section {
+                background: var(--ha-card-background, var(--card-background-color, #fff));
+                border-radius: 12px;
+                padding: 16px;
+                box-shadow: var(--ha-card-box-shadow, none);
+                border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+            }
+            .section-header h3 {
+                margin: 0;
+                font-size: 1rem;
+                font-weight: 600;
+            }
+            .section-header p {
+                margin: 4px 0 12px;
+                color: var(--secondary-text-color, #6b6b6b);
+                font-size: 0.9rem;
+            }
+            .field {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                font-size: 0.95rem;
+            }
+            select {
+                font: inherit;
+                padding: 8px 10px;
+                border-radius: 8px;
+                border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.2));
+                background: var(--input-fill-color, #fff);
+                color: inherit;
+            }
+            .calendar-list {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                max-height: 320px;
+                overflow: auto;
+                padding-right: 4px;
+            }
+            .calendar-option {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 8px;
+                border-radius: 10px;
+                border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.1));
+                background: var(--ha-card-background, rgba(0, 0, 0, 0.02));
+            }
+            .calendar-option span {
+                font-weight: 600;
+            }
+            .calendar-option small {
+                display: block;
+                color: var(--secondary-text-color, #6b6b6b);
+                font-size: 0.8rem;
+            }
+            .placeholder {
+                padding: 8px 0;
+                color: var(--secondary-text-color, #6b6b6b);
+                font-size: 0.9rem;
+            }
+            .placeholder.error {
+                color: var(--error-color, #c62828);
+            }
+        `;
+        this.shadowRoot.appendChild(style);
+
+        const grid = document.createElement("div");
+        grid.className = "picker-grid";
+        grid.appendChild(this.renderLanguageSection());
+        grid.appendChild(this.renderCalendarsSection());
+        this.shadowRoot.appendChild(grid);
+    }
+
+    renderLanguageSection() {
+        const section = document.createElement("div");
+        section.className = "section";
+
+        const header = document.createElement("div");
+        header.className = "section-header";
+        const title = document.createElement("h3");
+        title.textContent = this.t("languageLabel");
+        const description = document.createElement("p");
+        description.textContent = this.t("pickerLanguageHelper");
+        header.append(title, description);
+
+        const field = document.createElement("label");
+        field.className = "field";
+        const label = document.createElement("span");
+        label.textContent = this.t("languageLabel");
+        const select = document.createElement("select");
+        select.value = this._config?.language || "system";
+        const languageOptions = [
+            { code: "system", label: this.t("systemDefault") },
+            ...this._languageOptions
+        ];
+        languageOptions.forEach(({ code, label }) => {
+            const option = document.createElement("option");
+            option.value = code;
+            option.textContent = label;
+            select.appendChild(option);
+        });
+        select.addEventListener("change", event => {
+            this.updateLanguage(event.target.value);
+        });
+
+        field.append(label, select);
+        section.append(header, field);
+        return section;
+    }
+
+    renderCalendarsSection() {
+        const section = document.createElement("div");
+        section.className = "section";
+
+        const header = document.createElement("div");
+        header.className = "section-header";
+        const title = document.createElement("h3");
+        title.textContent = this.t("pickerCalendarsTitle");
+        const description = document.createElement("p");
+        description.textContent = this.t("pickerCalendarsDescription");
+        header.append(title, description);
+        section.appendChild(header);
+
+        if (!this._hass) {
+            const pending = document.createElement("div");
+            pending.className = "placeholder";
+            pending.textContent = this.t("pickerCalendarsLoading");
+            section.appendChild(pending);
+            return section;
+        }
+
+        if (this._loadingCalendars) {
+            const loading = document.createElement("div");
+            loading.className = "placeholder";
+            loading.textContent = this.t("pickerCalendarsLoading");
+            section.appendChild(loading);
+            return section;
+        }
+
+        if (this._calendarsError) {
+            const error = document.createElement("div");
+            error.className = "placeholder error";
+            error.textContent = this._calendarsError.message || this._calendarsError.toString();
+            section.appendChild(error);
+            return section;
+        }
+
+        if (!this._calendars.length) {
+            const empty = document.createElement("div");
+            empty.className = "placeholder";
+            empty.textContent = this.t("pickerCalendarsEmpty");
+            section.appendChild(empty);
+            return section;
+        }
+
+        const list = document.createElement("div");
+        list.className = "calendar-list";
+        const selectedSet = this.getSelectedCalendars();
+        this._calendars.forEach(calendar => {
+            const option = document.createElement("label");
+            option.className = "calendar-option";
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = selectedSet.has(calendar.entity_id);
+            checkbox.addEventListener("change", event => {
+                this.toggleCalendar(calendar.entity_id, event.target.checked);
+            });
+            const texts = document.createElement("div");
+            const name = document.createElement("span");
+            name.textContent = calendar.name || calendar.entity_id;
+            const entity = document.createElement("small");
+            entity.textContent = calendar.entity_id;
+            texts.append(name, entity);
+            option.append(checkbox, texts);
+            list.appendChild(option);
+        });
+        section.appendChild(list);
+        return section;
+    }
+
+    getSelectedCalendars() {
+        const configured = Array.isArray(this._config?.entities) ? this._config.entities : [];
+        if (configured.length) {
+            return new Set(configured);
+        }
+        return new Set(this._calendars.map(calendar => calendar.entity_id));
+    }
+
+    updateLanguage(value) {
+        if (value === "system" || !value) {
+            this._config.language = "system";
+        } else {
+            const normalized = normalizeLanguage(value);
+            this._config.language = SUPPORTED_LANGUAGES.includes(normalized) ? normalized : "system";
+        }
+        this.dispatchConfigChanged();
+        this.render();
+    }
+
+    toggleCalendar(entityId, checked) {
+        if (!entityId) return;
+        const available = this._calendars.map(calendar => calendar.entity_id);
+        const baseSet = new Set(
+            Array.isArray(this._config?.entities) && this._config.entities.length
+                ? this._config.entities
+                : available
+        );
+        if (checked) {
+            baseSet.add(entityId);
+        } else {
+            baseSet.delete(entityId);
+        }
+        if (baseSet.size === available.length || baseSet.size === 0) {
+            this._config.entities = [];
+        } else {
+            this._config.entities = Array.from(baseSet);
+        }
+        this.dispatchConfigChanged();
+        this.render();
+    }
+
+    dispatchConfigChanged() {
+        this.dispatchEvent(new CustomEvent("config-changed", {
+            detail: { config: this._config },
+            bubbles: true,
+            composed: true
+        }));
+    }
+}
+
+if (!customElements.get("calendar-week-card-picker")) {
+    customElements.define("calendar-week-card-picker", CalendarWeekCardPickerEditor);
+}
