@@ -630,7 +630,11 @@ function buildNoCalendarsCopy(translateFn) {
     };
 }
 
-function createNoCalendarsLayout(copy, handlers = {}) {
+function createNoCalendarsLayout(copy, options = {}) {
+    const {
+        handlers = {},
+        buttonFactory = null
+    } = options;
     const {
         onOpenIntegrations = null,
         onReadGuide = null,
@@ -687,7 +691,10 @@ function createNoCalendarsLayout(copy, handlers = {}) {
     const buttonRow = document.createElement("div");
     buttonRow.className = "no-calendars-buttons";
 
-    const createButton = (label, handler) => {
+    const createButton = (label, handler, extra = {}) => {
+        if (typeof buttonFactory === "function") {
+            return buttonFactory(label, handler, extra);
+        }
         const btn = document.createElement("button");
         btn.type = "button";
         btn.textContent = label;
@@ -697,9 +704,9 @@ function createNoCalendarsLayout(copy, handlers = {}) {
         return btn;
     };
 
-    buttonRow.appendChild(createButton(copy.actions.openIntegrations, onOpenIntegrations));
-    buttonRow.appendChild(createButton(copy.actions.readGuide, onReadGuide));
-    buttonRow.appendChild(createButton(copy.actions.refresh, onRefresh));
+    buttonRow.appendChild(createButton(copy.actions.openIntegrations, onOpenIntegrations, { action: "integrations" }));
+    buttonRow.appendChild(createButton(copy.actions.readGuide, onReadGuide, { action: "guide" }));
+    buttonRow.appendChild(createButton(copy.actions.refresh, onRefresh, { action: "refresh" }));
     card.appendChild(buttonRow);
 
     return card;
@@ -1035,21 +1042,24 @@ class CalendarWeekCard extends HTMLElement {
     createInlineNoCalendarsContent() {
         const copy = this.getNoCalendarsContent();
         return createNoCalendarsLayout(copy, {
-            onOpenIntegrations: () => {
-                if (typeof window !== "undefined") {
-                    window.open(HOME_ASSISTANT_INTEGRATIONS_URL, "_blank", "noopener,noreferrer");
+            handlers: {
+                onOpenIntegrations: () => {
+                    if (typeof window !== "undefined") {
+                        window.open(HOME_ASSISTANT_INTEGRATIONS_URL, "_blank", "noopener,noreferrer");
+                    }
+                },
+                onReadGuide: () => {
+                    if (typeof window !== "undefined") {
+                        window.open(CARD_DOCUMENTATION_URL, "_blank", "noopener,noreferrer");
+                    }
+                },
+                onRefresh: () => {
+                    if (this._hass) {
+                        this.ensureEntities(this._hass).then(() => this.loadEvents(this._hass));
+                    }
                 }
             },
-            onReadGuide: () => {
-                if (typeof window !== "undefined") {
-                    window.open(CARD_DOCUMENTATION_URL, "_blank", "noopener,noreferrer");
-                }
-            },
-            onRefresh: () => {
-                if (this._hass) {
-                    this.ensureEntities(this._hass).then(() => this.loadEvents(this._hass));
-                }
-            }
+            buttonFactory: (label, handler) => this.createDialogButton(label, { onClick: handler })
         });
     }
 
@@ -1896,8 +1906,7 @@ class CalendarWeekCard extends HTMLElement {
     async loadEvents(hass) {
         await this.ensureEntities(hass);
 
-        const entities = this.getActiveEntities();
-        const visibleEntities = entities.filter(entity => !this.isEntityHidden(entity));
+        const visibleEntities = this.getVisibleEntityIds(hass);
 
         if (!visibleEntities.length) {
             if (this.isEditorPreview()) {
@@ -2452,6 +2461,33 @@ class CalendarWeekCard extends HTMLElement {
             return this.config.entities;
         }
         return this.dynamicEntities;
+    }
+
+    getKnownCalendarIds(hass) {
+        if (Array.isArray(this.availableCalendars) && this.availableCalendars.length) {
+            return this.availableCalendars.map(cal => cal.entity_id);
+        }
+        const stateCalendars = this.getCalendarsFromStates(hass);
+        if (stateCalendars.length) {
+            this.availableCalendars = stateCalendars;
+            return stateCalendars.map(cal => cal.entity_id);
+        }
+        return [];
+    }
+
+    getVisibleEntityIds(hass) {
+        const entities = Array.isArray(this.getActiveEntities()) ? [...this.getActiveEntities()] : [];
+        if (!entities.length) {
+            return [];
+        }
+        const notHidden = entities.filter(entityId => entityId && !this.isEntityHidden(entityId));
+        const knownIds = this.getKnownCalendarIds(hass);
+        const shouldRequireKnownIds = this._hasStateCalendarsSnapshot || knownIds.length > 0;
+        if (!shouldRequireKnownIds) {
+            return notHidden;
+        }
+        const knownSet = new Set(knownIds);
+        return notHidden.filter(entityId => knownSet.has(entityId));
     }
 
     getHiddenEntities() {
