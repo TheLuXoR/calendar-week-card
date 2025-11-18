@@ -78,6 +78,106 @@ const THEME_ACCENT_FALLBACK = {
 const HOME_ASSISTANT_INTEGRATIONS_URL = "https://my.home-assistant.io/redirect/integrations/";
 const CARD_DOCUMENTATION_URL = "https://github.com/TheLuXoR/calendar-week-card?tab=readme-ov-file#register-calendars-in-home-assistant";
 
+function buildNoCalendarsCopy(translateFn) {
+    const t = typeof translateFn === "function" ? translateFn : (key => key);
+    return {
+        title: t("noCalendarsTitle"),
+        description: t("noCalendarsDescription"),
+        stepsIntro: t("noCalendarsStepsIntro"),
+        steps: [
+            t("noCalendarsStepIntegrations"),
+            t("noCalendarsStepAdd"),
+            t("noCalendarsStepVerify")
+        ],
+        settingsHint: t("noCalendarsSettingsHint"),
+        linksTitle: t("noCalendarsLinksTitle"),
+        links: [
+            { label: t("noCalendarsOpenIntegrations"), url: HOME_ASSISTANT_INTEGRATIONS_URL },
+            { label: t("noCalendarsReadGuide"), url: CARD_DOCUMENTATION_URL }
+        ],
+        actions: {
+            openIntegrations: t("noCalendarsOpenIntegrations"),
+            readGuide: t("noCalendarsReadGuide"),
+            refresh: t("noCalendarsRefresh")
+        }
+    };
+}
+
+function createNoCalendarsLayout(copy, handlers = {}) {
+    const {
+        onOpenIntegrations = null,
+        onReadGuide = null,
+        onRefresh = null
+    } = handlers;
+
+    const card = document.createElement("div");
+    card.className = "no-calendars-card";
+
+    const title = document.createElement("h2");
+    title.textContent = copy.title;
+    card.appendChild(title);
+
+    const description = document.createElement("p");
+    description.textContent = copy.description;
+    card.appendChild(description);
+
+    const stepsIntro = document.createElement("p");
+    stepsIntro.textContent = copy.stepsIntro;
+    card.appendChild(stepsIntro);
+
+    const stepsList = document.createElement("ol");
+    stepsList.className = "no-calendars-steps";
+    copy.steps.forEach(text => {
+        const item = document.createElement("li");
+        item.textContent = text;
+        stepsList.appendChild(item);
+    });
+    card.appendChild(stepsList);
+
+    const settingsHint = document.createElement("p");
+    settingsHint.className = "no-calendars-settings-hint";
+    settingsHint.textContent = copy.settingsHint;
+    card.appendChild(settingsHint);
+
+    const linksHeading = document.createElement("h3");
+    linksHeading.textContent = copy.linksTitle;
+    card.appendChild(linksHeading);
+
+    const linksList = document.createElement("ul");
+    linksList.className = "no-calendars-links";
+    copy.links.forEach(({ label, url }) => {
+        const li = document.createElement("li");
+        const anchor = document.createElement("a");
+        anchor.textContent = label;
+        anchor.href = url;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        li.appendChild(anchor);
+        linksList.appendChild(li);
+    });
+    card.appendChild(linksList);
+
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "no-calendars-buttons";
+
+    const createButton = (label, handler) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = label;
+        if (typeof handler === "function") {
+            btn.addEventListener("click", handler);
+        }
+        return btn;
+    };
+
+    buttonRow.appendChild(createButton(copy.actions.openIntegrations, onOpenIntegrations));
+    buttonRow.appendChild(createButton(copy.actions.readGuide, onReadGuide));
+    buttonRow.appendChild(createButton(copy.actions.refresh, onRefresh));
+    card.appendChild(buttonRow);
+
+    return card;
+}
+
 export class CalendarWeekCard extends HTMLElement {
     constructor() {
         super();
@@ -105,7 +205,6 @@ export class CalendarWeekCard extends HTMLElement {
         this.baseColors = {};
         this.baseHiddenEntities = [];
         this._configOverrides = {};
-        this._noCalendarsDialogVisible = false;
         this.inlineNoCalendarsContainer = null;
     }
     resolveLanguage(preference) {
@@ -384,114 +483,28 @@ export class CalendarWeekCard extends HTMLElement {
     }
 
     getNoCalendarsContent() {
-        return {
-            title: this.t("noCalendarsTitle"),
-            description: this.t("noCalendarsDescription"),
-            stepsIntro: this.t("noCalendarsStepsIntro"),
-            steps: [
-                this.t("noCalendarsStepIntegrations"),
-                this.t("noCalendarsStepAdd"),
-                this.t("noCalendarsStepVerify")
-            ],
-            settingsHint: this.t("noCalendarsSettingsHint"),
-            linksTitle: this.t("noCalendarsLinksTitle"),
-            links: [
-                { label: this.t("noCalendarsOpenIntegrations"), url: HOME_ASSISTANT_INTEGRATIONS_URL },
-                { label: this.t("noCalendarsReadGuide"), url: CARD_DOCUMENTATION_URL }
-            ],
-            actions: {
-                openIntegrations: this.t("noCalendarsOpenIntegrations"),
-                readGuide: this.t("noCalendarsReadGuide"),
-                refresh: this.t("noCalendarsRefresh"),
-                close: this.t("close")
-            }
-        };
+        return buildNoCalendarsCopy(key => this.t(key));
     }
 
     createInlineNoCalendarsContent() {
         const copy = this.getNoCalendarsContent();
-        const card = document.createElement("div");
-        card.className = "no-calendars-card";
-
-        const title = document.createElement("h2");
-        title.textContent = copy.title;
-        card.appendChild(title);
-
-        const description = document.createElement("p");
-        description.textContent = copy.description;
-        card.appendChild(description);
-
-        const stepsIntro = document.createElement("p");
-        stepsIntro.textContent = copy.stepsIntro;
-        card.appendChild(stepsIntro);
-
-        const stepsList = document.createElement("ol");
-        stepsList.className = "no-calendars-steps";
-        copy.steps.forEach(text => {
-            const item = document.createElement("li");
-            item.textContent = text;
-            stepsList.appendChild(item);
+        return createNoCalendarsLayout(copy, {
+            onOpenIntegrations: () => {
+                if (typeof window !== "undefined") {
+                    window.open(HOME_ASSISTANT_INTEGRATIONS_URL, "_blank", "noopener,noreferrer");
+                }
+            },
+            onReadGuide: () => {
+                if (typeof window !== "undefined") {
+                    window.open(CARD_DOCUMENTATION_URL, "_blank", "noopener,noreferrer");
+                }
+            },
+            onRefresh: () => {
+                if (this._hass) {
+                    this.ensureEntities(this._hass).then(() => this.loadEvents(this._hass));
+                }
+            }
         });
-        card.appendChild(stepsList);
-
-        const settingsHint = document.createElement("p");
-        settingsHint.className = "no-calendars-settings-hint";
-        settingsHint.textContent = copy.settingsHint;
-        card.appendChild(settingsHint);
-
-        const linksHeading = document.createElement("h3");
-        linksHeading.textContent = copy.linksTitle;
-        card.appendChild(linksHeading);
-
-        const linksList = document.createElement("ul");
-        linksList.className = "no-calendars-links";
-        copy.links.forEach(({ label, url }) => {
-            const li = document.createElement("li");
-            const anchor = document.createElement("a");
-            anchor.textContent = label;
-            anchor.href = url;
-            anchor.target = "_blank";
-            anchor.rel = "noopener noreferrer";
-            li.appendChild(anchor);
-            linksList.appendChild(li);
-        });
-        card.appendChild(linksList);
-
-        const buttonRow = document.createElement("div");
-        buttonRow.className = "no-calendars-buttons";
-
-        const createButton = (label, handler) => {
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.textContent = label;
-            if (typeof handler === "function") {
-                btn.addEventListener("click", handler);
-            }
-            return btn;
-        };
-
-        const openIntegrations = () => {
-            if (typeof window !== "undefined") {
-                window.open(HOME_ASSISTANT_INTEGRATIONS_URL, "_blank", "noopener,noreferrer");
-            }
-        };
-        const openGuide = () => {
-            if (typeof window !== "undefined") {
-                window.open(CARD_DOCUMENTATION_URL, "_blank", "noopener,noreferrer");
-            }
-        };
-        const refreshCalendars = () => {
-            if (this._hass) {
-                this.ensureEntities(this._hass).then(() => this.loadEvents(this._hass));
-            }
-        };
-
-        buttonRow.appendChild(createButton(copy.actions.openIntegrations, openIntegrations));
-        buttonRow.appendChild(createButton(copy.actions.readGuide, openGuide));
-        buttonRow.appendChild(createButton(copy.actions.refresh, refreshCalendars));
-        card.appendChild(buttonRow);
-
-        return card;
     }
 
     renderInlineNoCalendarsContent() {
@@ -534,7 +547,6 @@ export class CalendarWeekCard extends HTMLElement {
 
     presentNoCalendarsState() {
         this.showInlineNoCalendarsState();
-        this.showNoCalendarsDialog();
     }
 
     createDialogButton(label, options = {}) {
@@ -595,211 +607,6 @@ export class CalendarWeekCard extends HTMLElement {
         }
 
         return button;
-    }
-
-    dismissNoCalendarsDialog() {
-        if (typeof document === "undefined") {
-            this._noCalendarsDialogVisible = false;
-            return;
-        }
-
-        const existing = document.querySelector("#calendar-week-card-no-calendars");
-        if (existing) {
-            existing.remove();
-        }
-        this._noCalendarsDialogVisible = false;
-    }
-
-    showNoCalendarsDialog() {
-        const hasConfiguredEntities = Array.isArray(this.config?.entities) && this.config.entities.length > 0;
-        const hasAvailableCalendars = Array.isArray(this.availableCalendars) && this.availableCalendars.length > 0;
-
-        if (typeof document === "undefined" || hasConfiguredEntities || hasAvailableCalendars || this._noCalendarsDialogVisible) {
-            return;
-        }
-
-        const palette = this.getDialogPalette();
-        const copy = this.getNoCalendarsContent();
-        const dialogId = "calendar-week-card-no-calendars";
-        const existing = document.querySelector(`#${dialogId}`);
-        if (existing) {
-            existing.remove();
-        }
-
-        const overlay = document.createElement("div");
-        overlay.id = dialogId;
-        Object.assign(overlay.style, {
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background: palette.overlay,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "16px",
-            zIndex: 10000,
-            fontFamily: "sans-serif"
-        });
-
-        const closeDialog = () => {
-            overlay.remove();
-            this._noCalendarsDialogVisible = false;
-        };
-
-        overlay.addEventListener("click", event => {
-            if (event.target === overlay) {
-                closeDialog();
-            }
-        });
-
-        const content = document.createElement("div");
-        Object.assign(content.style, {
-            background: palette.background,
-            color: palette.text,
-            borderRadius: "16px",
-            padding: "24px",
-            maxWidth: "520px",
-            width: "100%",
-            boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "12px",
-            border: `1px solid ${palette.border}`
-        });
-        content.addEventListener("click", event => event.stopPropagation());
-
-        const title = document.createElement("h2");
-        title.textContent = copy.title;
-        Object.assign(title.style, {
-            margin: 0,
-            fontSize: "1.35em",
-            fontWeight: 700
-        });
-
-        const description = document.createElement("p");
-        description.textContent = copy.description;
-        Object.assign(description.style, {
-            margin: 0,
-            color: palette.muted,
-            lineHeight: 1.5
-        });
-
-        const stepsIntro = document.createElement("p");
-        stepsIntro.textContent = copy.stepsIntro;
-        Object.assign(stepsIntro.style, {
-            margin: 0,
-            fontWeight: 600
-        });
-
-        const stepsList = document.createElement("ol");
-        Object.assign(stepsList.style, {
-            margin: 0,
-            paddingLeft: "20px",
-            color: palette.text,
-            lineHeight: 1.5
-        });
-
-        copy.steps.forEach(text => {
-            const item = document.createElement("li");
-            item.textContent = text;
-            stepsList.appendChild(item);
-        });
-
-        const settingsHint = document.createElement("p");
-        settingsHint.textContent = copy.settingsHint;
-        Object.assign(settingsHint.style, {
-            margin: "4px 0 0 0",
-            fontWeight: 600,
-            color: palette.text
-        });
-
-        const linksHeading = document.createElement("h3");
-        linksHeading.textContent = copy.linksTitle;
-        Object.assign(linksHeading.style, {
-            margin: "12px 0 0 0",
-            fontSize: "1em",
-            fontWeight: 600
-        });
-
-        const linksList = document.createElement("ul");
-        Object.assign(linksList.style, {
-            margin: 0,
-            paddingLeft: "20px",
-            color: palette.muted,
-            lineHeight: 1.4
-        });
-
-        const addLink = (label, url) => {
-            const li = document.createElement("li");
-            const link = document.createElement("a");
-            link.textContent = label;
-            link.href = url;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-            link.style.color = this.readCssColor("--accent-color", "#4D96FF");
-            link.style.fontWeight = 600;
-            li.appendChild(link);
-            linksList.appendChild(li);
-        };
-
-        copy.links.forEach(({ label, url }) => addLink(label, url));
-
-        const buttonRow = document.createElement("div");
-        Object.assign(buttonRow.style, {
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "8px",
-            marginTop: "16px"
-        });
-
-        const openIntegrationsButton = this.createDialogButton(copy.actions.openIntegrations);
-        openIntegrationsButton.addEventListener("click", () => {
-            if (typeof window !== "undefined") {
-                window.open(HOME_ASSISTANT_INTEGRATIONS_URL, "_blank", "noopener,noreferrer");
-            }
-        });
-
-        const guideButton = this.createDialogButton(copy.actions.readGuide);
-        guideButton.addEventListener("click", () => {
-            if (typeof window !== "undefined") {
-                window.open(CARD_DOCUMENTATION_URL, "_blank", "noopener,noreferrer");
-            }
-        });
-
-        const refreshButton = this.createDialogButton(copy.actions.refresh);
-        refreshButton.addEventListener("click", () => {
-            closeDialog();
-            if (this._hass) {
-                this.ensureEntities(this._hass).then(() => this.loadEvents(this._hass));
-            }
-        });
-
-        const closeButton = this.createDialogButton(copy.actions.close);
-        closeButton.addEventListener("click", closeDialog);
-
-        [openIntegrationsButton, guideButton, refreshButton, closeButton].forEach(btn => {
-            btn.style.flex = "1 1 200px";
-        });
-
-        buttonRow.appendChild(openIntegrationsButton);
-        buttonRow.appendChild(guideButton);
-        buttonRow.appendChild(refreshButton);
-        buttonRow.appendChild(closeButton);
-
-        content.appendChild(title);
-        content.appendChild(description);
-        content.appendChild(stepsIntro);
-        content.appendChild(stepsList);
-        content.appendChild(settingsHint);
-        content.appendChild(linksHeading);
-        content.appendChild(linksList);
-        content.appendChild(buttonRow);
-
-        overlay.appendChild(content);
-        document.body.appendChild(overlay);
-        this._noCalendarsDialogVisible = true;
     }
 
     clearStoredData() {
@@ -1550,7 +1357,6 @@ export class CalendarWeekCard extends HTMLElement {
             return;
         }
 
-        this.dismissNoCalendarsDialog();
         this.hideInlineNoCalendarsState();
 
         const [start, end] = this.getWeekRange();
@@ -1967,7 +1773,6 @@ export class CalendarWeekCard extends HTMLElement {
                 this.dynamicEntities = this.availableCalendars.map(cal => cal.entity_id);
                 this.assignDefaultColors(this.dynamicEntities);
                 if (this.dynamicEntities.length) {
-                    this.dismissNoCalendarsDialog();
                     this.hideInlineNoCalendarsState();
                 } else if (!this.config?.entities?.length) {
                     this.presentNoCalendarsState();
@@ -2844,8 +2649,8 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
         return translate(this.valueLanguage, key);
     }
 
-    async loadCalendars() {
-        if (!this._hass || this._loadingCalendars || this._calendarsLoaded) {
+    async loadCalendars(force = false) {
+        if (!this._hass || this._loadingCalendars || (this._calendarsLoaded && !force)) {
             return;
         }
         this._loadingCalendars = true;
@@ -2874,6 +2679,13 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
         }
     }
 
+    refreshCalendars() {
+        this._calendarsLoaded = false;
+        this._calendars = [];
+        this._calendarsError = null;
+        this.loadCalendars(true);
+    }
+
     maybeAdoptHiddenEntities() {
         if (!Array.isArray(this._config?.entities) || !this._config.entities.length) {
             return;
@@ -2887,6 +2699,34 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
         const available = this._calendars.map(calendar => calendar.entity_id);
         const hidden = available.filter(entityId => !this._config.entities.includes(entityId));
         this._config.hidden_entities = hidden;
+    }
+
+    shouldShowNoCalendarsState() {
+        return this._calendarsLoaded
+            && !this._loadingCalendars
+            && !this._calendarsError
+            && this._calendars.length === 0;
+    }
+
+    getNoCalendarsContent() {
+        return buildNoCalendarsCopy(key => this.t(key));
+    }
+
+    createPickerNoCalendarsLayout() {
+        const copy = this.getNoCalendarsContent();
+        return createNoCalendarsLayout(copy, {
+            onOpenIntegrations: () => {
+                if (typeof window !== "undefined") {
+                    window.open(HOME_ASSISTANT_INTEGRATIONS_URL, "_blank", "noopener,noreferrer");
+                }
+            },
+            onReadGuide: () => {
+                if (typeof window !== "undefined") {
+                    window.open(CARD_DOCUMENTATION_URL, "_blank", "noopener,noreferrer");
+                }
+            },
+            onRefresh: () => this.refreshCalendars()
+        });
     }
 
     render() {
@@ -2968,8 +2808,96 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
             .placeholder.error {
                 color: var(--error-color, #c62828);
             }
+            .no-calendars-inline {
+                width: 100%;
+                box-sizing: border-box;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 24px;
+            }
+            .no-calendars-card {
+                width: min(640px, 100%);
+                background: var(--ha-card-background, var(--card-background-color, #ffffff));
+                border-radius: 16px;
+                border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+                padding: 24px;
+                box-shadow: var(--ha-card-box-shadow, 0 12px 30px rgba(15, 15, 30, 0.08));
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                color: var(--primary-text-color, #1f1f1f);
+            }
+            .no-calendars-card h2 {
+                margin: 0;
+                font-size: 1.35em;
+                font-weight: 700;
+            }
+            .no-calendars-card h3 {
+                margin: 8px 0 0;
+                font-size: 1em;
+                font-weight: 600;
+            }
+            .no-calendars-card p {
+                margin: 0;
+                line-height: 1.5;
+                color: var(--secondary-text-color, #5f6368);
+            }
+            .no-calendars-settings-hint {
+                font-weight: 600;
+                color: var(--primary-text-color, #1f1f1f);
+            }
+            .no-calendars-steps {
+                margin: 0;
+                padding-left: 20px;
+                color: var(--primary-text-color, #1f1f1f);
+                line-height: 1.5;
+            }
+            .no-calendars-links {
+                margin: 0;
+                padding-left: 20px;
+                color: var(--secondary-text-color, #5f6368);
+                line-height: 1.4;
+            }
+            .no-calendars-links a {
+                color: var(--accent-color, #4D96FF);
+                font-weight: 600;
+                text-decoration: none;
+            }
+            .no-calendars-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 8px;
+            }
+            .no-calendars-buttons button {
+                flex: 1 1 180px;
+                border: none;
+                border-radius: 999px;
+                padding: 10px 16px;
+                font-weight: 600;
+                cursor: pointer;
+                background: var(--cwc-button-bg, rgba(66, 135, 245, 0.08));
+                color: var(--accent-color, #4D96FF);
+                transition: background 0.2s ease, transform 0.2s ease;
+            }
+            .no-calendars-buttons button:hover {
+                background: var(--cwc-button-bg-hover, rgba(66, 135, 245, 0.15));
+                transform: translateY(-1px);
+            }
         `;
         this.shadowRoot.appendChild(style);
+
+        if (this.shouldShowNoCalendarsState()) {
+            const empty = document.createElement("div");
+            empty.className = "no-calendars-inline";
+            const layout = this.createPickerNoCalendarsLayout();
+            if (layout) {
+                empty.appendChild(layout);
+            }
+            this.shadowRoot.appendChild(empty);
+            return;
+        }
 
         const grid = document.createElement("div");
         grid.className = "picker-grid";
