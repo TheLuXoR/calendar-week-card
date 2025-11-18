@@ -101,6 +101,7 @@ export class CalendarWeekCard extends HTMLElement {
         this.baseHiddenEntities = [];
         this._configOverrides = {};
         this._noCalendarsDialogVisible = false;
+        this._calendarsLoadFailed = false;
     }
     resolveLanguage(preference) {
         return resolveLanguage(preference, {
@@ -1342,6 +1343,20 @@ export class CalendarWeekCard extends HTMLElement {
                 });
             } catch (e) {
                 console.error("Error fetching events:", entity, e);
+                const status = Number(e?.status || e?.status_code || e?.statusCode || e?.code);
+                const message = typeof e?.message === "string" ? e.message : "";
+                const is4xx = Number.isFinite(status) ? (status >= 400 && status < 500) : /\b4\d\d\b/.test(message);
+                if (is4xx) {
+                    const beforeLength = this.dynamicEntities.length;
+                    this.dynamicEntities = this.dynamicEntities.filter(id => id !== entity);
+                    if (Array.isArray(this.availableCalendars)) {
+                        this.availableCalendars = this.availableCalendars.filter(cal => cal?.entity_id !== entity);
+                    }
+                    if (beforeLength && !this.dynamicEntities.length && !this.config?.entities?.length) {
+                        this.renderList([]);
+                        this.showNoCalendarsDialog();
+                    }
+                }
             }
         }
 
@@ -1697,7 +1712,8 @@ export class CalendarWeekCard extends HTMLElement {
             return;
         }
 
-        if (this.dynamicEntities.length) {
+        const hasAvailableCalendars = Array.isArray(this.availableCalendars) && this.availableCalendars.length > 0;
+        if (this.dynamicEntities.length && hasAvailableCalendars && !this._calendarsLoadFailed) {
             return;
         }
 
@@ -1712,6 +1728,7 @@ export class CalendarWeekCard extends HTMLElement {
                 const list = Array.isArray(calendars) ? calendars : [];
                 this.availableCalendars = list.filter(cal => cal?.entity_id);
                 this.dynamicEntities = this.availableCalendars.map(cal => cal.entity_id);
+                this._calendarsLoadFailed = false;
                 this.assignDefaultColors(this.dynamicEntities);
                 if (this.dynamicEntities.length) {
                     this.dismissNoCalendarsDialog();
@@ -1722,6 +1739,7 @@ export class CalendarWeekCard extends HTMLElement {
                 console.error("calendar-week-card: Failed to load calendars", err);
                 this.availableCalendars = [];
                 this.dynamicEntities = [];
+                this._calendarsLoadFailed = true;
                 if (!this.config?.entities?.length) {
                     this.showNoCalendarsDialog();
                 }
