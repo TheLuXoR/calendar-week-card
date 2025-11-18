@@ -55,19 +55,17 @@ function wrapSection(title, content) {
 }
 
 async function build() {
-    const [localizationSource, colorsSource, litShimSource, cardSource, entrySource] = await Promise.all([
+    const [localizationSource, colorsSource, litShimSource, cardSource] = await Promise.all([
         readSource("localization.js"),
         readSource("colors.js"),
         readSource("lit-shim.js"),
-        readSource("calendar-week-card.js"),
-        readSource("index.js")
+        readSource("calendar-week-card.js")
     ]);
 
     const localization = stripExports(localizationSource);
     const colors = stripExports(colorsSource);
     const litShim = stripImports(stripExports(litShimSource));
     const card = stripImports(stripExports(cardSource));
-    const entry = stripImports(stripExports(entrySource));
 
     const banner = "// Calendar Week Card – generated bundle";
 
@@ -76,8 +74,7 @@ async function build() {
         wrapSection("Localization", localization),
         wrapSection("Color utilities", colors),
         wrapSection("Lit shim", litShim),
-        wrapSection("Calendar week card", card),
-        wrapSection("Card registration", entry)
+        wrapSection("Calendar week card", card)
     ].filter(Boolean);
 
     await mkdir(distDir, { recursive: true });

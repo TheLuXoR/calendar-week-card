@@ -3351,6 +3351,3 @@ if (typeof window !== "undefined") {
         window.customCards.push(cardEntry);
     }
 }
-
-// Card registration
-from "./calendar-week-card.js";
