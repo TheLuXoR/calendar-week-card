@@ -75,6 +75,9 @@ const THEME_ACCENT_FALLBACK = {
     dark: "#ff453a"
 };
 
+const HOME_ASSISTANT_INTEGRATIONS_URL = "https://my.home-assistant.io/redirect/integrations/";
+const CARD_DOCUMENTATION_URL = "https://github.com/TheLuXoR/calendar-week-card?tab=readme-ov-file#register-calendars-in-home-assistant";
+
 export class CalendarWeekCard extends HTMLElement {
     constructor() {
         super();
@@ -103,6 +106,7 @@ export class CalendarWeekCard extends HTMLElement {
         this.baseHiddenEntities = [];
         this._configOverrides = {};
         this._noCalendarsDialogVisible = false;
+        this.inlineNoCalendarsContainer = null;
     }
     resolveLanguage(preference) {
         return resolveLanguage(preference, {
@@ -151,6 +155,9 @@ export class CalendarWeekCard extends HTMLElement {
         localStorage.setItem("calendar-week-card-language", this.languagePreference);
 
         this.refreshDisplay();
+        if (this.inlineNoCalendarsContainer && !this.inlineNoCalendarsContainer.hidden) {
+            this.renderInlineNoCalendarsContent();
+        }
     }
 
     resolveTheme(preference) {
@@ -376,6 +383,160 @@ export class CalendarWeekCard extends HTMLElement {
         button.style.color = textColor;
     }
 
+    getNoCalendarsContent() {
+        return {
+            title: this.t("noCalendarsTitle"),
+            description: this.t("noCalendarsDescription"),
+            stepsIntro: this.t("noCalendarsStepsIntro"),
+            steps: [
+                this.t("noCalendarsStepIntegrations"),
+                this.t("noCalendarsStepAdd"),
+                this.t("noCalendarsStepVerify")
+            ],
+            settingsHint: this.t("noCalendarsSettingsHint"),
+            linksTitle: this.t("noCalendarsLinksTitle"),
+            links: [
+                { label: this.t("noCalendarsOpenIntegrations"), url: HOME_ASSISTANT_INTEGRATIONS_URL },
+                { label: this.t("noCalendarsReadGuide"), url: CARD_DOCUMENTATION_URL }
+            ],
+            actions: {
+                openIntegrations: this.t("noCalendarsOpenIntegrations"),
+                readGuide: this.t("noCalendarsReadGuide"),
+                refresh: this.t("noCalendarsRefresh"),
+                close: this.t("close")
+            }
+        };
+    }
+
+    createInlineNoCalendarsContent() {
+        const copy = this.getNoCalendarsContent();
+        const card = document.createElement("div");
+        card.className = "no-calendars-card";
+
+        const title = document.createElement("h2");
+        title.textContent = copy.title;
+        card.appendChild(title);
+
+        const description = document.createElement("p");
+        description.textContent = copy.description;
+        card.appendChild(description);
+
+        const stepsIntro = document.createElement("p");
+        stepsIntro.textContent = copy.stepsIntro;
+        card.appendChild(stepsIntro);
+
+        const stepsList = document.createElement("ol");
+        stepsList.className = "no-calendars-steps";
+        copy.steps.forEach(text => {
+            const item = document.createElement("li");
+            item.textContent = text;
+            stepsList.appendChild(item);
+        });
+        card.appendChild(stepsList);
+
+        const settingsHint = document.createElement("p");
+        settingsHint.className = "no-calendars-settings-hint";
+        settingsHint.textContent = copy.settingsHint;
+        card.appendChild(settingsHint);
+
+        const linksHeading = document.createElement("h3");
+        linksHeading.textContent = copy.linksTitle;
+        card.appendChild(linksHeading);
+
+        const linksList = document.createElement("ul");
+        linksList.className = "no-calendars-links";
+        copy.links.forEach(({ label, url }) => {
+            const li = document.createElement("li");
+            const anchor = document.createElement("a");
+            anchor.textContent = label;
+            anchor.href = url;
+            anchor.target = "_blank";
+            anchor.rel = "noopener noreferrer";
+            li.appendChild(anchor);
+            linksList.appendChild(li);
+        });
+        card.appendChild(linksList);
+
+        const buttonRow = document.createElement("div");
+        buttonRow.className = "no-calendars-buttons";
+
+        const createButton = (label, handler) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.textContent = label;
+            if (typeof handler === "function") {
+                btn.addEventListener("click", handler);
+            }
+            return btn;
+        };
+
+        const openIntegrations = () => {
+            if (typeof window !== "undefined") {
+                window.open(HOME_ASSISTANT_INTEGRATIONS_URL, "_blank", "noopener,noreferrer");
+            }
+        };
+        const openGuide = () => {
+            if (typeof window !== "undefined") {
+                window.open(CARD_DOCUMENTATION_URL, "_blank", "noopener,noreferrer");
+            }
+        };
+        const refreshCalendars = () => {
+            if (this._hass) {
+                this.ensureEntities(this._hass).then(() => this.loadEvents(this._hass));
+            }
+        };
+
+        buttonRow.appendChild(createButton(copy.actions.openIntegrations, openIntegrations));
+        buttonRow.appendChild(createButton(copy.actions.readGuide, openGuide));
+        buttonRow.appendChild(createButton(copy.actions.refresh, refreshCalendars));
+        card.appendChild(buttonRow);
+
+        return card;
+    }
+
+    renderInlineNoCalendarsContent() {
+        if (!this.inlineNoCalendarsContainer) {
+            return;
+        }
+        this.inlineNoCalendarsContainer.innerHTML = "";
+        const layout = this.createInlineNoCalendarsContent();
+        if (layout) {
+            this.inlineNoCalendarsContainer.appendChild(layout);
+        }
+    }
+
+    showInlineNoCalendarsState() {
+        if (!this.inlineNoCalendarsContainer) {
+            return;
+        }
+        this.renderInlineNoCalendarsContent();
+        this.inlineNoCalendarsContainer.hidden = false;
+        if (this.weekBody) {
+            this.weekBody.style.display = "none";
+        }
+        if (this.header) {
+            this.header.style.display = "none";
+        }
+    }
+
+    hideInlineNoCalendarsState() {
+        if (this.inlineNoCalendarsContainer) {
+            this.inlineNoCalendarsContainer.hidden = true;
+            this.inlineNoCalendarsContainer.innerHTML = "";
+        }
+        if (this.weekBody) {
+            this.weekBody.style.display = "";
+        }
+        if (this.header) {
+            this.header.style.display = "";
+        }
+    }
+
+    presentNoCalendarsState() {
+        this.showInlineNoCalendarsState();
+        this.showNoCalendarsDialog();
+    }
+
     createDialogButton(label, options = {}) {
         const {
             startColor = null,
@@ -458,6 +619,7 @@ export class CalendarWeekCard extends HTMLElement {
         }
 
         const palette = this.getDialogPalette();
+        const copy = this.getNoCalendarsContent();
         const dialogId = "calendar-week-card-no-calendars";
         const existing = document.querySelector(`#${dialogId}`);
         if (existing) {
@@ -509,7 +671,7 @@ export class CalendarWeekCard extends HTMLElement {
         content.addEventListener("click", event => event.stopPropagation());
 
         const title = document.createElement("h2");
-        title.textContent = this.t("noCalendarsTitle");
+        title.textContent = copy.title;
         Object.assign(title.style, {
             margin: 0,
             fontSize: "1.35em",
@@ -517,7 +679,7 @@ export class CalendarWeekCard extends HTMLElement {
         });
 
         const description = document.createElement("p");
-        description.textContent = this.t("noCalendarsDescription");
+        description.textContent = copy.description;
         Object.assign(description.style, {
             margin: 0,
             color: palette.muted,
@@ -525,7 +687,7 @@ export class CalendarWeekCard extends HTMLElement {
         });
 
         const stepsIntro = document.createElement("p");
-        stepsIntro.textContent = this.t("noCalendarsStepsIntro");
+        stepsIntro.textContent = copy.stepsIntro;
         Object.assign(stepsIntro.style, {
             margin: 0,
             fontWeight: 600
@@ -539,18 +701,22 @@ export class CalendarWeekCard extends HTMLElement {
             lineHeight: 1.5
         });
 
-        [
-            this.t("noCalendarsStepIntegrations"),
-            this.t("noCalendarsStepAdd"),
-            this.t("noCalendarsStepVerify")
-        ].forEach(text => {
+        copy.steps.forEach(text => {
             const item = document.createElement("li");
             item.textContent = text;
             stepsList.appendChild(item);
         });
 
+        const settingsHint = document.createElement("p");
+        settingsHint.textContent = copy.settingsHint;
+        Object.assign(settingsHint.style, {
+            margin: "4px 0 0 0",
+            fontWeight: 600,
+            color: palette.text
+        });
+
         const linksHeading = document.createElement("h3");
-        linksHeading.textContent = this.t("noCalendarsLinksTitle");
+        linksHeading.textContent = copy.linksTitle;
         Object.assign(linksHeading.style, {
             margin: "12px 0 0 0",
             fontSize: "1em",
@@ -565,9 +731,6 @@ export class CalendarWeekCard extends HTMLElement {
             lineHeight: 1.4
         });
 
-        const integrationUrl = "https://my.home-assistant.io/redirect/integrations/";
-        const docsUrl = "https://github.com/TheLuXoR/calendar-week-card?tab=readme-ov-file#register-calendars-in-home-assistant";
-
         const addLink = (label, url) => {
             const li = document.createElement("li");
             const link = document.createElement("a");
@@ -581,8 +744,7 @@ export class CalendarWeekCard extends HTMLElement {
             linksList.appendChild(li);
         };
 
-        addLink(this.t("noCalendarsOpenIntegrations"), integrationUrl);
-        addLink(this.t("noCalendarsReadGuide"), docsUrl);
+        copy.links.forEach(({ label, url }) => addLink(label, url));
 
         const buttonRow = document.createElement("div");
         Object.assign(buttonRow.style, {
@@ -592,21 +754,21 @@ export class CalendarWeekCard extends HTMLElement {
             marginTop: "16px"
         });
 
-        const openIntegrationsButton = this.createDialogButton(this.t("noCalendarsOpenIntegrations"));
+        const openIntegrationsButton = this.createDialogButton(copy.actions.openIntegrations);
         openIntegrationsButton.addEventListener("click", () => {
             if (typeof window !== "undefined") {
-                window.open(integrationUrl, "_blank", "noopener,noreferrer");
+                window.open(HOME_ASSISTANT_INTEGRATIONS_URL, "_blank", "noopener,noreferrer");
             }
         });
 
-        const guideButton = this.createDialogButton(this.t("noCalendarsReadGuide"));
+        const guideButton = this.createDialogButton(copy.actions.readGuide);
         guideButton.addEventListener("click", () => {
             if (typeof window !== "undefined") {
-                window.open(docsUrl, "_blank", "noopener,noreferrer");
+                window.open(CARD_DOCUMENTATION_URL, "_blank", "noopener,noreferrer");
             }
         });
 
-        const refreshButton = this.createDialogButton(this.t("noCalendarsRefresh"));
+        const refreshButton = this.createDialogButton(copy.actions.refresh);
         refreshButton.addEventListener("click", () => {
             closeDialog();
             if (this._hass) {
@@ -614,7 +776,7 @@ export class CalendarWeekCard extends HTMLElement {
             }
         });
 
-        const closeButton = this.createDialogButton(this.t("close"));
+        const closeButton = this.createDialogButton(copy.actions.close);
         closeButton.addEventListener("click", closeDialog);
 
         [openIntegrationsButton, guideButton, refreshButton, closeButton].forEach(btn => {
@@ -630,6 +792,7 @@ export class CalendarWeekCard extends HTMLElement {
         content.appendChild(description);
         content.appendChild(stepsIntro);
         content.appendChild(stepsList);
+        content.appendChild(settingsHint);
         content.appendChild(linksHeading);
         content.appendChild(linksList);
         content.appendChild(buttonRow);
@@ -1161,6 +1324,88 @@ export class CalendarWeekCard extends HTMLElement {
                 left: 1px;
                 right: 3px;
             }
+            .no-calendars-inline {
+                width: 100%;
+                box-sizing: border-box;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 24px;
+            }
+            .no-calendars-inline[hidden] {
+                display: none !important;
+            }
+            .no-calendars-card {
+                width: min(640px, 100%);
+                background: var(--cwc-surface, var(--card-background-color, #ffffff));
+                border-radius: 16px;
+                border: 1px solid var(--cwc-border-color, rgba(0, 0, 0, 0.08));
+                padding: 24px;
+                box-shadow: 0 12px 30px rgba(15, 15, 30, 0.08);
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                color: var(--cwc-primary-text);
+            }
+            .no-calendars-card h2 {
+                margin: 0;
+                font-size: 1.35em;
+                font-weight: 700;
+                color: var(--cwc-primary-text);
+            }
+            .no-calendars-card h3 {
+                margin: 8px 0 0;
+                font-size: 1em;
+                font-weight: 600;
+                color: var(--cwc-primary-text);
+            }
+            .no-calendars-card p {
+                margin: 0;
+                line-height: 1.5;
+                color: var(--cwc-secondary-text);
+            }
+            .no-calendars-settings-hint {
+                font-weight: 600;
+                color: var(--cwc-primary-text);
+            }
+            .no-calendars-steps {
+                margin: 0;
+                padding-left: 20px;
+                color: var(--cwc-primary-text);
+                line-height: 1.5;
+            }
+            .no-calendars-links {
+                margin: 0;
+                padding-left: 20px;
+                color: var(--cwc-secondary-text);
+                line-height: 1.4;
+            }
+            .no-calendars-links a {
+                color: var(--accent-color, #4D96FF);
+                font-weight: 600;
+                text-decoration: none;
+            }
+            .no-calendars-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 8px;
+            }
+            .no-calendars-buttons button {
+                flex: 1 1 180px;
+                border: none;
+                border-radius: 999px;
+                padding: 10px 16px;
+                font-weight: 600;
+                cursor: pointer;
+                background: var(--cwc-button-bg, rgba(66, 135, 245, 0.08));
+                color: var(--accent-color, #4D96FF);
+                transition: background 0.2s ease, transform 0.2s ease;
+            }
+            .no-calendars-buttons button:hover {
+                background: var(--cwc-button-bg-hover, rgba(66, 135, 245, 0.15));
+                transform: translateY(-1px);
+            }
         </style>
 
         <div class="header-bar">
@@ -1181,6 +1426,7 @@ export class CalendarWeekCard extends HTMLElement {
                 ${[...Array(7)].map(() => `<div class="day-column"></div>`).join("")}
             </div>
         </div>
+        <div class="no-calendars-inline" hidden></div>
         `;
 
         this.grid = this.shadowRoot.querySelector(".week-grid");
@@ -1188,6 +1434,8 @@ export class CalendarWeekCard extends HTMLElement {
         this.header = this.shadowRoot.querySelector(".week-header");
         this.titleLine = this.shadowRoot.querySelector(".title-line");
         this.dayColumns = this.shadowRoot.querySelectorAll(".day-column");
+        this.weekBody = this.shadowRoot.querySelector(".week-body");
+        this.inlineNoCalendarsContainer = this.shadowRoot.querySelector(".no-calendars-inline");
 
         this.colorResolver = document.createElement("div");
         this.colorResolver.style.display = "none";
@@ -1294,13 +1542,16 @@ export class CalendarWeekCard extends HTMLElement {
 
         if (!visibleEntities.length) {
             if (!entities.length && !this.config?.entities?.length) {
-                this.showNoCalendarsDialog();
+                this.presentNoCalendarsState();
+            } else {
+                this.hideInlineNoCalendarsState();
             }
             this.renderList([]);
             return;
         }
 
         this.dismissNoCalendarsDialog();
+        this.hideInlineNoCalendarsState();
 
         const [start, end] = this.getWeekRange();
         let allEvents = [];
@@ -1717,15 +1968,16 @@ export class CalendarWeekCard extends HTMLElement {
                 this.assignDefaultColors(this.dynamicEntities);
                 if (this.dynamicEntities.length) {
                     this.dismissNoCalendarsDialog();
+                    this.hideInlineNoCalendarsState();
                 } else if (!this.config?.entities?.length) {
-                    this.showNoCalendarsDialog();
+                    this.presentNoCalendarsState();
                 }
             } catch (err) {
                 console.error("calendar-week-card: Failed to load calendars", err);
                 this.availableCalendars = [];
                 this.dynamicEntities = [];
                 if (!this.config?.entities?.length) {
-                    this.showNoCalendarsDialog();
+                    this.presentNoCalendarsState();
                 }
             }
         })();
@@ -2572,7 +2824,8 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
         const language = normalizedLanguage === "system" || !SUPPORTED_LANGUAGES.includes(normalizedLanguage)
             ? "system"
             : normalizedLanguage;
-        this._config = { ...config, entities, language };
+        const hiddenEntities = Array.isArray(config.hidden_entities) ? [...config.hidden_entities] : undefined;
+        this._config = { ...config, entities, hidden_entities: hiddenEntities, language };
         this.render();
     }
 
@@ -2609,6 +2862,7 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
                     name: item.name || item.entity_id
                 }))
                 .sort((a, b) => a.name.localeCompare(b.name, this.valueLanguage));
+            this.maybeAdoptHiddenEntities();
             this._calendarsLoaded = true;
         } catch (err) {
             console.warn("calendar-week-card: Failed to load calendars for picker", err);
@@ -2618,6 +2872,21 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
             this._loadingCalendars = false;
             this.render();
         }
+    }
+
+    maybeAdoptHiddenEntities() {
+        if (!Array.isArray(this._config?.entities) || !this._config.entities.length) {
+            return;
+        }
+        if (Array.isArray(this._config.hidden_entities)) {
+            return;
+        }
+        if (!this._calendars.length) {
+            return;
+        }
+        const available = this._calendars.map(calendar => calendar.entity_id);
+        const hidden = available.filter(entityId => !this._config.entities.includes(entityId));
+        this._config.hidden_entities = hidden;
     }
 
     render() {
@@ -2816,12 +3085,24 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
         return section;
     }
 
+    getHiddenCalendarsSet() {
+        if (Array.isArray(this._config?.hidden_entities)) {
+            return new Set(this._config.hidden_entities);
+        }
+        return null;
+    }
+
     getSelectedCalendars() {
+        const available = this._calendars.map(calendar => calendar.entity_id);
+        const hiddenSet = this.getHiddenCalendarsSet();
+        if (hiddenSet) {
+            return new Set(available.filter(entityId => !hiddenSet.has(entityId)));
+        }
         const configured = Array.isArray(this._config?.entities) ? this._config.entities : [];
         if (configured.length) {
             return new Set(configured);
         }
-        return new Set(this._calendars.map(calendar => calendar.entity_id));
+        return new Set(available);
     }
 
     updateLanguage(value) {
@@ -2837,29 +3118,37 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
 
     toggleCalendar(entityId, checked) {
         if (!entityId) return;
-        const available = this._calendars.map(calendar => calendar.entity_id);
-        const baseSet = new Set(
-            Array.isArray(this._config?.entities) && this._config.entities.length
-                ? this._config.entities
-                : available
-        );
+        const hiddenSet = this.getHiddenCalendarsSet() || new Set();
         if (checked) {
-            baseSet.add(entityId);
+            hiddenSet.delete(entityId);
         } else {
-            baseSet.delete(entityId);
+            hiddenSet.add(entityId);
         }
-        if (baseSet.size === available.length || baseSet.size === 0) {
-            this._config.entities = [];
-        } else {
-            this._config.entities = Array.from(baseSet);
-        }
+        this._config.hidden_entities = Array.from(hiddenSet);
+        this._config.entities = [];
         this.dispatchConfigChanged();
         this.render();
     }
 
     dispatchConfigChanged() {
+        const config = { ...this._config };
+        if (Array.isArray(this._config.entities) && this._config.entities.length) {
+            config.entities = [...this._config.entities];
+        } else {
+            delete config.entities;
+        }
+        if (Array.isArray(this._config.hidden_entities)) {
+            const hiddenCopy = [...this._config.hidden_entities];
+            if (hiddenCopy.length) {
+                config.hidden_entities = hiddenCopy;
+            } else {
+                delete config.hidden_entities;
+            }
+        } else {
+            delete config.hidden_entities;
+        }
         this.dispatchEvent(new CustomEvent("config-changed", {
-            detail: { config: this._config },
+            detail: { config },
             bubbles: true,
             composed: true
         }));
