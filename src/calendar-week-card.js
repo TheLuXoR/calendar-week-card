@@ -207,6 +207,7 @@ export class CalendarWeekCard extends HTMLElement {
         this._configOverrides = {};
         this.inlineNoCalendarsContainer = null;
         this._isEditorPreview = false;
+        this._hasStateCalendarsSnapshot = false;
     }
     resolveLanguage(preference) {
         return resolveLanguage(preference, {
@@ -1879,9 +1880,23 @@ export class CalendarWeekCard extends HTMLElement {
         this._entitiesPromise = (async () => {
             try {
                 const calendars = await hass.callApi("get", "calendars");
+                const locale = this.getLocale();
                 const list = Array.isArray(calendars) ? calendars : [];
-                this.availableCalendars = list.filter(cal => cal?.entity_id);
-                this.dynamicEntities = this.availableCalendars.map(cal => cal.entity_id);
+                const apiCalendars = list
+                    .filter(cal => cal?.entity_id)
+                    .map(cal => ({
+                        entity_id: cal.entity_id,
+                        name: cal.name || cal.entity_id
+                    }))
+                    .sort((a, b) => (a.name || a.entity_id).localeCompare(b.name || b.entity_id, locale));
+                const stateCalendars = this.getCalendarsFromStates(hass);
+                if (stateCalendars.length > 0) {
+                    this._hasStateCalendarsSnapshot = true;
+                }
+                const preferStates = this._hasStateCalendarsSnapshot || stateCalendars.length > 0;
+                const availableCalendars = preferStates ? stateCalendars : apiCalendars;
+                this.availableCalendars = availableCalendars;
+                this.dynamicEntities = availableCalendars.map(cal => cal.entity_id);
                 this.assignDefaultColors(this.dynamicEntities);
                 if (this.dynamicEntities.length) {
                     this.hideInlineNoCalendarsState();
@@ -1920,6 +1935,21 @@ export class CalendarWeekCard extends HTMLElement {
         return this.getHiddenEntities().includes(entityId);
     }
 
+    getCalendarsFromStates(hass) {
+        if (!hass || !hass.states) {
+            return [];
+        }
+
+        const locale = this.getLocale();
+        return Object.entries(hass.states)
+            .filter(([entityId]) => typeof entityId === "string" && entityId.startsWith("calendar."))
+            .map(([entityId, stateObj]) => ({
+                entity_id: entityId,
+                name: stateObj?.attributes?.friendly_name || entityId
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name, locale));
+    }
+
     setEntityHidden(entityId, shouldHide) {
         const hiddenSet = new Set(this.getHiddenEntities());
         if (shouldHide) {
@@ -1938,18 +1968,14 @@ export class CalendarWeekCard extends HTMLElement {
     }
 
     updateCalendarsFromStates(hass) {
-        if (!hass || !hass.states) {
+        const calendars = this.getCalendarsFromStates(hass);
+        if (!calendars.length && !this._hasStateCalendarsSnapshot) {
             return;
         }
 
-        const locale = this.getLocale();
-        const calendars = Object.entries(hass.states)
-            .filter(([entityId]) => typeof entityId === "string" && entityId.startsWith("calendar."))
-            .map(([entityId, stateObj]) => ({
-                entity_id: entityId,
-                name: stateObj?.attributes?.friendly_name || entityId
-            }))
-            .sort((a, b) => a.name.localeCompare(b.name, locale));
+        if (calendars.length > 0) {
+            this._hasStateCalendarsSnapshot = true;
+        }
 
         const prev = Array.isArray(this.availableCalendars) ? this.availableCalendars : [];
         const prevIds = prev.map(cal => cal.entity_id);

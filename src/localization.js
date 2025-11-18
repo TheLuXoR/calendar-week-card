@@ -44,7 +44,7 @@ export const TRANSLATIONS = {
         pickerLanguageHelper: "Use the same language as Home Assistant or pick one of the available translations.",
         pickerCalendarsTitle: "Calendars to include",
         pickerCalendarsDescription: "Toggle which calendars should appear in this card.",
-        pickerCalendarsEmpty: "Home Assistant has not provided any calendars yet.",
+        pickerCalendarsEmpty: "Home Assistant has not provided any calendars yet. Open Settings → Devices & Services → Integrations to add one or read the setup guide in the documentation for detailed steps.",
         pickerCalendarsLoading: "Looking for calendars…"
     },
     de: {
@@ -90,7 +90,7 @@ export const TRANSLATIONS = {
         pickerLanguageHelper: "Nutze dieselbe Sprache wie Home Assistant oder wähle eine der verfügbaren Übersetzungen.",
         pickerCalendarsTitle: "Anzuzeigende Kalender",
         pickerCalendarsDescription: "Wähle, welche Kalender in dieser Karte erscheinen sollen.",
-        pickerCalendarsEmpty: "Home Assistant hat noch keine Kalender bereitgestellt.",
+        pickerCalendarsEmpty: "Home Assistant hat noch keine Kalender bereitgestellt. Öffne Einstellungen → Geräte & Dienste → Integrationen, um einen hinzuzufügen, oder lies die Setup-Anleitung in der Dokumentation.",
         pickerCalendarsLoading: "Kalender werden gesucht…"
     },
     fr: {
@@ -136,7 +136,7 @@ export const TRANSLATIONS = {
         pickerLanguageHelper: "Utilisez la même langue que Home Assistant ou choisissez l'une des traductions disponibles.",
         pickerCalendarsTitle: "Calendriers à inclure",
         pickerCalendarsDescription: "Activez les calendriers qui doivent apparaître dans cette carte.",
-        pickerCalendarsEmpty: "Home Assistant n'a pas encore fourni de calendriers.",
+        pickerCalendarsEmpty: "Home Assistant n'a pas encore fourni de calendriers. Ouvrez Paramètres → Appareils et services → Intégrations pour en ajouter un ou consultez le guide d'installation dans la documentation.",
         pickerCalendarsLoading: "Recherche des calendriers…"
     },
     es: {
@@ -182,7 +182,7 @@ export const TRANSLATIONS = {
         pickerLanguageHelper: "Usa el mismo idioma que Home Assistant o elige una de las traducciones disponibles.",
         pickerCalendarsTitle: "Calendarios a incluir",
         pickerCalendarsDescription: "Activa los calendarios que deben mostrarse en esta tarjeta.",
-        pickerCalendarsEmpty: "Home Assistant todavía no ha proporcionado calendarios.",
+        pickerCalendarsEmpty: "Home Assistant todavía no ha proporcionado calendarios. Abre Ajustes → Dispositivos y servicios → Integraciones para añadir uno o consulta la guía de configuración en la documentación.",
         pickerCalendarsLoading: "Buscando calendarios…"
     },
     it: {
@@ -228,7 +228,7 @@ export const TRANSLATIONS = {
         pickerLanguageHelper: "Usa la stessa lingua di Home Assistant oppure scegli una delle traduzioni disponibili.",
         pickerCalendarsTitle: "Calendari da includere",
         pickerCalendarsDescription: "Attiva i calendari che devono comparire in questa card.",
-        pickerCalendarsEmpty: "Home Assistant non ha ancora fornito calendari.",
+        pickerCalendarsEmpty: "Home Assistant non ha ancora fornito calendari. Apri Impostazioni → Dispositivi e servizi → Integrazioni per aggiungerne uno oppure leggi la guida di configurazione nella documentazione.",
         pickerCalendarsLoading: "Ricerca dei calendari in corso…"
     },
     nl: {
@@ -274,7 +274,7 @@ export const TRANSLATIONS = {
         pickerLanguageHelper: "Gebruik dezelfde taal als Home Assistant of kies een van de beschikbare vertalingen.",
         pickerCalendarsTitle: "Kalenders om te tonen",
         pickerCalendarsDescription: "Schakel in welke kalenders in deze kaart moeten verschijnen.",
-        pickerCalendarsEmpty: "Home Assistant heeft nog geen kalenders geleverd.",
+        pickerCalendarsEmpty: "Home Assistant heeft nog geen kalenders geleverd. Open Instellingen → Apparaten en services → Integraties om er een toe te voegen of lees de setup-handleiding in de documentatie.",
         pickerCalendarsLoading: "Kalenders worden opgezocht…"
     }
 };
