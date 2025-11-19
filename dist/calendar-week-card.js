@@ -2005,27 +2005,6 @@ class CalendarWeekCard extends HTMLElement {
         this.renderList(allEvents);
     }
 
-    logAvailableCalendars(calendars, context = "") {
-        const resolvedCalendars = Array.isArray(calendars)
-            ? calendars
-            : Array.isArray(this.availableCalendars)
-                ? this.availableCalendars
-                : [];
-        const summary = resolvedCalendars.map(cal => {
-            const id = cal?.entity_id || "<unknown>";
-            const namePart = cal?.name && cal.name !== cal.entity_id ? ` (${cal.name})` : "";
-            return `${id}${namePart}`;
-        });
-        const label = context ? `[${context}]` : "";
-        console.info(
-            "calendar-week-card:",
-            label,
-            "available calendars from API:",
-            summary,
-            `(total: ${resolvedCalendars.length})`
-        );
-    }
-
     parseErrorStatusCode(error) {
         if (!error) {
             return null;
@@ -2174,13 +2153,6 @@ class CalendarWeekCard extends HTMLElement {
     renderList(events) {
         if (this._hass) {
             this.refreshCalendarsFromApi(this._hass, { fallbackToStatesOnError: false })
-                .then(calendars => this.logAvailableCalendars(calendars, "renderList"))
-                .catch(err => {
-                    console.error("calendar-week-card: Failed to log calendars during render", err);
-                    this.logAvailableCalendars(undefined, "renderList");
-                });
-        } else {
-            this.logAvailableCalendars(undefined, "renderList");
         }
         this.lastEvents = events;
         this.dayColumns.forEach(col => {
@@ -2628,8 +2600,6 @@ class CalendarWeekCard extends HTMLElement {
             : [];
         this.availableCalendars = validCalendars;
         this._hasAppliedCalendars = true;
-
-        this.logAvailableCalendars(validCalendars, "applyAvailableCalendars");
 
         if (!this.config?.entities?.length) {
             this.dynamicEntities = validCalendars.map(cal => cal.entity_id);
