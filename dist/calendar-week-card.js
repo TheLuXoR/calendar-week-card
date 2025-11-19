@@ -1925,6 +1925,7 @@ class CalendarWeekCard extends HTMLElement {
         const [start, end] = this.getWeekRange();
         let allEvents = [];
         const unavailableCalendars = new Set();
+        let refreshedAfterUnavailable = false;
 
         for (const entity of visibleEntities) {
             try {
@@ -1967,6 +1968,26 @@ class CalendarWeekCard extends HTMLElement {
                 console.error("Error fetching events:", entity, e);
                 if (this.isCalendarUnavailableError(e)) {
                     unavailableCalendars.add(entity);
+                    if (!refreshedAfterUnavailable) {
+                        refreshedAfterUnavailable = true;
+                        await this.refreshCalendarsFromApi(hass, { fallbackToStatesOnError: false });
+                        const refreshedVisible = this.getVisibleEntityIds(hass);
+                        if (!refreshedVisible.length) {
+                            this.presentNoCalendarsState();
+                            this.renderList([]);
+                            return;
+                        }
+
+                        const currentSet = new Set(visibleEntities);
+                        const listsDiffer =
+                            refreshedVisible.length !== visibleEntities.length ||
+                            refreshedVisible.some(id => !currentSet.has(id));
+
+                        if (listsDiffer) {
+                            await this.loadEvents(hass);
+                            return;
+                        }
+                    }
                 }
             }
         }
