@@ -1477,12 +1477,46 @@ export class CalendarWeekCard extends HTMLElement {
         this.renderList(allEvents);
     }
 
+    parseErrorStatusCode(error) {
+        if (!error) {
+            return null;
+        }
+
+        const candidates = [
+            error?.status,
+            error?.code,
+            error?.body?.code,
+            error?.body?.status
+        ];
+
+        for (const candidate of candidates) {
+            if (typeof candidate === "number" && !Number.isNaN(candidate)) {
+                return candidate;
+            }
+            if (typeof candidate === "string") {
+                const direct = Number(candidate);
+                if (!Number.isNaN(direct)) {
+                    return direct;
+                }
+                const match = candidate.match(/\b(\d{3})\b/);
+                if (match) {
+                    const parsed = Number(match[1]);
+                    if (!Number.isNaN(parsed)) {
+                        return parsed;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
     isCalendarUnavailableError(error) {
         if (!error) {
             return false;
         }
 
-        const status = Number(error?.status ?? error?.code);
+        const status = this.parseErrorStatusCode(error);
         if (status === 400 || status === 404) {
             return true;
         }
@@ -1499,7 +1533,7 @@ export class CalendarWeekCard extends HTMLElement {
         ];
 
         return messageSources.some(msg =>
-            typeof msg === "string" && /not found|no calendar|unable to find/.test(msg.toLowerCase())
+            typeof msg === "string" && /not found|no calendar|unable to find|bad request/.test(msg.toLowerCase())
         );
     }
 
