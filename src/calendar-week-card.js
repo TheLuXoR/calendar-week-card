@@ -1647,24 +1647,29 @@ export class CalendarWeekCard extends HTMLElement {
         const dayRenderData = [];
 
         for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+            const dayStart = new Date(startOfWeek.getTime() + dayOffset * 24 * 60 * 60 * 1000);
+            const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+            const overlapsDay = ev => ev.start < dayEnd && ev.end > dayStart;
+            const mapToDisplayEvent = ev => ({
+                ...ev,
+                displayStart: ev.start > dayStart ? ev.start : new Date(dayStart.getTime()),
+                displayEnd: ev.end < dayEnd ? ev.end : new Date(dayEnd.getTime())
+            });
+
             // Get all events for this day, sorted by start time
             const allDayEvents = visibleEvents
-                .filter(ev => {
-                    const evDayOffset = Math.floor((ev.start - startOfWeek) / (1000 * 60 * 60 * 24));
-                    return evDayOffset === dayOffset && ev.isAllDay;
-                })
-                .sort((a, b) => a.start - b.start);
+                .filter(ev => ev.isAllDay && overlapsDay(ev))
+                .map(mapToDisplayEvent)
+                .sort((a, b) => a.displayStart - b.displayStart);
 
             const dayEvents = visibleEvents
-                .filter(ev => {
-                    const evDayOffset = Math.floor((ev.start - startOfWeek) / (1000 * 60 * 60 * 24));
-                    return evDayOffset === dayOffset && !ev.isAllDay;
-                })
-                .sort((a, b) => a.start - b.start);
+                .filter(ev => !ev.isAllDay && overlapsDay(ev))
+                .map(mapToDisplayEvent)
+                .sort((a, b) => a.displayStart - b.displayStart);
 
             const dayColumn = this.dayColumns[dayOffset];
             const timedContainer = dayColumn.querySelector(".timed-events");
-            dayRenderData.push({ dayEvents, allDayEvents, timedContainer, dayColumn, dayOffset });
+            dayRenderData.push({ dayEvents, allDayEvents, timedContainer, dayColumn, dayOffset, dayStart, dayEnd });
         }
 
         const trimUnusedHours = this.config.trim_unused_hours === true;
@@ -1672,12 +1677,14 @@ export class CalendarWeekCard extends HTMLElement {
         let latestEnd = -Infinity;
 
         if (trimUnusedHours) {
-            dayRenderData.forEach(({ dayEvents }) => {
+            dayRenderData.forEach(({ dayEvents, dayStart, dayEnd }) => {
                 dayEvents.forEach(ev => {
-                    const startMinutes = ev.start.getHours() * 60 + ev.start.getMinutes();
-                    let endMinutes = ev.end.getHours() * 60 + ev.end.getMinutes();
+                    const startDate = ev.displayStart || ev.start || dayStart;
+                    const endDate = ev.displayEnd || ev.end || dayEnd;
+                    const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
+                    let endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
                     if (endMinutes <= startMinutes) {
-                        const durationMinutes = Math.max((ev.end - ev.start) / (1000 * 60), 1);
+                        const durationMinutes = Math.max((endDate - startDate) / (1000 * 60), 1);
                         endMinutes = Math.min(startMinutes + durationMinutes, 24 * 60);
                     }
                     earliestStart = Math.min(earliestStart, startMinutes);
@@ -1726,7 +1733,7 @@ export class CalendarWeekCard extends HTMLElement {
 
         const visibleStartMinute = this.visibleStartMinute || 0;
 
-        for (const { dayEvents, allDayEvents, timedContainer } of dayRenderData) {
+        for (const { dayEvents, allDayEvents, timedContainer, dayStart, dayEnd } of dayRenderData) {
             if (!timedContainer) continue;
             const activeStack = [];
 
@@ -1789,13 +1796,17 @@ export class CalendarWeekCard extends HTMLElement {
             // 1) First pass: assign columns and track max column index
             let maxColumnIndex = -1;
             for (const ev of dayEvents) {
+                const evStart = ev.displayStart || ev.start;
+                const evEnd = ev.displayEnd || ev.end;
+
                 for (let i = activeStack.length - 1; i >= 0; i--) {
-                    if (activeStack[i].end <= ev.start) activeStack.splice(i, 1);
+                    if (activeStack[i].__stackEnd <= evStart) activeStack.splice(i, 1);
                 }
 
                 let maxCol = -1;
                 activeStack.forEach(e => { if (e.column > maxCol) maxCol = e.column; });
                 ev.column = maxCol + 1;
+                ev.__stackEnd = evEnd;
                 activeStack.push(ev);
 
                 if (ev.column > maxColumnIndex) {
@@ -1808,10 +1819,13 @@ export class CalendarWeekCard extends HTMLElement {
 
             // 2) Second pass: actually render with dynamic left indentation
             for (const ev of dayEvents) {
-                const startMinutes = ev.start.getHours() * 60 + ev.start.getMinutes();
-                let endMinutes = ev.end.getHours() * 60 + ev.end.getMinutes();
+                const startDate = ev.displayStart || ev.start || dayStart;
+                const endDate = ev.displayEnd || ev.end || dayEnd;
+
+                const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
+                let endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
                 if (endMinutes <= startMinutes) {
-                    const durationMinutes = Math.max((ev.end - ev.start) / (1000 * 60), 1);
+                    const durationMinutes = Math.max((endDate - startDate) / (1000 * 60), 1);
                     endMinutes = Math.min(startMinutes + durationMinutes, 24 * 60);
                 }
                 const top = baseTopOffset + (startMinutes - visibleStartMinute) * this.pixelsPerMinute;
