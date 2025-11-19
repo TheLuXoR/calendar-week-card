@@ -1644,17 +1644,51 @@ export class CalendarWeekCard extends HTMLElement {
             ? events.filter(ev => !this.isEntityHidden(ev.calendar))
             : [];
 
+        const dayMillis = 24 * 60 * 60 * 1000;
+        const normalizeDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const getEventSpanDays = (ev) => {
+            const startDay = normalizeDay(ev.start);
+            const endForSpan = new Date(ev.end.getTime() - 1);
+            const endDay = normalizeDay(endForSpan);
+            const diffDays = Math.floor((endDay - startDay) / dayMillis);
+            return Math.max(1, diffDays + 1);
+        };
+        const buildEventTitle = (ev) => {
+            const baseTitle = ev.isUntitled ? this.t("noTitle") : ev.title;
+            if (!ev.daySpan || ev.daySpan <= 1) {
+                return baseTitle;
+            }
+            const dayIndex = Math.min(Math.max(ev.dayIndex || 1, 1), ev.daySpan);
+            return `${baseTitle} (${dayIndex}/${ev.daySpan})`;
+        };
+        const formatTimeWithOptionalDate = (date, referenceDay, locale) => {
+            const timePart = date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+            const isSameDay = date.getFullYear() === referenceDay.getFullYear()
+                && date.getMonth() === referenceDay.getMonth()
+                && date.getDate() === referenceDay.getDate();
+            if (isSameDay) {
+                return timePart;
+            }
+            const datePart = date.toLocaleDateString(locale, { day: "2-digit", month: "2-digit" });
+            return `${datePart} ${timePart}`;
+        };
+
         const dayRenderData = [];
 
         for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
             const dayStart = new Date(startOfWeek.getTime() + dayOffset * 24 * 60 * 60 * 1000);
             const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
             const overlapsDay = ev => ev.start < dayEnd && ev.end > dayStart;
-            const mapToDisplayEvent = ev => ({
-                ...ev,
-                displayStart: ev.start > dayStart ? ev.start : new Date(dayStart.getTime()),
-                displayEnd: ev.end < dayEnd ? ev.end : new Date(dayEnd.getTime())
-            });
+            const mapToDisplayEvent = ev => {
+                const spanDays = getEventSpanDays(ev);
+                return {
+                    ...ev,
+                    daySpan: spanDays,
+                    dayIndex: Math.min(Math.max(Math.floor((dayStart - normalizeDay(ev.start)) / dayMillis) + 1, 1), spanDays),
+                    displayStart: ev.start > dayStart ? ev.start : new Date(dayStart.getTime()),
+                    displayEnd: ev.end < dayEnd ? ev.end : new Date(dayEnd.getTime())
+                };
+            };
 
             // Get all events for this day, sorted by start time
             const allDayEvents = visibleEvents
@@ -1736,6 +1770,7 @@ export class CalendarWeekCard extends HTMLElement {
         for (const { dayEvents, allDayEvents, timedContainer, dayStart, dayEnd } of dayRenderData) {
             if (!timedContainer) continue;
             const activeStack = [];
+            const referenceDay = normalizeDay(dayStart);
 
             allDayEvents.forEach((ev, index) => {
                 const baseColor = this.config.colors[ev.calendar] || ev.color || "#4287f5";
@@ -1760,7 +1795,7 @@ export class CalendarWeekCard extends HTMLElement {
 
                 const titleEl = document.createElement("div");
                 titleEl.className = "event-title";
-                titleEl.textContent = ev.isUntitled ? this.t("noTitle") : ev.title;
+                titleEl.textContent = buildEventTitle(ev);
 
                 const timeEl = document.createElement("div");
                 timeEl.className = "event-tag event-all-day-tag";
@@ -1875,12 +1910,12 @@ export class CalendarWeekCard extends HTMLElement {
                 const locale = this.getLocale();
                 const eventSurface = document.createElement("div");
                 eventSurface.className = "event-surface";
-                const startStr = ev.start.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
-                const endStr = ev.end.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+                const startStr = formatTimeWithOptionalDate(ev.start, referenceDay, locale);
+                const endStr = formatTimeWithOptionalDate(ev.end, referenceDay, locale);
 
                 const titleEl = document.createElement("div");
                 titleEl.className = "event-title";
-                titleEl.textContent = ev.isUntitled ? this.t("noTitle") : ev.title;
+                titleEl.textContent = buildEventTitle(ev);
 
                 const timeEl = document.createElement("div");
                 timeEl.className = "event-time";
