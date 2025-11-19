@@ -720,6 +720,7 @@ class CalendarWeekCard extends HTMLElement {
         this.dynamicEntities = [];
         this.availableCalendars = [];
         this._stateCalendarsSnapshot = [];
+        this._hasAppliedCalendars = false;
         this.configHiddenKey = "calendar-week-card-hidden";
         this.pixelsPerMinute = 1;
         this.timeAxisOffset = 0;
@@ -2004,6 +2005,23 @@ class CalendarWeekCard extends HTMLElement {
         this.renderList(allEvents);
     }
 
+    logAvailableCalendars(context = "") {
+        const calendars = Array.isArray(this.availableCalendars) ? this.availableCalendars : [];
+        const summary = calendars.map(cal => {
+            const id = cal?.entity_id || "<unknown>";
+            const namePart = cal?.name && cal.name !== cal.entity_id ? ` (${cal.name})` : "";
+            return `${id}${namePart}`;
+        });
+        const label = context ? `[${context}]` : "";
+        console.info(
+            "calendar-week-card:",
+            label,
+            "available calendars from API:",
+            summary,
+            `(total: ${calendars.length})`
+        );
+    }
+
     parseErrorStatusCode(error) {
         if (!error) {
             return null;
@@ -2150,6 +2168,7 @@ class CalendarWeekCard extends HTMLElement {
         });
     }
     renderList(events) {
+        this.logAvailableCalendars("renderList");
         this.lastEvents = events;
         this.dayColumns.forEach(col => {
             col.classList.remove("today-column");
@@ -2595,6 +2614,9 @@ class CalendarWeekCard extends HTMLElement {
             ? calendars.filter(cal => cal && cal.entity_id)
             : [];
         this.availableCalendars = validCalendars;
+        this._hasAppliedCalendars = true;
+
+        this.logAvailableCalendars("applyAvailableCalendars");
 
         if (!this.config?.entities?.length) {
             this.dynamicEntities = validCalendars.map(cal => cal.entity_id);
@@ -2637,8 +2659,8 @@ class CalendarWeekCard extends HTMLElement {
         }
         const notHidden = entities.filter(entityId => entityId && !this.isEntityHidden(entityId));
         const knownIds = this.getKnownCalendarIds();
-        const shouldRequireKnownIds = knownIds.length > 0;
-        if (!shouldRequireKnownIds) {
+        const shouldFilterToKnown = this._hasAppliedCalendars === true;
+        if (!shouldFilterToKnown) {
             return notHidden;
         }
         const knownSet = new Set(knownIds);
