@@ -2005,9 +2005,13 @@ class CalendarWeekCard extends HTMLElement {
         this.renderList(allEvents);
     }
 
-    logAvailableCalendars(context = "") {
-        const calendars = Array.isArray(this.availableCalendars) ? this.availableCalendars : [];
-        const summary = calendars.map(cal => {
+    logAvailableCalendars(calendars, context = "") {
+        const resolvedCalendars = Array.isArray(calendars)
+            ? calendars
+            : Array.isArray(this.availableCalendars)
+                ? this.availableCalendars
+                : [];
+        const summary = resolvedCalendars.map(cal => {
             const id = cal?.entity_id || "<unknown>";
             const namePart = cal?.name && cal.name !== cal.entity_id ? ` (${cal.name})` : "";
             return `${id}${namePart}`;
@@ -2018,7 +2022,7 @@ class CalendarWeekCard extends HTMLElement {
             label,
             "available calendars from API:",
             summary,
-            `(total: ${calendars.length})`
+            `(total: ${resolvedCalendars.length})`
         );
     }
 
@@ -2168,7 +2172,16 @@ class CalendarWeekCard extends HTMLElement {
         });
     }
     renderList(events) {
-        this.logAvailableCalendars("renderList");
+        if (this._hass) {
+            this.refreshCalendarsFromApi(this._hass, { fallbackToStatesOnError: false })
+                .then(calendars => this.logAvailableCalendars(calendars, "renderList"))
+                .catch(err => {
+                    console.error("calendar-week-card: Failed to log calendars during render", err);
+                    this.logAvailableCalendars(undefined, "renderList");
+                });
+        } else {
+            this.logAvailableCalendars(undefined, "renderList");
+        }
         this.lastEvents = events;
         this.dayColumns.forEach(col => {
             col.classList.remove("today-column");
@@ -2616,7 +2629,7 @@ class CalendarWeekCard extends HTMLElement {
         this.availableCalendars = validCalendars;
         this._hasAppliedCalendars = true;
 
-        this.logAvailableCalendars("applyAvailableCalendars");
+        this.logAvailableCalendars(validCalendars, "applyAvailableCalendars");
 
         if (!this.config?.entities?.length) {
             this.dynamicEntities = validCalendars.map(cal => cal.entity_id);
