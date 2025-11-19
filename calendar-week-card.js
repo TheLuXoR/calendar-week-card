@@ -719,6 +719,7 @@ class CalendarWeekCard extends HTMLElement {
         this.lastEvents = [];
         this.dynamicEntities = [];
         this.availableCalendars = [];
+        this._stateCalendarsSnapshot = [];
         this.configHiddenKey = "calendar-week-card-hidden";
         this.pixelsPerMinute = 1;
         this.timeAxisOffset = 0;
@@ -741,7 +742,7 @@ class CalendarWeekCard extends HTMLElement {
         this._configOverrides = {};
         this.inlineNoCalendarsContainer = null;
         this._isEditorPreview = false;
-        this._hasStateCalendarsSnapshot = false;
+        this._refreshCalendarsPromise = undefined;
     }
     resolveLanguage(preference) {
         return resolveLanguage(preference, {
@@ -1246,7 +1247,9 @@ class CalendarWeekCard extends HTMLElement {
         this.baseHiddenEntities = Array.isArray(this.config.hidden_entities) ? [...this.config.hidden_entities] : [];
         this.dynamicEntities = [];
         this.availableCalendars = [];
+        this._stateCalendarsSnapshot = [];
         this._entitiesPromise = undefined;
+        this._refreshCalendarsPromise = undefined;
 
         this.initializeThemePreference();
 
@@ -1968,7 +1971,8 @@ class CalendarWeekCard extends HTMLElement {
             }
         }
 
-        if (allEvents.length === 0 && unavailableCalendars.size === visibleEntities.length) {
+        if (allEvents.length === 0 && unavailableCalendars.size === visibleEntities.length && visibleEntities.length > 0) {
+            await this.refreshCalendarsFromApi(hass, { fallbackToStatesOnError: false });
             this.presentNoCalendarsState();
             this.renderList([]);
             return;
@@ -2448,46 +2452,112 @@ class CalendarWeekCard extends HTMLElement {
             return;
         }
 
-        this._entitiesPromise = (async () => {
-            try {
-                const calendars = await hass.callApi("get", "calendars");
-                const locale = this.getLocale();
-                const list = Array.isArray(calendars) ? calendars : [];
-                const apiCalendars = list
-                    .filter(cal => cal?.entity_id)
-                    .map(cal => ({
-                        entity_id: cal.entity_id,
-                        name: cal.name || cal.entity_id
-                    }))
-                    .sort((a, b) => (a.name || a.entity_id).localeCompare(b.name || b.entity_id, locale));
-                const stateCalendars = this.getCalendarsFromStates(hass);
-                if (stateCalendars.length > 0) {
-                    this._hasStateCalendarsSnapshot = true;
-                }
-                const preferStates = this._hasStateCalendarsSnapshot || stateCalendars.length > 0;
-                const availableCalendars = preferStates ? stateCalendars : apiCalendars;
-                this.availableCalendars = availableCalendars;
-                this.dynamicEntities = availableCalendars.map(cal => cal.entity_id);
-                this.assignDefaultColors(this.dynamicEntities);
-                if (this.dynamicEntities.length) {
-                    this.hideInlineNoCalendarsState();
-                } else if (!this.config?.entities?.length) {
-                    this.presentNoCalendarsState();
-                }
-            } catch (err) {
-                console.error("calendar-week-card: Failed to load calendars", err);
-                this.availableCalendars = [];
-                this.dynamicEntities = [];
-                if (!this.config?.entities?.length) {
-                    this.presentNoCalendarsState();
-                }
-            }
-        })();
+        this._entitiesPromise = this.refreshCalendarsFromApi(hass, {
+            fallbackToStatesOnError: true
+        });
 
         try {
             await this._entitiesPromise;
         } finally {
             this._entitiesPromise = undefined;
+        }
+    }
+
+    async refreshCalendarsFromApi(hass, options = {}) {
+        if (!hass) {
+            return [];
+        }
+
+        if (this._refreshCalendarsPromise) {
+            return this._refreshCalendarsPromise;
+        }
+
+        const { fallbackToStatesOnError = false } = options;
+
+        this._refreshCalendarsPromise = (async () => {
+            let calendars = [];
+            try {
+                const apiCalendars = await this.fetchCalendarsFromApi(hass);
+                calendars = this.mergeCalendarNames(apiCalendars, hass);
+            } catch (err) {
+                console.error("calendar-week-card: Failed to refresh calendars", err);
+                if (fallbackToStatesOnError) {
+                    calendars = this.getCalendarsFromStates(hass);
+                } else {
+                    calendars = [];
+                }
+            }
+
+            this.applyAvailableCalendars(calendars);
+            return calendars;
+        })();
+
+        try {
+            return await this._refreshCalendarsPromise;
+        } finally {
+            this._refreshCalendarsPromise = undefined;
+        }
+    }
+
+    async fetchCalendarsFromApi(hass) {
+        if (!hass) {
+            return [];
+        }
+        const calendars = await hass.callApi("get", "calendars");
+        const locale = this.getLocale();
+        const list = Array.isArray(calendars) ? calendars : [];
+        return list
+            .filter(cal => cal?.entity_id)
+            .map(cal => ({
+                entity_id: cal.entity_id,
+                name: cal.name || cal.entity_id
+            }))
+            .sort((a, b) => (a.name || a.entity_id).localeCompare(b.name || b.entity_id, locale));
+    }
+
+    mergeCalendarNames(calendars = [], hass) {
+        if (!Array.isArray(calendars) || calendars.length === 0) {
+            return [];
+        }
+
+        const stateCalendars = this.getCalendarsFromStates(hass);
+        if (!stateCalendars.length) {
+            return calendars;
+        }
+
+        const stateMap = new Map(stateCalendars.map(cal => [cal.entity_id, cal]));
+        return calendars.map(cal => {
+            const stateMatch = stateMap.get(cal.entity_id);
+            if (stateMatch?.name && stateMatch.name !== cal.name) {
+                return { ...cal, name: stateMatch.name };
+            }
+            return cal;
+        });
+    }
+
+    applyAvailableCalendars(calendars = []) {
+        const validCalendars = Array.isArray(calendars)
+            ? calendars.filter(cal => cal && cal.entity_id)
+            : [];
+        this.availableCalendars = validCalendars;
+
+        if (!this.config?.entities?.length) {
+            this.dynamicEntities = validCalendars.map(cal => cal.entity_id);
+            this.assignDefaultColors(this.dynamicEntities);
+        }
+
+        let hasEntities = false;
+        if (this.config?.entities?.length) {
+            const validIds = new Set(validCalendars.map(cal => cal.entity_id));
+            hasEntities = this.config.entities.some(entityId => validIds.has(entityId) && !this.isEntityHidden(entityId));
+        } else {
+            hasEntities = this.dynamicEntities.length > 0;
+        }
+
+        if (!hasEntities) {
+            this.presentNoCalendarsState();
+        } else {
+            this.hideInlineNoCalendarsState();
         }
     }
 
@@ -2498,14 +2568,9 @@ class CalendarWeekCard extends HTMLElement {
         return this.dynamicEntities;
     }
 
-    getKnownCalendarIds(hass) {
+    getKnownCalendarIds() {
         if (Array.isArray(this.availableCalendars) && this.availableCalendars.length) {
             return this.availableCalendars.map(cal => cal.entity_id);
-        }
-        const stateCalendars = this.getCalendarsFromStates(hass);
-        if (stateCalendars.length) {
-            this.availableCalendars = stateCalendars;
-            return stateCalendars.map(cal => cal.entity_id);
         }
         return [];
     }
@@ -2516,8 +2581,8 @@ class CalendarWeekCard extends HTMLElement {
             return [];
         }
         const notHidden = entities.filter(entityId => entityId && !this.isEntityHidden(entityId));
-        const knownIds = this.getKnownCalendarIds(hass);
-        const shouldRequireKnownIds = this._hasStateCalendarsSnapshot || knownIds.length > 0;
+        const knownIds = this.getKnownCalendarIds();
+        const shouldRequireKnownIds = knownIds.length > 0;
         if (!shouldRequireKnownIds) {
             return notHidden;
         }
@@ -2567,15 +2632,7 @@ class CalendarWeekCard extends HTMLElement {
 
     updateCalendarsFromStates(hass) {
         const calendars = this.getCalendarsFromStates(hass);
-        if (!calendars.length && !this._hasStateCalendarsSnapshot) {
-            return;
-        }
-
-        if (calendars.length > 0) {
-            this._hasStateCalendarsSnapshot = true;
-        }
-
-        const prev = Array.isArray(this.availableCalendars) ? this.availableCalendars : [];
+        const prev = Array.isArray(this._stateCalendarsSnapshot) ? this._stateCalendarsSnapshot : [];
         const prevIds = prev.map(cal => cal.entity_id);
         const nextIds = calendars.map(cal => cal.entity_id);
         const changedLength = prevIds.length !== nextIds.length;
@@ -2588,16 +2645,12 @@ class CalendarWeekCard extends HTMLElement {
             return;
         }
 
-        this.availableCalendars = calendars;
+        this._stateCalendarsSnapshot = calendars;
 
-        if (!this.config?.entities?.length) {
-            this.dynamicEntities = nextIds;
-            this.assignDefaultColors(this.dynamicEntities);
-            if (!this.dynamicEntities.length) {
-                this.presentNoCalendarsState();
-            } else {
-                this.hideInlineNoCalendarsState();
-            }
+        if (this._hass) {
+            this.refreshCalendarsFromApi(this._hass, {
+                fallbackToStatesOnError: true
+            });
         }
     }
 
