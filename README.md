@@ -1,4 +1,3 @@
-# !!! Rework needed !!!
 # Calendar Week Card
 [![hacs][hacs-img]][hacs-url] 
 [![GitHub Release][github-release-img]][github-release-url] 
@@ -10,6 +9,14 @@
 <img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_4.png" alt="drawing" width="300"/>
 
 A fully customizable Lovelace card that displays your week at a glance in a clean, structured grid. It automatically finds all calendars available in Home Assistant, but you can also choose specific ones if you prefer. Each calendar can have its own color, and you can tweak the entire theme to match your setup.
+
+## Getting started
+
+1. **Register your calendars in Home Assistant.** The card cannot show events that Home Assistant does not know about (see the next section for details).
+2. **Install the card** via HACS or by copying the release file manually.
+3. **Add it from the Lovelace card picker** or define it in YAML (examples below). The card comes with an in-card settings dialog so you can finish the setup without leaving the dashboard.
+
+Once the card is on a dashboard you can open the settings dialog (⋮ menu → **Configure**) to pick languages, themes, colors, hidden calendars, and layout options without editing YAML.
 
 ## Register calendars in Home Assistant
 
@@ -54,25 +61,49 @@ Once at least one calendar entity exists, the card can discover it automatically
    type: module
    ```
 
-## usage
-currently the calendar card is meant to be used as a panel view.
-#### how to do a panel view?
-<details>
+## Usage
 
-1. add a new dashboard
-2. open the dashboard and open its settings
-3. adjust it to Panel<br><img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_5.png" alt="drawing" width="300"/>
+### Add it from the Lovelace card picker
+
+The card registers itself with the Home Assistant card picker, so it can be added like any built-in card:
+
+1. Open a dashboard, click **Edit dashboard**, and then **Add card**.
+2. Search for **Calendar Week Card** (look under the **Custom** section).
+3. Use the picker preview to select the language and toggle which calendars should appear. The picker fetches available calendars from Home Assistant, so you can confirm everything works before saving.
+4. Click **Save**. The card is now live, and you can always reopen the in-card settings dialog to adjust colors, themes, visibility, and trimming.
+
+### Use the picker card on a dashboard
+
+If you prefer to keep a visual configuration helper on a dedicated admin dashboard, you can add the picker as its own card. It exposes the same controls as the Add Card dialog and writes the resulting configuration back to Lovelace:
+
+```yaml
+type: custom:calendar-week-card-picker
+```
+
+Place it temporarily next to your calendar card, toggle languages or calendar visibility, and then copy/export the generated YAML when you are happy with the selection.
+
+### Panel view layout
+
+The calendar looks best when it gets the full dashboard width. To turn a dashboard into a panel view:
+
+<details>
+<summary>Steps for panel view</summary>
+
+1. Add or open the dashboard that should host the calendar.
+2. Click the three-dot menu → **Edit dashboard** → **More options**.
+3. Enable **Panel mode**. The dashboard will now show a single card stretched to the full width.<br><img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_5.png" alt="drawing" width="300"/>
+
 </details>
 
-##### currently this is only tested as panel view
-
 ### Minimal setup
+
 ```yaml
 type: custom:calendar-week-card
 ```
-Setting it up in this way it will start with a default setup. You can customize it via settings screen.
 
-### configuarable setup
+With this configuration the card discovers all available calendars and starts with default colors. You can customize everything later through the settings dialog.
+
+### Configurable setup
 
 Every option that is available in the in-card settings dialog can also be controlled from YAML. This makes it easy to keep multiple dashboards consistent or to share a predefined look and feel with other users.
 
