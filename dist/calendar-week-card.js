@@ -352,6 +352,37 @@ function getLanguageOptions() {
     return SUPPORTED_LANGUAGES.map(code => ({ code, label: LANGUAGE_NAMES[code] || code }));
 }
 
+function getHassLanguageCandidate(hass) {
+    if (!hass || typeof hass !== "object") {
+        return null;
+    }
+
+    const candidates = [
+        hass.locale && typeof hass.locale === "object" ? hass.locale.language : null,
+        hass.locale && typeof hass.locale === "object" ? hass.locale.languageCode : null,
+        hass.language,
+        hass.selectedLanguage,
+        hass.user && typeof hass.user === "object" ? hass.user.language : null
+    ];
+
+    for (const candidate of candidates) {
+        if (typeof candidate === "string" && candidate.trim()) {
+            return candidate;
+        }
+    }
+
+    return null;
+}
+
+function getSupportedLanguageForHass(hass) {
+    const rawLanguage = getHassLanguageCandidate(hass);
+    const normalized = normalizeLanguage(rawLanguage);
+    if (normalized && SUPPORTED_LANGUAGES.includes(normalized)) {
+        return normalized;
+    }
+    return FALLBACK_LANGUAGE;
+}
+
 // File: colors.js
 const HEX_PATTERN = /^#([0-9a-fA-F]{3,8})$/;
 
@@ -2757,7 +2788,8 @@ class CalendarWeekCard extends HTMLElement {
             position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
             background: "rgba(0,0,0,0.5)", display: "flex",
             justifyContent: "center", alignItems: "center", zIndex: 9999,
-            fontFamily: "sans-serif", overflowY: "auto", padding: "24px",
+            fontFamily: "sans-serif", overflowY: "auto",
+            padding: "clamp(12px, 4vw, 24px)",
             boxSizing: "border-box"
         });
         dialog.addEventListener("click", e => { if (e.target === dialog) dialog.remove(); });
@@ -2765,7 +2797,8 @@ class CalendarWeekCard extends HTMLElement {
         const content = document.createElement("div");
         Object.assign(content.style, {
             background: "#fff", padding: "24px", borderRadius: "12px",
-            minWidth: "360px", maxWidth: "600px", width: "100%",
+            minWidth: "min(360px, calc(100vw - (2 * clamp(12px, 4vw, 24px))))",
+            maxWidth: "600px", width: "100%",
             boxShadow: "0 8px 20px rgba(0,0,0,0.25)", display: "flex",
             flexDirection: "column", gap: "16px",
             maxHeight: "calc(100vh - 80px)", overflowY: "auto"

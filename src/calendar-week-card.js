@@ -2261,7 +2261,8 @@ export class CalendarWeekCard extends HTMLElement {
             position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
             background: "rgba(0,0,0,0.5)", display: "flex",
             justifyContent: "center", alignItems: "center", zIndex: 9999,
-            fontFamily: "sans-serif", overflowY: "auto", padding: "24px",
+            fontFamily: "sans-serif", overflowY: "auto",
+            padding: "clamp(12px, 4vw, 24px)",
             boxSizing: "border-box"
         });
         dialog.addEventListener("click", e => { if (e.target === dialog) dialog.remove(); });
@@ -2269,7 +2270,8 @@ export class CalendarWeekCard extends HTMLElement {
         const content = document.createElement("div");
         Object.assign(content.style, {
             background: "#fff", padding: "24px", borderRadius: "12px",
-            minWidth: "360px", maxWidth: "600px", width: "100%",
+            minWidth: "min(360px, calc(100vw - (2 * clamp(12px, 4vw, 24px))))",
+            maxWidth: "600px", width: "100%",
             boxShadow: "0 8px 20px rgba(0,0,0,0.25)", display: "flex",
             flexDirection: "column", gap: "16px",
             maxHeight: "calc(100vh - 80px)", overflowY: "auto"
