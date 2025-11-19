@@ -39,7 +39,13 @@ export const TRANSLATIONS = {
         noCalendarsLinksTitle: "Need help?",
         noCalendarsOpenIntegrations: "Open Integrations",
         noCalendarsReadGuide: "Read setup guide",
-        noCalendarsRefresh: "Check again"
+        noCalendarsRefresh: "Check again",
+        noCalendarsSettingsHint: "You can set up this card from its own settings dialog. Use the gear icon in the header once Home Assistant finds calendars.",
+        pickerLanguageHelper: "Use the same language as Home Assistant or pick one of the available translations.",
+        pickerCalendarsTitle: "Calendars to include",
+        pickerCalendarsDescription: "Toggle which calendars should appear in this card.",
+        pickerCalendarsEmpty: "Home Assistant has not provided any calendars yet. Open Settings → Devices & Services → Integrations to add one or read the setup guide in the documentation for detailed steps.",
+        pickerCalendarsLoading: "Looking for calendars…"
     },
     de: {
         today: "Heute",
@@ -79,7 +85,13 @@ export const TRANSLATIONS = {
         noCalendarsLinksTitle: "Brauchst du Hilfe?",
         noCalendarsOpenIntegrations: "Integrationen öffnen",
         noCalendarsReadGuide: "Setup-Anleitung lesen",
-        noCalendarsRefresh: "Erneut prüfen"
+        noCalendarsRefresh: "Erneut prüfen",
+        noCalendarsSettingsHint: "Du kannst die Karte über ihren eigenen Einstellungsdialog einrichten. Nutze das Zahnradsymbol in der Kopfzeile, sobald Home Assistant Kalender findet.",
+        pickerLanguageHelper: "Nutze dieselbe Sprache wie Home Assistant oder wähle eine der verfügbaren Übersetzungen.",
+        pickerCalendarsTitle: "Anzuzeigende Kalender",
+        pickerCalendarsDescription: "Wähle, welche Kalender in dieser Karte erscheinen sollen.",
+        pickerCalendarsEmpty: "Home Assistant hat noch keine Kalender bereitgestellt. Öffne Einstellungen → Geräte & Dienste → Integrationen, um einen hinzuzufügen, oder lies die Setup-Anleitung in der Dokumentation.",
+        pickerCalendarsLoading: "Kalender werden gesucht…"
     },
     fr: {
         today: "Aujourd'hui",
@@ -119,7 +131,13 @@ export const TRANSLATIONS = {
         noCalendarsLinksTitle: "Besoin d'aide ?",
         noCalendarsOpenIntegrations: "Ouvrir les intégrations",
         noCalendarsReadGuide: "Lire le guide d'installation",
-        noCalendarsRefresh: "Vérifier à nouveau"
+        noCalendarsRefresh: "Vérifier à nouveau",
+        noCalendarsSettingsHint: "Vous pouvez configurer cette carte via sa propre fenêtre de paramètres. Utilisez l'icône d'engrenage dans l'en-tête dès que Home Assistant détecte des calendriers.",
+        pickerLanguageHelper: "Utilisez la même langue que Home Assistant ou choisissez l'une des traductions disponibles.",
+        pickerCalendarsTitle: "Calendriers à inclure",
+        pickerCalendarsDescription: "Activez les calendriers qui doivent apparaître dans cette carte.",
+        pickerCalendarsEmpty: "Home Assistant n'a pas encore fourni de calendriers. Ouvrez Paramètres → Appareils et services → Intégrations pour en ajouter un ou consultez le guide d'installation dans la documentation.",
+        pickerCalendarsLoading: "Recherche des calendriers…"
     },
     es: {
         today: "Hoy",
@@ -159,7 +177,13 @@ export const TRANSLATIONS = {
         noCalendarsLinksTitle: "¿Necesitas ayuda?",
         noCalendarsOpenIntegrations: "Abrir Integraciones",
         noCalendarsReadGuide: "Leer guía de configuración",
-        noCalendarsRefresh: "Volver a comprobar"
+        noCalendarsRefresh: "Volver a comprobar",
+        noCalendarsSettingsHint: "Puedes configurar esta tarjeta desde su propio cuadro de configuración. Usa el icono de engranaje en el encabezado cuando Home Assistant encuentre calendarios.",
+        pickerLanguageHelper: "Usa el mismo idioma que Home Assistant o elige una de las traducciones disponibles.",
+        pickerCalendarsTitle: "Calendarios a incluir",
+        pickerCalendarsDescription: "Activa los calendarios que deben mostrarse en esta tarjeta.",
+        pickerCalendarsEmpty: "Home Assistant todavía no ha proporcionado calendarios. Abre Ajustes → Dispositivos y servicios → Integraciones para añadir uno o consulta la guía de configuración en la documentación.",
+        pickerCalendarsLoading: "Buscando calendarios…"
     },
     it: {
         today: "Oggi",
@@ -199,7 +223,13 @@ export const TRANSLATIONS = {
         noCalendarsLinksTitle: "Hai bisogno di aiuto?",
         noCalendarsOpenIntegrations: "Apri Integrazioni",
         noCalendarsReadGuide: "Leggi la guida di configurazione",
-        noCalendarsRefresh: "Controlla di nuovo"
+        noCalendarsRefresh: "Controlla di nuovo",
+        noCalendarsSettingsHint: "Puoi configurare questa card dalla sua finestra di impostazioni. Usa l'icona a forma di ingranaggio nell'intestazione quando Home Assistant trova i calendari.",
+        pickerLanguageHelper: "Usa la stessa lingua di Home Assistant oppure scegli una delle traduzioni disponibili.",
+        pickerCalendarsTitle: "Calendari da includere",
+        pickerCalendarsDescription: "Attiva i calendari che devono comparire in questa card.",
+        pickerCalendarsEmpty: "Home Assistant non ha ancora fornito calendari. Apri Impostazioni → Dispositivi e servizi → Integrazioni per aggiungerne uno oppure leggi la guida di configurazione nella documentazione.",
+        pickerCalendarsLoading: "Ricerca dei calendari in corso…"
     },
     nl: {
         today: "Vandaag",
@@ -239,7 +269,13 @@ export const TRANSLATIONS = {
         noCalendarsLinksTitle: "Hulp nodig?",
         noCalendarsOpenIntegrations: "Integraties openen",
         noCalendarsReadGuide: "Setup-handleiding lezen",
-        noCalendarsRefresh: "Opnieuw controleren"
+        noCalendarsRefresh: "Opnieuw controleren",
+        noCalendarsSettingsHint: "Je kunt de kaart instellen via het eigen instellingenvenster. Gebruik het tandwiel in de kop zodra Home Assistant agenda's vindt.",
+        pickerLanguageHelper: "Gebruik dezelfde taal als Home Assistant of kies een van de beschikbare vertalingen.",
+        pickerCalendarsTitle: "Kalenders om te tonen",
+        pickerCalendarsDescription: "Schakel in welke kalenders in deze kaart moeten verschijnen.",
+        pickerCalendarsEmpty: "Home Assistant heeft nog geen kalenders geleverd. Open Instellingen → Apparaten en services → Integraties om er een toe te voegen of lees de setup-handleiding in de documentatie.",
+        pickerCalendarsLoading: "Kalenders worden opgezocht…"
     }
 };
 
@@ -311,4 +347,35 @@ export function translate(locale, key) {
 
 export function getLanguageOptions() {
     return SUPPORTED_LANGUAGES.map(code => ({ code, label: LANGUAGE_NAMES[code] || code }));
+}
+
+export function getHassLanguageCandidate(hass) {
+    if (!hass || typeof hass !== "object") {
+        return null;
+    }
+
+    const candidates = [
+        hass.locale && typeof hass.locale === "object" ? hass.locale.language : null,
+        hass.locale && typeof hass.locale === "object" ? hass.locale.languageCode : null,
+        hass.language,
+        hass.selectedLanguage,
+        hass.user && typeof hass.user === "object" ? hass.user.language : null
+    ];
+
+    for (const candidate of candidates) {
+        if (typeof candidate === "string" && candidate.trim()) {
+            return candidate;
+        }
+    }
+
+    return null;
+}
+
+export function getSupportedLanguageForHass(hass) {
+    const rawLanguage = getHassLanguageCandidate(hass);
+    const normalized = normalizeLanguage(rawLanguage);
+    if (normalized && SUPPORTED_LANGUAGES.includes(normalized)) {
+        return normalized;
+    }
+    return FALLBACK_LANGUAGE;
 }
