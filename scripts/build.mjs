@@ -1,77 +1,113 @@
 import { mkdir, readFile, writeFile, copyFile } from "fs/promises";
+import { exec } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
+
+const copyToClipboard = text =>
+    new Promise(res => exec(`printf "${text}" | pbcopy`, () => res()));
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
 const srcDir = path.join(rootDir, "src");
 const distDir = path.join(rootDir, "dist");
-
-// dist output (wie vorher)
 const outputFile = path.join(distDir, "calendar-week-card.js");
-
-// zusätzlich: Ziel für HACS (Repo-Root)
 const hacsOutputFile = path.join(rootDir, "calendar-week-card.js");
 
-function stripExports(source) {
-    return source
-        .replace(/export\s+default\s+/g, "")
-        .replace(/export\s+class\s+/g, "class ")
-        .replace(/export\s+const\s+/g, "const ")
-        .replace(/export\s+function\s+/g, "function ")
-        .replace(/export\s+\{[^}]+\};?/g, "");
+const IMPORT_PATTERN = /import\s+(?:[^'";]+?from\s+)?["']([^"']+)["'];?|import\s+["']([^"']+)["'];?/g;
+const EXPORT_DECL_PATTERN = /export\s+(?=class|function|const|let|var)/g;
+const EXPORT_DEFAULT_PATTERN = /export\s+default\s+/g;
+const EXPORT_LIST_PATTERN = /export\s+\{[^}]+\};?/g;
+
+async function getBuildNumber() {
+    const file = path.join(rootDir, "scripts/build-number.txt");
+    try {
+        const current = parseInt(await readFile(file, "utf8"), 10);
+        const next = (isNaN(current) ? 1 : current + 1);
+        await writeFile(file, String(next));
+        return next;
+    } catch {
+        await writeFile(file, "1");
+        return 1;
+    }
 }
 
-function stripImports(source) {
-    return source.replace(/^import[^;]+;\n?/gm, "").trimStart();
+function resolveDependency(currentFile, specifier) {
+    if (!specifier || !specifier.startsWith(".")) {
+        return null;
+    }
+
+    const currentDir = path.dirname(currentFile);
+    const withExtension = specifier.endsWith(".js") ? specifier : `${specifier}.js`;
+    const resolved = path.normalize(path.join(currentDir, withExtension));
+    return resolved;
 }
 
-async function readSource(relativePath) {
-    const filePath = path.join(srcDir, relativePath);
-    return readFile(filePath, "utf8");
+function transformSource(source) {
+    const dependencies = [];
+    const withoutImports = source.replace(IMPORT_PATTERN, (match, fromA, fromB) => {
+        const specifier = fromA || fromB;
+        dependencies.push(specifier);
+        return "";
+    });
+
+    const withoutExports = withoutImports
+        .replace(EXPORT_DEFAULT_PATTERN, "")
+        .replace(EXPORT_DECL_PATTERN, "")
+        .replace(EXPORT_LIST_PATTERN, "");
+
+    return {
+        code: withoutExports.trimStart(),
+        dependencies
+    };
 }
 
-function wrapSection(title, content) {
-    const trimmed = content.trim();
-    return trimmed ? `// ${title}\n${trimmed}` : "";
+async function bundleFile(entry) {
+    const visited = new Set();
+    const sections = [];
+
+    async function visit(relativePath) {
+        if (visited.has(relativePath)) {
+            return;
+        }
+        visited.add(relativePath);
+
+        const absolutePath = path.join(srcDir, relativePath);
+        const source = await readFile(absolutePath, "utf8");
+        const { code, dependencies } = transformSource(source);
+
+        for (const rawDependency of dependencies) {
+            const resolved = resolveDependency(relativePath, rawDependency);
+            if (resolved) {
+                await visit(resolved);
+            }
+        }
+
+        sections.push(`// File: ${relativePath}\n${code.trim()}\n`);
+    }
+
+    await visit(entry);
+    return sections.join("\n");
 }
 
 async function build() {
-    const [localizationSource, colorsSource, cardSource] = await Promise.all([
-        readSource("localization.js"),
-        readSource("colors.js"),
-        readSource("calendar-week-card.js")
-    ]);
-
-    const localization = stripExports(localizationSource);
-    const colors = stripExports(colorsSource);
-    const card = stripImports(stripExports(cardSource));
+    await mkdir(distDir, { recursive: true });
+    const bundle = await bundleFile("index.js");
 
     const banner = "// Calendar Week Card – generated bundle";
-    const registration = [
-        "if (!customElements.get(\"calendar-week-card\")) {",
-        "    customElements.define(\"calendar-week-card\", CalendarWeekCard);",
-        "}",
-        "",
-        "export { CalendarWeekCard };"
-    ].join("\n");
+    const footer = "export { CalendarWeekCard };";
+    const output = [banner, bundle, footer].filter(Boolean).join("\n\n");
 
-    const sections = [
-        banner,
-        wrapSection("Localization", localization),
-        wrapSection("Color utilities", colors),
-        wrapSection("Calendar week card", card),
-        registration
-    ].filter(Boolean);
-
-    await mkdir(distDir, { recursive: true });
-    await writeFile(outputFile, sections.join("\n\n") + "\n", "utf8");
-
-    // *** HIER: Datei zusätzlich an HACS-Ziel kopieren ***
+    await writeFile(outputFile, `${output}\n`, "utf8");
     await copyFile(outputFile, hacsOutputFile);
 
     console.log(`Built ${path.relative(rootDir, outputFile)}`);
     console.log(`Copied for HACS → ${path.relative(rootDir, hacsOutputFile)}`);
+
+    const buildNumber = await getBuildNumber();
+    const versionedPath = `/local/calendar-week-card/calendar-week-card.js?v=${buildNumber}`;
+    await copyToClipboard(versionedPath);
+    console.log("\nPath:");
+    console.log(versionedPath);
 }
 
 build().catch(err => {
