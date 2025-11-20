@@ -221,6 +221,7 @@ export class CalendarWeekCard extends HTMLElement {
         this._lastDayCount = 0;
         this._lastWeekChangeDirection = 0;
         this._edgeIntentDirection = null;
+        this._lastScrollMovementTime = 0;
     }
     resolveLanguage(preference) {
         return resolveLanguage(preference, {
@@ -1617,19 +1618,35 @@ export class CalendarWeekCard extends HTMLElement {
             const previous = this[trackerKey] || 0;
             const current = source.scrollLeft;
             const delta = current - previous;
+            if (delta !== 0) {
+                this._lastScrollMovementTime = Date.now();
+            }
             if (!this._isSyncingScroll && !this._isAutoScrolling) {
                 this._userAdjustedScroll = true;
             }
             this[trackerKey] = current;
             syncScroll(source, target);
-            this.handleEdgeScrollIntent(source, delta);
+            this.handleEdgeScrollIntent(source, delta, previous);
         };
 
         this.headerScroll.addEventListener("scroll", () => handleScroll(this.headerScroll, "_lastHeaderScrollLeft"));
         this.gridScroll.addEventListener("scroll", () => handleScroll(this.gridScroll, "_lastGridScrollLeft"));
+
+        const registerBoundaryIntent = (el) => {
+            if (!el) return;
+            el.addEventListener("wheel", (e) => {
+                const horizontalDelta = Math.abs(e.deltaX);
+                if (horizontalDelta <= Math.abs(e.deltaY)) return;
+                const direction = e.deltaX < 0 ? -1 : 1;
+                this.handleEdgeScrollIntent(el, direction, el.scrollLeft, { isBoundaryAttempt: true });
+            }, { passive: true });
+        };
+
+        registerBoundaryIntent(this.headerScroll);
+        registerBoundaryIntent(this.gridScroll);
     }
 
-    handleEdgeScrollIntent(source, delta) {
+    handleEdgeScrollIntent(source, delta, previous = null, { isBoundaryAttempt = false } = {}) {
         if (!source || this._isAutoScrolling) return;
         const { maxScroll } = this.getScrollMetrics(source);
         if (!maxScroll) {
@@ -1639,7 +1656,7 @@ export class CalendarWeekCard extends HTMLElement {
 
         const atStart = source.scrollLeft <= 0;
         const atEnd = source.scrollLeft >= maxScroll;
-        const direction = delta < 0 ? -1 : delta > 0 ? 1 : 0;
+        const direction = isBoundaryAttempt ? delta : delta < 0 ? -1 : delta > 0 ? 1 : 0;
         if (!direction) return;
 
         if (!atStart && !atEnd) {
@@ -1648,6 +1665,18 @@ export class CalendarWeekCard extends HTMLElement {
         }
 
         const boundaryDirection = atStart ? -1 : 1;
+        const wasAtBoundary = previous !== null && (boundaryDirection === -1 ? previous <= 0 : previous >= maxScroll);
+        const hasSettled = Date.now() - this._lastScrollMovementTime > 150;
+        if (!hasSettled) {
+            if (!isBoundaryAttempt) {
+                this._edgeIntentDirection = null;
+            }
+            return;
+        }
+        if (!isBoundaryAttempt && !wasAtBoundary) {
+            this._edgeIntentDirection = null;
+            return;
+        }
         if (direction !== boundaryDirection) {
             this._edgeIntentDirection = null;
             return;
