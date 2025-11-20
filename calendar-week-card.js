@@ -758,6 +758,8 @@ class CalendarWeekCard extends HTMLElement {
         this._isEditorPreview = false;
         this._refreshCalendarsPromise = undefined;
         this._lastDayCount = 0;
+        this._lastWeekChangeDirection = 0;
+        this._edgeIntentDirection = null;
     }
     resolveLanguage(preference) {
         return resolveLanguage(preference, {
@@ -1590,7 +1592,11 @@ class CalendarWeekCard extends HTMLElement {
                 overflow-y: hidden;
                 padding: 0 6px 0;
                 min-height: 0;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
             }
+            .week-header-scroll::-webkit-scrollbar { display: none; }
+            .week-header-scroll.no-scroll { overflow-x: hidden; }
             .week-header {
                 display: grid;
                 grid-template-columns: repeat(var(--cwc-day-count, 7), minmax(0, 1fr));
@@ -1636,7 +1642,11 @@ class CalendarWeekCard extends HTMLElement {
                 overflow-y: hidden;
                 background: var(--cwc-week-bg);
                 min-height: 0;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
             }
+            .week-grid-scroll::-webkit-scrollbar { display: none; }
+            .week-grid-scroll.no-scroll { overflow-x: hidden; }
             .hour-label {
                 position: absolute;
                 left: 6px;
@@ -1973,16 +1983,18 @@ class CalendarWeekCard extends HTMLElement {
     resetToCurrentWeek() {
         this.weekOffset = 0;
         this._userAdjustedScroll = false;
+        this._lastWeekChangeDirection = 0;
         this.updateHeader();
-        this.scrollToWeekStart({ animated: true });
+        this.scrollToWeekStart({ animated: true, alignTodayFirst: true, direction: 0 });
         if (this._hass) this.loadEvents(this._hass);
     }
 
     changeWeek(delta, { animateScroll = true } = {}) {
         this.weekOffset += delta;
         this._userAdjustedScroll = false;
+        this._lastWeekChangeDirection = delta;
         this.updateHeader();
-        this.scrollToWeekStart({ animated: animateScroll });
+        this.scrollToWeekStart({ animated: animateScroll, direction: delta });
         if (this._hass) this.loadEvents(this._hass);
     }
 
@@ -2076,22 +2088,42 @@ class CalendarWeekCard extends HTMLElement {
         return 0;
     }
 
-    getWeekScrollOffset() {
-        const isCurrentWeek = this.weekOffset === 0;
-        if (!isCurrentWeek) {
-            return 0;
-        }
+    getScrollMetrics(source = null) {
+        const scroll = source || this.gridScroll || this.headerScroll;
+        if (!scroll) return { maxScroll: 0 };
+        return {
+            maxScroll: Math.max(0, scroll.scrollWidth - scroll.clientWidth),
+            scroll
+        };
+    }
+
+    getWeekScrollOffset({ alignTodayFirst = false, direction = 0 } = {}) {
         const dayWidth = this.getApproximateDayWidth();
         if (!dayWidth) {
             return 0;
         }
-        const todayIndex = (new Date().getDay() + 6) % 7;
-        const targetIndex = Math.max(todayIndex - 1, 0);
-        return dayWidth * targetIndex;
+
+        const isCurrentWeek = this.weekOffset === 0;
+        if (isCurrentWeek) {
+            const todayIndex = (new Date().getDay() + 6) % 7;
+            if (alignTodayFirst) {
+                return dayWidth * todayIndex;
+            }
+            const targetIndex = Math.max(todayIndex - 1, 0);
+            return dayWidth * targetIndex;
+        }
+
+        const { maxScroll } = this.getScrollMetrics();
+        const fallbackMax = Math.max(0, this.getTotalDayCount() - this.getVisibleSpan()) * dayWidth;
+        const targetMax = maxScroll || fallbackMax;
+        if (direction < 0 && targetMax > 0) {
+            return targetMax;
+        }
+        return 0;
     }
 
-    scrollToWeekStart({ animated = false } = {}) {
-        const offset = this.getWeekScrollOffset();
+    scrollToWeekStart({ animated = false, alignTodayFirst = false, direction = 0 } = {}) {
+        const offset = this.getWeekScrollOffset({ alignTodayFirst, direction });
         this.syncScrollPosition(offset, animated);
     }
 
@@ -2137,15 +2169,39 @@ class CalendarWeekCard extends HTMLElement {
     }
 
     handleEdgeScrollIntent(source, delta) {
-        if (!source) return;
-        const maxScroll = Math.max(0, source.scrollWidth - source.clientWidth);
-        if (!maxScroll || Math.abs(delta) < 30) return;
+        if (!source || this._isAutoScrolling) return;
+        const { maxScroll } = this.getScrollMetrics(source);
+        if (!maxScroll) {
+            this._edgeIntentDirection = null;
+            return;
+        }
+
         const atStart = source.scrollLeft <= 0;
         const atEnd = source.scrollLeft >= maxScroll;
-        if (atStart && delta < 0) {
-            this.triggerEdgeWeekChange(-1);
-        } else if (atEnd && delta > 0) {
-            this.triggerEdgeWeekChange(1);
+        const direction = delta < 0 ? -1 : delta > 0 ? 1 : 0;
+        if (!direction) return;
+
+        if (!atStart && !atEnd) {
+            this._edgeIntentDirection = null;
+            return;
+        }
+
+        const boundaryDirection = atStart ? -1 : 1;
+        if (direction !== boundaryDirection) {
+            this._edgeIntentDirection = null;
+            return;
+        }
+
+        if (this._edgeIntentDirection === boundaryDirection) {
+            this.triggerEdgeWeekChange(boundaryDirection);
+            this._edgeIntentDirection = null;
+        } else {
+            this._edgeIntentDirection = boundaryDirection;
+            setTimeout(() => {
+                if (this._edgeIntentDirection === boundaryDirection) {
+                    this._edgeIntentDirection = null;
+                }
+            }, 350);
         }
     }
 
@@ -2160,8 +2216,15 @@ class CalendarWeekCard extends HTMLElement {
 
     updateScrollLayout({ animated = false } = {}) {
         if (this._userAdjustedScroll) return;
-        this.applyDayCountStyles(this.getTotalDayCount(), this.getVisibleSpan());
-        this.scrollToWeekStart({ animated });
+        const totalDays = this.getTotalDayCount();
+        const visibleSpan = this.getVisibleSpan();
+        this.applyDayCountStyles(totalDays, visibleSpan);
+        const disableScroll = visibleSpan >= totalDays;
+        [this.headerScroll, this.gridScroll].forEach(el => {
+            if (!el) return;
+            el.classList.toggle("no-scroll", disableScroll);
+        });
+        this.scrollToWeekStart({ animated, direction: this._lastWeekChangeDirection || 0 });
     }
 
     buildTimeLabels() {
