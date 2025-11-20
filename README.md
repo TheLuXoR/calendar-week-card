@@ -115,6 +115,7 @@ Every option that is available in the in-card settings dialog can also be contro
 | `language` | string | `system` | Locale used for all labels. Use `system` or one of the supported language codes (see `src/localization.js`). |
 | `theme` | string | `system` | Force the light or dark theme (`light`, `dark`, or `system`). YAML values override the per-browser theme preference. |
 | `trim_unused_hours` | boolean | `false` | When `true`, collapses empty time slots outside the hours that contain events. |
+| `days_to_show` | number | `7` | Limit how many days are rendered in the view (minimum `1`, maximum `7`). |
 | `highlight_today` | boolean | `true` | Toggle the highlight around the current day column. |
 | `today_highlight_color` | string | `#4D96FF` | Color used for the “today” highlight. Accepts hex or CSS color strings. YAML value wins over any color picked in the dialog. |
 
@@ -125,6 +126,7 @@ type: custom:calendar-week-card
 language: de
 theme: dark
 trim_unused_hours: true
+days_to_show: 4
 highlight_today: true
 today_highlight_color: '#3366ff'
 entities:

@@ -33,6 +33,8 @@ const TRANSLATIONS = {
         resetConfirmation: "Clear stored calendar settings? This cannot be undone.",
         trimUnusedHours: "Trim blank hours",
         trimUnusedHoursDescription: "Hide early and late hours without events.",
+        daysToShow: "Days to show",
+        daysToShowDescription: "Limit the number of visible days (1–7).",
         noCalendarsTitle: "No calendars found",
         noCalendarsDescription: "Home Assistant has not registered any calendar entities yet, so the card has nothing to display.",
         noCalendarsStepsIntro: "To fix this, please:",
@@ -79,6 +81,8 @@ const TRANSLATIONS = {
         resetConfirmation: "Gespeicherte Kalender-Einstellungen wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
         trimUnusedHours: "Unbenutzte Randstunden kürzen",
         trimUnusedHoursDescription: "Blendet frühe und späte Stunden ohne Termine aus.",
+        daysToShow: "Anzuzeigende Tage",
+        daysToShowDescription: "Begrenzt die sichtbaren Tage (1–7).",
         noCalendarsTitle: "Keine Kalender gefunden",
         noCalendarsDescription: "Home Assistant hat noch keine Kalender-Entitäten registriert, daher kann die Karte nichts anzeigen.",
         noCalendarsStepsIntro: "So löst du das Problem:",
@@ -125,6 +129,8 @@ const TRANSLATIONS = {
         resetConfirmation: "Effacer les paramètres enregistrés du calendrier ? Cette action est irréversible.",
         trimUnusedHours: "Réduire les heures vides",
         trimUnusedHoursDescription: "Masque les heures matinales et tardives sans événements.",
+        daysToShow: "Jours à afficher",
+        daysToShowDescription: "Limitez le nombre de jours visibles (1 à 7).",
         noCalendarsTitle: "Aucun calendrier trouvé",
         noCalendarsDescription: "Home Assistant n'a pas encore enregistré d'entités de calendrier, la carte ne peut donc rien afficher.",
         noCalendarsStepsIntro: "Pour résoudre le problème :",
@@ -171,6 +177,8 @@ const TRANSLATIONS = {
         resetConfirmation: "¿Borrar la configuración guardada del calendario? Esta acción no se puede deshacer.",
         trimUnusedHours: "Recortar horas vacías",
         trimUnusedHoursDescription: "Oculta las horas tempranas y tardías sin eventos.",
+        daysToShow: "Días a mostrar",
+        daysToShowDescription: "Limita la cantidad de días visibles (1–7).",
         noCalendarsTitle: "No se encontraron calendarios",
         noCalendarsDescription: "Home Assistant todavía no ha registrado entidades de calendario, por lo que la tarjeta no puede mostrar nada.",
         noCalendarsStepsIntro: "Para solucionarlo:",
@@ -217,6 +225,8 @@ const TRANSLATIONS = {
         resetConfirmation: "Eliminare le impostazioni salvate del calendario? L'operazione è irreversibile.",
         trimUnusedHours: "Riduci ore vuote",
         trimUnusedHoursDescription: "Nasconde le ore mattutine e serali senza eventi.",
+        daysToShow: "Giorni da mostrare",
+        daysToShowDescription: "Limita il numero di giorni visibili (1–7).",
         noCalendarsTitle: "Nessun calendario trovato",
         noCalendarsDescription: "Home Assistant non ha ancora registrato entità calendario, quindi la scheda non può mostrare nulla.",
         noCalendarsStepsIntro: "Per risolvere:",
@@ -263,6 +273,8 @@ const TRANSLATIONS = {
         resetConfirmation: "Opgeslagen kalenderinstellingen wissen? Dit kan niet ongedaan worden gemaakt.",
         trimUnusedHours: "Lege uren inkorten",
         trimUnusedHoursDescription: "Verbergt vroege en late uren zonder afspraken.",
+        daysToShow: "Dagen om te tonen",
+        daysToShowDescription: "Beperk het aantal zichtbare dagen (1–7).",
         noCalendarsTitle: "Geen agenda's gevonden",
         noCalendarsDescription: "Home Assistant heeft nog geen agenda-entiteiten geregistreerd, waardoor de kaart niets kan tonen.",
         noCalendarsStepsIntro: "Los dit op door het volgende te doen:",
@@ -732,6 +744,7 @@ class CalendarWeekCard extends HTMLElement {
         this.visibleStartMinute = 0;
         this.visibleEndMinute = 24 * 60;
         this.trimUnusedHoursKey = "calendar-week-card-trim-hours";
+        this.daysToShowPreferenceKey = "calendar-week-card-days-to-show";
         this.languagePreference = "system";
         this.language = "en";
         this.themePreference = "system";
@@ -744,6 +757,7 @@ class CalendarWeekCard extends HTMLElement {
         this.inlineNoCalendarsContainer = null;
         this._isEditorPreview = false;
         this._refreshCalendarsPromise = undefined;
+        this._lastDayCount = 0;
     }
     resolveLanguage(preference) {
         return resolveLanguage(preference, {
@@ -977,11 +991,75 @@ class CalendarWeekCard extends HTMLElement {
         return !!this._isEditorPreview;
     }
 
+    getDayCount() {
+        const normalized = this.normalizeDayCount(this.config?.days_to_show);
+        return normalized || 7;
+    }
+
+    normalizeDayCount(value) {
+        const asNumber = Number(value);
+        if (!Number.isFinite(asNumber)) return null;
+        const rounded = Math.round(asNumber);
+        if (rounded < 1 || rounded > 7) return null;
+        return rounded;
+    }
+
+    getPeriodBaseOffset() {
+        const dayCount = this.getDayCount();
+        if (dayCount >= 7) return 0;
+        const todayOffset = (new Date().getDay() + 6) % 7;
+        const maxStart = Math.max(0, 7 - dayCount);
+        const suggested = todayOffset - (dayCount - 1);
+        return Math.min(Math.max(suggested, 0), maxStart);
+    }
+
+    getDayOffsetFromStart(targetDate, startDate) {
+        const normalize = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const start = normalize(startDate);
+        const target = normalize(targetDate);
+        const diffMs = target - start;
+        return Math.floor(diffMs / (24 * 60 * 60 * 1000));
+    }
+
+    applyDayCountStyles(count) {
+        if (this.shadowRoot?.host) {
+            this.shadowRoot.host.style.setProperty("--cwc-day-count", count);
+        }
+        if (this.header) {
+            this.header.style.gridTemplateColumns = `60px repeat(${count}, 1fr)`;
+        }
+        if (this.grid) {
+            this.grid.style.gridTemplateColumns = `repeat(${count}, 1fr)`;
+        }
+    }
+
+    syncDayColumns() {
+        if (!this.grid) return;
+        const dayCount = this.getDayCount();
+        this.applyDayCountStyles(dayCount);
+
+        if (this.dayColumns?.length === dayCount && this._lastDayCount === dayCount) {
+            return;
+        }
+
+        this.grid.innerHTML = "";
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < dayCount; i++) {
+            const col = document.createElement("div");
+            col.className = "day-column";
+            fragment.appendChild(col);
+        }
+        this.grid.appendChild(fragment);
+        this.dayColumns = this.shadowRoot.querySelectorAll(".day-column");
+        this._lastDayCount = dayCount;
+    }
+
     refreshDisplay() {
         if (!this.shadowRoot) {
             return;
         }
 
+        this.syncDayColumns();
         this.applyTranslations();
         this.updateHeader();
 
@@ -1179,6 +1257,7 @@ class CalendarWeekCard extends HTMLElement {
             "calendar-week-card-today-highlight-color",
             "calendar-week-card-highlight-enabled",
             this.trimUnusedHoursKey,
+            this.daysToShowPreferenceKey,
             "calendar-week-card-theme"
         ];
 
@@ -1201,6 +1280,7 @@ class CalendarWeekCard extends HTMLElement {
         this.config.today_highlight_color = "#4D96FF";
         this.config.highlight_today = true;
         this.config.trim_unused_hours = false;
+        this.config.days_to_show = 7;
 
         this.assignDefaultColors(this.getActiveEntities());
 
@@ -1219,7 +1299,8 @@ class CalendarWeekCard extends HTMLElement {
             theme: hasOwn("theme"),
             highlight_today: hasOwn("highlight_today"),
             today_highlight_color: hasOwn("today_highlight_color"),
-            trim_unused_hours: hasOwn("trim_unused_hours")
+            trim_unused_hours: hasOwn("trim_unused_hours"),
+            days_to_show: hasOwn("days_to_show")
         };
 
         this.config = structuredClone(rawConfig) || {};
@@ -1352,6 +1433,26 @@ class CalendarWeekCard extends HTMLElement {
             this.config.trim_unused_hours = false;
         }
 
+        let savedDaysToShow = null;
+        try {
+            savedDaysToShow = localStorage.getItem(this.daysToShowPreferenceKey);
+        } catch (err) {
+            savedDaysToShow = null;
+        }
+
+        const hasDayOverride = this._configOverrides.days_to_show;
+        const normalizedConfigDayCount = this.normalizeDayCount(this.config.days_to_show);
+        if (hasDayOverride && normalizedConfigDayCount) {
+            this.config.days_to_show = normalizedConfigDayCount;
+        } else if (savedDaysToShow !== null) {
+            const normalizedSaved = this.normalizeDayCount(savedDaysToShow);
+            this.config.days_to_show = normalizedSaved || normalizedConfigDayCount || 7;
+        } else if (normalizedConfigDayCount) {
+            this.config.days_to_show = normalizedConfigDayCount;
+        } else {
+            this.config.days_to_show = 7;
+        }
+
         this.attachShadow({mode: "open"});
 
         this.shadowRoot.innerHTML = `
@@ -1464,7 +1565,7 @@ class CalendarWeekCard extends HTMLElement {
             }
             .week-header {
                 display: grid;
-                grid-template-columns: 60px repeat(7, 1fr);
+                grid-template-columns: 60px repeat(var(--cwc-day-count, 7), 1fr);
                 text-align: center;
                 font-weight: 600;
                 padding: 0 6px 8px;
@@ -1512,7 +1613,7 @@ class CalendarWeekCard extends HTMLElement {
                 position: relative;
                 flex: 1;
                 display: grid;
-                grid-template-columns: repeat(7, 1fr);
+                grid-template-columns: repeat(var(--cwc-day-count, 7), 1fr);
                 height: 100%;
                 width: 100%;
                 overflow: visible;
@@ -1794,7 +1895,6 @@ class CalendarWeekCard extends HTMLElement {
         <div class="week-body">
             <div class="time-bar"></div>
             <div class="week-grid">
-                ${[...Array(7)].map(() => `<div class="day-column"></div>`).join("")}
             </div>
         </div>
         <div class="no-calendars-inline" hidden></div>
@@ -1804,7 +1904,6 @@ class CalendarWeekCard extends HTMLElement {
         this.timeBar = this.shadowRoot.querySelector(".time-bar");
         this.header = this.shadowRoot.querySelector(".week-header");
         this.titleLine = this.shadowRoot.querySelector(".title-line");
-        this.dayColumns = this.shadowRoot.querySelectorAll(".day-column");
         this.weekBody = this.shadowRoot.querySelector(".week-body");
         this.inlineNoCalendarsContainer = this.shadowRoot.querySelector(".no-calendars-inline");
 
@@ -1815,10 +1914,14 @@ class CalendarWeekCard extends HTMLElement {
         this.applyTheme({ refresh: false });
         this.updateSystemThemeListener();
 
+        this.syncDayColumns();
+
         this.shadowRoot.querySelector(".prev-week").addEventListener("click", () => this.changeWeek(-1));
         this.shadowRoot.querySelector(".next-week").addEventListener("click", () => this.changeWeek(1));
         this.shadowRoot.querySelector(".today").addEventListener("click", () => this.resetToCurrentWeek());
         this.shadowRoot.querySelector(".settings-icon").addEventListener("click", () => this.showSettingsDialog());
+
+        this.setupSwipeGestures();
 
         this.refreshDisplay();
         setInterval(() => this.updateTimeLine(), 60000);
@@ -1836,15 +1939,53 @@ class CalendarWeekCard extends HTMLElement {
         if (this._hass) this.loadEvents(this._hass);
     }
 
+    setupSwipeGestures() {
+        if (!this.weekBody) return;
+        let startX = null;
+        let startY = null;
+        let isPointerDown = false;
+        const minDistance = 40;
+        const maxOffAxis = 60;
+
+        this.weekBody.addEventListener("pointerdown", e => {
+            if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
+            isPointerDown = true;
+            startX = e.clientX;
+            startY = e.clientY;
+        });
+
+        const endSwipe = (e) => {
+            if (!isPointerDown || startX === null || startY === null) return;
+            isPointerDown = false;
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minDistance && Math.abs(deltaY) < maxOffAxis) {
+                this.changeWeek(deltaX < 0 ? 1 : -1);
+            }
+            startX = null;
+            startY = null;
+        };
+
+        this.weekBody.addEventListener("pointerup", endSwipe);
+        this.weekBody.addEventListener("pointercancel", () => {
+            isPointerDown = false;
+            startX = null;
+            startY = null;
+        });
+    }
+
     getWeekRange() {
         const now = new Date();
         const monday = new Date(now);
-        monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) + this.weekOffset * 7);
+        monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
         monday.setHours(0, 0, 0, 0);
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        sunday.setHours(23, 59, 59, 999);
-        return [monday, sunday];
+        const visibleDays = this.getDayCount();
+        const start = new Date(monday);
+        start.setDate(monday.getDate() + this.getPeriodBaseOffset() + this.weekOffset * visibleDays);
+        const rangeEnd = new Date(start);
+        rangeEnd.setDate(start.getDate() + Math.max(0, visibleDays - 1));
+        rangeEnd.setHours(23, 59, 59, 999);
+        return [start, rangeEnd];
     }
 
     updateHeader() {
@@ -1854,8 +1995,11 @@ class CalendarWeekCard extends HTMLElement {
         const monthEnd = end.toLocaleDateString(locale, {month: "long", year: "numeric"});
         this.titleLine.textContent = monthStart === monthEnd ? monthStart : `${monthStart} – ${monthEnd}`;
 
-        const todayOffset = ((new Date().getDay() + 6) % 7);
-        const days = [...Array(7)].map((_, i) => {
+        const today = new Date();
+        const todayOffset = this.getDayOffsetFromStart(today, start);
+        const dayCount = this.getDayCount();
+        this.applyDayCountStyles(dayCount);
+        const days = [...Array(dayCount)].map((_, i) => {
             const d = new Date(start);
             d.setDate(start.getDate() + i);
             return {
@@ -2154,6 +2298,7 @@ class CalendarWeekCard extends HTMLElement {
         if (this._hass) {
             this.refreshCalendarsFromApi(this._hass, { fallbackToStatesOnError: false })
         }
+        this.syncDayColumns();
         this.lastEvents = events;
         this.dayColumns.forEach(col => {
             col.classList.remove("today-column");
@@ -2202,7 +2347,8 @@ class CalendarWeekCard extends HTMLElement {
 
         const dayRenderData = [];
 
-        for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const dayCount = this.getDayCount();
+        for (let dayOffset = 0; dayOffset < dayCount; dayOffset++) {
             const dayStart = new Date(startOfWeek.getTime() + dayOffset * 24 * 60 * 60 * 1000);
             const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
             const overlapsDay = ev => ev.start < dayEnd && ev.end > dayStart;
@@ -2278,8 +2424,9 @@ class CalendarWeekCard extends HTMLElement {
         const highlightMix = this.mixColor(highlightEdgeColor, "#ffffff", isDarkTheme ? 0.12 : 0.4) || highlightEdgeColor;
         const highlightOverlay = this.colorWithAlpha(highlightMix, isDarkTheme ? 0.28 : 0.2);
         const now = new Date();
-        const todayOffset = (now.getDay() + 6) % 7;
-        const shouldHighlightToday = highlightEnabled && this.weekOffset === 0;
+        const todayOffset = this.getDayOffsetFromStart(now, startOfWeek);
+        const shouldHighlightToday = highlightEnabled && this.weekOffset === 0
+            && todayOffset >= 0 && todayOffset < dayCount;
 
         for (const { dayColumn, dayOffset } of dayRenderData) {
             if (shouldHighlightToday && dayOffset === todayOffset) {
@@ -2811,8 +2958,8 @@ class CalendarWeekCard extends HTMLElement {
             return;
         }
 
-        const todayOffset = (now.getDay() + 6) % 7;
-        if (!this.dayColumns[todayOffset]) return;
+        const todayOffset = this.getDayOffsetFromStart(now, start);
+        if (todayOffset < 0 || todayOffset >= this.dayColumns.length) return;
 
         const line = document.createElement("div");
         line.className = "time-line";
@@ -3072,6 +3219,68 @@ class CalendarWeekCard extends HTMLElement {
         trimSection.appendChild(trimDescription);
         content.appendChild(trimSection);
 
+        const dayCountSection = document.createElement("div");
+        Object.assign(dayCountSection.style, {
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+            padding: "12px",
+            borderRadius: "10px"
+        });
+
+        const dayCountHeader = document.createElement("div");
+        Object.assign(dayCountHeader.style, {
+            display: "flex",
+            alignItems: "center",
+            gap: "10px"
+        });
+
+        const dayCountLabel = document.createElement("span");
+        dayCountLabel.style.flex = "1";
+        dayCountLabel.style.fontWeight = "600";
+
+        const dayCountInput = document.createElement("input");
+        dayCountInput.type = "number";
+        dayCountInput.min = "1";
+        dayCountInput.max = "7";
+        dayCountInput.step = "1";
+        dayCountInput.value = this.getDayCount();
+        Object.assign(dayCountInput.style, {
+            width: "80px",
+            height: "34px",
+            borderRadius: "8px",
+            border: "1px solid transparent",
+            padding: "6px",
+            fontWeight: "600"
+        });
+
+        const dayCountDescription = document.createElement("span");
+        dayCountDescription.style.fontSize = "0.85em";
+
+        dayCountInput.addEventListener("change", e => {
+            const normalized = this.normalizeDayCount(e.target.value);
+            if (!normalized) {
+                dayCountInput.value = this.getDayCount();
+                return;
+            }
+            this.config.days_to_show = normalized;
+            try {
+                localStorage.setItem(this.daysToShowPreferenceKey, String(normalized));
+            } catch (err) {
+                console.warn("calendar-week-card: Failed to persist days preference", err);
+            }
+            this.refreshDisplay();
+            if (this._hass) {
+                this.loadEvents(this._hass);
+            }
+        });
+
+        dayCountHeader.appendChild(dayCountLabel);
+        dayCountHeader.appendChild(dayCountInput);
+        dayCountSection.appendChild(dayCountHeader);
+        dayCountSection.appendChild(dayCountDescription);
+        content.appendChild(dayCountSection);
+
         const highlightSection = document.createElement("div");
         Object.assign(highlightSection.style, {
             display: "flex",
@@ -3195,6 +3404,7 @@ class CalendarWeekCard extends HTMLElement {
                     picker.disabled = hidden;
                     picker.style.opacity = hidden ? "0.5" : "1";
                 });
+                dayCountInput.value = this.getDayCount();
                 applyDialogTheme();
                 updateDialogText();
             });
@@ -3270,6 +3480,14 @@ class CalendarWeekCard extends HTMLElement {
             trimSection.style.border = `1px solid ${palette.border}`;
             trimLabel.style.color = palette.text;
             trimDescription.style.color = palette.muted;
+            dayCountSection.style.background = this.theme === "dark"
+                ? "rgba(77, 150, 255, 0.12)"
+                : "rgba(77, 150, 255, 0.08)";
+            dayCountSection.style.border = `1px solid ${palette.border}`;
+            dayCountLabel.style.color = palette.text;
+            dayCountDescription.style.color = palette.muted;
+            dayCountInput.style.border = `1px solid ${palette.border}`;
+            dayCountInput.style.background = palette.inputBackground;
             highlightSection.style.background = this.theme === "dark"
                 ? "rgba(77, 150, 255, 0.18)"
                 : "rgba(77, 150, 255, 0.08)";
@@ -3318,6 +3536,11 @@ class CalendarWeekCard extends HTMLElement {
             trimToggle.setAttribute("aria-label", trimLabelText);
             trimToggle.setAttribute("title", trimLabelText);
             trimDescription.textContent = this.t("trimUnusedHoursDescription");
+            const dayCountLabelText = this.t("daysToShow");
+            dayCountLabel.textContent = dayCountLabelText;
+            dayCountInput.setAttribute("aria-label", dayCountLabelText);
+            dayCountInput.setAttribute("title", dayCountLabelText);
+            dayCountDescription.textContent = this.t("daysToShowDescription");
             highlightLabel.textContent = this.t("highlightToday");
             highlightDescription.textContent = this.t("highlightTodayDescription");
             if (resetDescription) {

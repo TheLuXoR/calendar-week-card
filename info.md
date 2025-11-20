@@ -33,6 +33,7 @@ All values that can be changed in the settings dialog can also be defined in YAM
 | `language` | string | `system` | Language for labels (`system` or a supported language code). |
 | `theme` | string | `system` | Force `light`, `dark`, or `system` theme. |
 | `trim_unused_hours` | boolean | `false` | Collapse empty time ranges when `true`. |
+| `days_to_show` | number | `7` | Number of days to render (between `1` and `7`). |
 | `highlight_today` | boolean | `true` | Enable or disable the today highlight. |
 | `today_highlight_color` | string | `#4D96FF` | Override the color of the today highlight. |
 
@@ -43,6 +44,7 @@ type: custom:calendar-week-card
 language: fr
 theme: light
 trim_unused_hours: true
+days_to_show: 3
 today_highlight_color: '#3a7bff'
 hidden_entities:
   - calendar.travel
