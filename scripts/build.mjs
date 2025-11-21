@@ -94,8 +94,7 @@ async function build() {
     const bundle = await bundleFile("index.js");
 
     const banner = "// Calendar Week Card – generated bundle";
-    const footer = "export { CalendarWeekCard };";
-    const output = [banner, bundle, footer].filter(Boolean).join("\n\n");
+    const output = [banner, bundle].filter(Boolean).join("\n\n");
 
     await writeFile(outputFile, `${output}\n`, "utf8");
     await copyFile(outputFile, hacsOutputFile);
