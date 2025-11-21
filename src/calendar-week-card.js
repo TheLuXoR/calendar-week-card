@@ -18,6 +18,12 @@ import {
     rgbToHex,
     rgbToString
 } from "./colors.js";
+import {
+    CARD_DOCUMENTATION_URL,
+    HOME_ASSISTANT_INTEGRATIONS_URL,
+    buildNoCalendarsCopy,
+    createNoCalendarsLayout
+} from "./no-calendars.js";
 
 const THEME_VARIABLES = {
     light: {
@@ -74,116 +80,6 @@ const THEME_ACCENT_FALLBACK = {
     light: "#ff3b30",
     dark: "#ff453a"
 };
-
-const HOME_ASSISTANT_INTEGRATIONS_URL = "https://my.home-assistant.io/redirect/integrations/";
-const CARD_DOCUMENTATION_URL = "https://github.com/TheLuXoR/calendar-week-card?tab=readme-ov-file#register-calendars-in-home-assistant";
-
-function buildNoCalendarsCopy(translateFn) {
-    const t = typeof translateFn === "function" ? translateFn : (key => key);
-    return {
-        title: t("noCalendarsTitle"),
-        description: t("noCalendarsDescription"),
-        stepsIntro: t("noCalendarsStepsIntro"),
-        steps: [
-            t("noCalendarsStepIntegrations"),
-            t("noCalendarsStepAdd"),
-            t("noCalendarsStepVerify")
-        ],
-        settingsHint: t("noCalendarsSettingsHint"),
-        linksTitle: t("noCalendarsLinksTitle"),
-        links: [
-            { label: t("noCalendarsOpenIntegrations"), url: HOME_ASSISTANT_INTEGRATIONS_URL },
-            { label: t("noCalendarsReadGuide"), url: CARD_DOCUMENTATION_URL }
-        ],
-        actions: {
-            openIntegrations: t("noCalendarsOpenIntegrations"),
-            readGuide: t("noCalendarsReadGuide"),
-            refresh: t("noCalendarsRefresh")
-        }
-    };
-}
-
-function createNoCalendarsLayout(copy, options = {}) {
-    const {
-        handlers = {},
-        buttonFactory = null
-    } = options;
-    const {
-        onOpenIntegrations = null,
-        onReadGuide = null,
-        onRefresh = null
-    } = handlers;
-
-    const card = document.createElement("div");
-    card.className = "no-calendars-card";
-
-    const title = document.createElement("h2");
-    title.textContent = copy.title;
-    card.appendChild(title);
-
-    const description = document.createElement("p");
-    description.textContent = copy.description;
-    card.appendChild(description);
-
-    const stepsIntro = document.createElement("p");
-    stepsIntro.textContent = copy.stepsIntro;
-    card.appendChild(stepsIntro);
-
-    const stepsList = document.createElement("ol");
-    stepsList.className = "no-calendars-steps";
-    copy.steps.forEach(text => {
-        const item = document.createElement("li");
-        item.textContent = text;
-        stepsList.appendChild(item);
-    });
-    card.appendChild(stepsList);
-
-    const settingsHint = document.createElement("p");
-    settingsHint.className = "no-calendars-settings-hint";
-    settingsHint.textContent = copy.settingsHint;
-    card.appendChild(settingsHint);
-
-    const linksHeading = document.createElement("h3");
-    linksHeading.textContent = copy.linksTitle;
-    card.appendChild(linksHeading);
-
-    const linksList = document.createElement("ul");
-    linksList.className = "no-calendars-links";
-    copy.links.forEach(({ label, url }) => {
-        const li = document.createElement("li");
-        const anchor = document.createElement("a");
-        anchor.textContent = label;
-        anchor.href = url;
-        anchor.target = "_blank";
-        anchor.rel = "noopener noreferrer";
-        li.appendChild(anchor);
-        linksList.appendChild(li);
-    });
-    card.appendChild(linksList);
-
-    const buttonRow = document.createElement("div");
-    buttonRow.className = "no-calendars-buttons";
-
-    const createButton = (label, handler, extra = {}) => {
-        if (typeof buttonFactory === "function") {
-            return buttonFactory(label, handler, extra);
-        }
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.textContent = label;
-        if (typeof handler === "function") {
-            btn.addEventListener("click", handler);
-        }
-        return btn;
-    };
-
-    buttonRow.appendChild(createButton(copy.actions.openIntegrations, onOpenIntegrations, { action: "integrations" }));
-    buttonRow.appendChild(createButton(copy.actions.readGuide, onReadGuide, { action: "guide" }));
-    buttonRow.appendChild(createButton(copy.actions.refresh, onRefresh, { action: "refresh" }));
-    card.appendChild(buttonRow);
-
-    return card;
-}
 
 export class CalendarWeekCard extends HTMLElement {
     constructor() {
@@ -514,26 +410,30 @@ export class CalendarWeekCard extends HTMLElement {
         return buildNoCalendarsCopy(key => this.t(key));
     }
 
+    getNoCalendarsHandlers() {
+        return {
+            onOpenIntegrations: () => {
+                if (typeof window !== "undefined") {
+                    window.open(HOME_ASSISTANT_INTEGRATIONS_URL, "_blank", "noopener,noreferrer");
+                }
+            },
+            onReadGuide: () => {
+                if (typeof window !== "undefined") {
+                    window.open(CARD_DOCUMENTATION_URL, "_blank", "noopener,noreferrer");
+                }
+            },
+            onRefresh: () => {
+                if (this._hass) {
+                    this.ensureEntities(this._hass).then(() => this.loadEvents(this._hass));
+                }
+            }
+        };
+    }
+
     createInlineNoCalendarsContent() {
         const copy = this.getNoCalendarsContent();
         return createNoCalendarsLayout(copy, {
-            handlers: {
-                onOpenIntegrations: () => {
-                    if (typeof window !== "undefined") {
-                        window.open(HOME_ASSISTANT_INTEGRATIONS_URL, "_blank", "noopener,noreferrer");
-                    }
-                },
-                onReadGuide: () => {
-                    if (typeof window !== "undefined") {
-                        window.open(CARD_DOCUMENTATION_URL, "_blank", "noopener,noreferrer");
-                    }
-                },
-                onRefresh: () => {
-                    if (this._hass) {
-                        this.ensureEntities(this._hass).then(() => this.loadEvents(this._hass));
-                    }
-                }
-            },
+            handlers: this.getNoCalendarsHandlers(),
             buttonFactory: (label, handler) => this.createDialogButton(label, { onClick: handler })
         });
     }
