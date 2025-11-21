@@ -205,6 +205,7 @@ export class CalendarWeekCard extends HTMLElement {
         this.visibleStartMinute = 0;
         this.visibleEndMinute = 24 * 60;
         this.trimUnusedHoursKey = "calendar-week-card-trim-hours";
+        this.daysToShowPreferenceKey = "calendar-week-card-days-to-show";
         this.languagePreference = "system";
         this.language = "en";
         this.themePreference = "system";
@@ -217,6 +218,8 @@ export class CalendarWeekCard extends HTMLElement {
         this.inlineNoCalendarsContainer = null;
         this._isEditorPreview = false;
         this._refreshCalendarsPromise = undefined;
+        this._lastDayCount = 0;
+        this._lastWeekChangeDirection = 0;
     }
     resolveLanguage(preference) {
         return resolveLanguage(preference, {
@@ -450,11 +453,82 @@ export class CalendarWeekCard extends HTMLElement {
         return !!this._isEditorPreview;
     }
 
+    getDayCount() {
+        const normalized = this.normalizeDayCount(this.config?.days_to_show);
+        return normalized || 7;
+    }
+
+    getTotalDayCount() {
+        return 7;
+    }
+
+    getVisibleSpan() {
+        const peekAmount = 0.35;
+        const visible = this.getDayCount();
+        return Math.min(this.getTotalDayCount(), visible + peekAmount);
+    }
+
+    normalizeDayCount(value) {
+        const asNumber = Number(value);
+        if (!Number.isFinite(asNumber)) return null;
+        const rounded = Math.round(asNumber);
+        if (rounded < 1 || rounded > 7) return null;
+        return rounded;
+    }
+
+    getPeriodBaseOffset() {
+        return 0;
+    }
+
+    getDayOffsetFromStart(targetDate, startDate) {
+        const normalize = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const start = normalize(startDate);
+        const target = normalize(targetDate);
+        const diffMs = target - start;
+        return Math.floor(diffMs / (24 * 60 * 60 * 1000));
+    }
+
+    applyDayCountStyles(totalDays, visibleSpan = totalDays) {
+        if (this.shadowRoot?.host) {
+            this.shadowRoot.host.style.setProperty("--cwc-day-count", totalDays);
+            this.shadowRoot.host.style.setProperty("--cwc-total-days", totalDays);
+            this.shadowRoot.host.style.setProperty("--cwc-visible-span", visibleSpan);
+        }
+        if (this.header) {
+            this.header.style.gridTemplateColumns = `repeat(${totalDays}, 1fr)`;
+        }
+        if (this.grid) {
+            this.grid.style.gridTemplateColumns = `repeat(${totalDays}, 1fr)`;
+        }
+    }
+
+    syncDayColumns() {
+        if (!this.grid) return;
+        const totalDays = this.getTotalDayCount();
+        this.applyDayCountStyles(totalDays, this.getVisibleSpan());
+
+        if (this.dayColumns?.length === totalDays && this._lastDayCount === totalDays) {
+            return;
+        }
+
+        this.grid.innerHTML = "";
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < totalDays; i++) {
+            const col = document.createElement("div");
+            col.className = "day-column";
+            fragment.appendChild(col);
+        }
+        this.grid.appendChild(fragment);
+        this.dayColumns = this.shadowRoot.querySelectorAll(".day-column");
+        this._lastDayCount = totalDays;
+    }
+
     refreshDisplay() {
         if (!this.shadowRoot) {
             return;
         }
 
+        this.syncDayColumns();
         this.applyTranslations();
         this.updateHeader();
 
@@ -465,6 +539,8 @@ export class CalendarWeekCard extends HTMLElement {
             this.buildTimeLabels();
             this.updateTimeLine();
         }
+
+        this.updateScrollLayout({ animated: false });
     }
 
     getDialogPalette() {
@@ -652,6 +728,7 @@ export class CalendarWeekCard extends HTMLElement {
             "calendar-week-card-today-highlight-color",
             "calendar-week-card-highlight-enabled",
             this.trimUnusedHoursKey,
+            this.daysToShowPreferenceKey,
             "calendar-week-card-theme"
         ];
 
@@ -674,6 +751,7 @@ export class CalendarWeekCard extends HTMLElement {
         this.config.today_highlight_color = "#4D96FF";
         this.config.highlight_today = true;
         this.config.trim_unused_hours = false;
+        this.config.days_to_show = 7;
 
         this.assignDefaultColors(this.getActiveEntities());
 
@@ -692,7 +770,8 @@ export class CalendarWeekCard extends HTMLElement {
             theme: hasOwn("theme"),
             highlight_today: hasOwn("highlight_today"),
             today_highlight_color: hasOwn("today_highlight_color"),
-            trim_unused_hours: hasOwn("trim_unused_hours")
+            trim_unused_hours: hasOwn("trim_unused_hours"),
+            days_to_show: hasOwn("days_to_show")
         };
 
         this.config = structuredClone(rawConfig) || {};
@@ -825,6 +904,26 @@ export class CalendarWeekCard extends HTMLElement {
             this.config.trim_unused_hours = false;
         }
 
+        let savedDaysToShow = null;
+        try {
+            savedDaysToShow = localStorage.getItem(this.daysToShowPreferenceKey);
+        } catch (err) {
+            savedDaysToShow = null;
+        }
+
+        const hasDayOverride = this._configOverrides.days_to_show;
+        const normalizedConfigDayCount = this.normalizeDayCount(this.config.days_to_show);
+        if (hasDayOverride && normalizedConfigDayCount) {
+            this.config.days_to_show = normalizedConfigDayCount;
+        } else if (savedDaysToShow !== null) {
+            const normalizedSaved = this.normalizeDayCount(savedDaysToShow);
+            this.config.days_to_show = normalizedSaved || normalizedConfigDayCount || 7;
+        } else if (normalizedConfigDayCount) {
+            this.config.days_to_show = normalizedConfigDayCount;
+        } else {
+            this.config.days_to_show = 7;
+        }
+
         this.attachShadow({mode: "open"});
 
         this.shadowRoot.innerHTML = `
@@ -935,16 +1034,38 @@ export class CalendarWeekCard extends HTMLElement {
             .settings-icon:hover {
                 background: var(--cwc-settings-icon-hover);
             }
-            .week-header {
-                display: grid;
-                grid-template-columns: 60px repeat(7, 1fr);
-                text-align: center;
-                font-weight: 600;
-                padding: 0 6px 8px;
+            .week-header-row {
+                display: flex;
+                align-items: stretch;
+                padding: 0 0 8px;
                 color: var(--cwc-secondary-text);
                 border-bottom: 1px solid var(--cwc-border-color);
+                gap: 0;
             }
-            .week-header div {
+            .time-bar-spacer {
+                width: 64px;
+                flex-shrink: 0;
+            }
+            .week-header-scroll {
+                flex: 1;
+                overflow-x: auto;
+                overflow-y: hidden;
+                padding: 0 6px 0;
+                min-height: 0;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            .week-header-scroll::-webkit-scrollbar { display: none; }
+            .week-header-scroll.no-scroll { overflow-x: hidden; }
+            .week-header {
+                display: grid;
+                grid-template-columns: repeat(var(--cwc-day-count, 7), minmax(0, 1fr));
+                min-width: calc((var(--cwc-total-days, 7) / var(--cwc-visible-span, 7)) * 100%);
+                text-align: center;
+                font-weight: 600;
+                color: var(--cwc-secondary-text);
+            }
+            .week-header .day-header {
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -974,6 +1095,18 @@ export class CalendarWeekCard extends HTMLElement {
                 overflow: hidden;
                 min-height: 0;
             }
+            .week-grid-scroll {
+                position: relative;
+                flex: 1;
+                overflow-x: auto;
+                overflow-y: hidden;
+                background: var(--cwc-week-bg);
+                min-height: 0;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            .week-grid-scroll::-webkit-scrollbar { display: none; }
+            .week-grid-scroll.no-scroll { overflow-x: hidden; }
             .hour-label {
                 position: absolute;
                 left: 6px;
@@ -983,12 +1116,10 @@ export class CalendarWeekCard extends HTMLElement {
             }
             .week-grid {
                 position: relative;
-                flex: 1;
                 display: grid;
-                grid-template-columns: repeat(7, 1fr);
+                grid-template-columns: repeat(var(--cwc-day-count, 7), minmax(0, 1fr));
+                min-width: calc((var(--cwc-total-days, 7) / var(--cwc-visible-span, 7)) * 100%);
                 height: 100%;
-                width: 100%;
-                overflow: visible;
                 background: var(--cwc-week-bg);
                 min-height: 0;
             }
@@ -1262,12 +1393,18 @@ export class CalendarWeekCard extends HTMLElement {
           <span class="settings-icon">⚙️</span>
         </div>
 
-        <div class="week-header"></div>
+        <div class="week-header-row">
+            <div class="time-bar-spacer"></div>
+            <div class="week-header-scroll">
+                <div class="week-header"></div>
+            </div>
+        </div>
 
         <div class="week-body">
             <div class="time-bar"></div>
-            <div class="week-grid">
-                ${[...Array(7)].map(() => `<div class="day-column"></div>`).join("")}
+            <div class="week-grid-scroll">
+                <div class="week-grid">
+                </div>
             </div>
         </div>
         <div class="no-calendars-inline" hidden></div>
@@ -1276,8 +1413,9 @@ export class CalendarWeekCard extends HTMLElement {
         this.grid = this.shadowRoot.querySelector(".week-grid");
         this.timeBar = this.shadowRoot.querySelector(".time-bar");
         this.header = this.shadowRoot.querySelector(".week-header");
+        this.headerScroll = this.shadowRoot.querySelector(".week-header-scroll");
+        this.gridScroll = this.shadowRoot.querySelector(".week-grid-scroll");
         this.titleLine = this.shadowRoot.querySelector(".title-line");
-        this.dayColumns = this.shadowRoot.querySelectorAll(".day-column");
         this.weekBody = this.shadowRoot.querySelector(".week-body");
         this.inlineNoCalendarsContainer = this.shadowRoot.querySelector(".no-calendars-inline");
 
@@ -1288,10 +1426,15 @@ export class CalendarWeekCard extends HTMLElement {
         this.applyTheme({ refresh: false });
         this.updateSystemThemeListener();
 
+        this.syncDayColumns();
+
         this.shadowRoot.querySelector(".prev-week").addEventListener("click", () => this.changeWeek(-1));
         this.shadowRoot.querySelector(".next-week").addEventListener("click", () => this.changeWeek(1));
         this.shadowRoot.querySelector(".today").addEventListener("click", () => this.resetToCurrentWeek());
         this.shadowRoot.querySelector(".settings-icon").addEventListener("click", () => this.showSettingsDialog());
+
+        this.setupSwipeGestures();
+        this.setupScrollSync();
 
         this.refreshDisplay();
         setInterval(() => this.updateTimeLine(), 60000);
@@ -1299,25 +1442,71 @@ export class CalendarWeekCard extends HTMLElement {
 
     resetToCurrentWeek() {
         this.weekOffset = 0;
+        this._userAdjustedScroll = false;
+        this._lastWeekChangeDirection = 0;
         this.updateHeader();
+        this.scrollToWeekStart({ animated: true, alignTodayFirst: true, direction: 0 });
+        this.scheduleDeferredWeekScroll({ alignTodayFirst: true, direction: 0 });
         if (this._hass) this.loadEvents(this._hass);
     }
 
-    changeWeek(delta) {
+    changeWeek(delta, { animateScroll = true } = {}) {
         this.weekOffset += delta;
+        this._userAdjustedScroll = false;
+        this._lastWeekChangeDirection = delta;
         this.updateHeader();
+        this.scrollToWeekStart({ animated: animateScroll, direction: delta });
+        this.scheduleDeferredWeekScroll({ direction: delta, animated: animateScroll });
         if (this._hass) this.loadEvents(this._hass);
+    }
+
+    setupSwipeGestures() {
+        if (!this.weekBody) return;
+        let startX = null;
+        let startY = null;
+        let isPointerDown = false;
+        const minDistance = 40;
+        const maxOffAxis = 60;
+
+        this.weekBody.addEventListener("pointerdown", e => {
+            if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
+            isPointerDown = true;
+            startX = e.clientX;
+            startY = e.clientY;
+        });
+
+        const endSwipe = (e) => {
+            if (!isPointerDown || startX === null || startY === null) return;
+            isPointerDown = false;
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minDistance && Math.abs(deltaY) < maxOffAxis) {
+                this.changeWeek(deltaX < 0 ? 1 : -1);
+            }
+            startX = null;
+            startY = null;
+        };
+
+        this.weekBody.addEventListener("pointerup", endSwipe);
+        this.weekBody.addEventListener("pointercancel", () => {
+            isPointerDown = false;
+            startX = null;
+            startY = null;
+        });
     }
 
     getWeekRange() {
         const now = new Date();
         const monday = new Date(now);
-        monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) + this.weekOffset * 7);
+        monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
         monday.setHours(0, 0, 0, 0);
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        sunday.setHours(23, 59, 59, 999);
-        return [monday, sunday];
+        const visibleDays = this.getTotalDayCount();
+        const start = new Date(monday);
+        start.setDate(monday.getDate() + this.getPeriodBaseOffset() + this.weekOffset * visibleDays);
+        const rangeEnd = new Date(start);
+        rangeEnd.setDate(start.getDate() + Math.max(0, visibleDays - 1));
+        rangeEnd.setHours(23, 59, 59, 999);
+        return [start, rangeEnd];
     }
 
     updateHeader() {
@@ -1327,8 +1516,11 @@ export class CalendarWeekCard extends HTMLElement {
         const monthEnd = end.toLocaleDateString(locale, {month: "long", year: "numeric"});
         this.titleLine.textContent = monthStart === monthEnd ? monthStart : `${monthStart} – ${monthEnd}`;
 
-        const todayOffset = ((new Date().getDay() + 6) % 7);
-        const days = [...Array(7)].map((_, i) => {
+        const today = new Date();
+        const todayOffset = this.getDayOffsetFromStart(today, start);
+        const dayCount = this.getTotalDayCount();
+        this.applyDayCountStyles(dayCount, this.getVisibleSpan());
+        const days = [...Array(dayCount)].map((_, i) => {
             const d = new Date(start);
             d.setDate(start.getDate() + i);
             return {
@@ -1338,11 +1530,131 @@ export class CalendarWeekCard extends HTMLElement {
             };
         });
 
-        this.header.innerHTML = `<div></div>` + days.map(d =>
-            `<div style="color:${d.isToday ? 'var(--accent-color)' : 'inherit'};">
-                <div>${d.name}</div>
-                <div class="day-num">${d.num}</div>
+        this.header.innerHTML = days.map(d =>
+            `<div class="day-header" style="color:${d.isToday ? 'var(--accent-color)' : 'inherit'};">\
+                <div>${d.name}</div>\
+                <div class="day-num">${d.num}</div>\
             </div>`).join('');
+    }
+
+    getApproximateDayWidth() {
+        if (this.dayColumns?.length) {
+            const rect = this.dayColumns[0]?.getBoundingClientRect();
+            if (rect?.width) {
+                return rect.width;
+            }
+        }
+        if (this.gridScroll?.clientWidth) {
+            return this.gridScroll.clientWidth / this.getVisibleSpan();
+        }
+        return 0;
+    }
+
+    getScrollMetrics(source = null) {
+        const scroll = source || this.gridScroll || this.headerScroll;
+        if (!scroll) return { maxScroll: 0 };
+        return {
+            maxScroll: Math.max(0, scroll.scrollWidth - scroll.clientWidth),
+            scroll
+        };
+    }
+
+    getWeekScrollOffset({ alignTodayFirst = false, direction = 0 } = {}) {
+        const dayWidth = this.getApproximateDayWidth();
+        if (!dayWidth) {
+            return 0;
+        }
+
+        const totalDays = this.getTotalDayCount();
+        const visibleSpan = this.getVisibleSpan();
+        const canScrollWithinWeek = visibleSpan < totalDays;
+
+        const isCurrentWeek = this.weekOffset === 0;
+        if (isCurrentWeek) {
+            const todayIndex = (new Date().getDay() + 6) % 7;
+            if (alignTodayFirst) {
+                return dayWidth * todayIndex;
+            }
+            const targetIndex = Math.max(todayIndex - 1, 0);
+            return dayWidth * targetIndex;
+        }
+
+        if (!canScrollWithinWeek) {
+            return 0;
+        }
+
+        const { maxScroll } = this.getScrollMetrics();
+        const fallbackMax = Math.max(0, this.getTotalDayCount() - this.getVisibleSpan()) * dayWidth;
+        const targetMax = maxScroll || fallbackMax;
+        if (direction < 0 && targetMax > 0) {
+            return targetMax;
+        }
+        return 0;
+    }
+
+    scrollToWeekStart({ animated = false, alignTodayFirst = false, direction = 0 } = {}) {
+        const offset = this.getWeekScrollOffset({ alignTodayFirst, direction });
+        this.syncScrollPosition(offset, animated);
+    }
+
+    scheduleDeferredWeekScroll({ animated = true, alignTodayFirst = false, direction = 0 } = {}) {
+        if (!this.headerScroll || !this.gridScroll) return;
+        // Allow layout to settle so measurements like scrollWidth/clientWidth are accurate
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                this.scrollToWeekStart({ animated, alignTodayFirst, direction });
+            });
+        });
+    }
+
+    syncScrollPosition(offset, animated) {
+        this._isAutoScrolling = true;
+        const behavior = animated ? "smooth" : "auto";
+        if (this.gridScroll) {
+            this.gridScroll.scrollTo({ left: offset, behavior });
+        }
+        if (this.headerScroll) {
+            this.headerScroll.scrollTo({ left: offset, behavior });
+        }
+        setTimeout(() => {
+            this._isAutoScrolling = false;
+        }, animated ? 350 : 0);
+    }
+
+    setupScrollSync() {
+        if (!this.headerScroll || !this.gridScroll) return;
+        const syncScroll = (source, target) => {
+            if (!target) return;
+            if (this._isSyncingScroll) return;
+            this._isSyncingScroll = true;
+            target.scrollLeft = source.scrollLeft;
+            this._isSyncingScroll = false;
+        };
+
+        const handleScroll = (source, trackerKey) => {
+            const target = source === this.gridScroll ? this.headerScroll : this.gridScroll;
+            if (!this._isSyncingScroll && !this._isAutoScrolling) {
+                this._userAdjustedScroll = true;
+            }
+            this[trackerKey] = source.scrollLeft;
+            syncScroll(source, target);
+        };
+
+        this.headerScroll.addEventListener("scroll", () => handleScroll(this.headerScroll, "_lastHeaderScrollLeft"));
+        this.gridScroll.addEventListener("scroll", () => handleScroll(this.gridScroll, "_lastGridScrollLeft"));
+    }
+
+    updateScrollLayout({ animated = false } = {}) {
+        if (this._userAdjustedScroll) return;
+        const totalDays = this.getTotalDayCount();
+        const visibleSpan = this.getVisibleSpan();
+        this.applyDayCountStyles(totalDays, visibleSpan);
+        const disableScroll = visibleSpan >= totalDays;
+        [this.headerScroll, this.gridScroll].forEach(el => {
+            if (!el) return;
+            el.classList.toggle("no-scroll", disableScroll);
+        });
+        this.scrollToWeekStart({ animated, direction: this._lastWeekChangeDirection || 0 });
     }
 
     buildTimeLabels() {
@@ -1627,6 +1939,7 @@ export class CalendarWeekCard extends HTMLElement {
         if (this._hass) {
             this.refreshCalendarsFromApi(this._hass, { fallbackToStatesOnError: false })
         }
+        this.syncDayColumns();
         this.lastEvents = events;
         this.dayColumns.forEach(col => {
             col.classList.remove("today-column");
@@ -1675,7 +1988,8 @@ export class CalendarWeekCard extends HTMLElement {
 
         const dayRenderData = [];
 
-        for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const dayCount = this.getTotalDayCount();
+        for (let dayOffset = 0; dayOffset < dayCount; dayOffset++) {
             const dayStart = new Date(startOfWeek.getTime() + dayOffset * 24 * 60 * 60 * 1000);
             const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
             const overlapsDay = ev => ev.start < dayEnd && ev.end > dayStart;
@@ -1751,8 +2065,9 @@ export class CalendarWeekCard extends HTMLElement {
         const highlightMix = this.mixColor(highlightEdgeColor, "#ffffff", isDarkTheme ? 0.12 : 0.4) || highlightEdgeColor;
         const highlightOverlay = this.colorWithAlpha(highlightMix, isDarkTheme ? 0.28 : 0.2);
         const now = new Date();
-        const todayOffset = (now.getDay() + 6) % 7;
-        const shouldHighlightToday = highlightEnabled && this.weekOffset === 0;
+        const todayOffset = this.getDayOffsetFromStart(now, startOfWeek);
+        const shouldHighlightToday = highlightEnabled && this.weekOffset === 0
+            && todayOffset >= 0 && todayOffset < dayCount;
 
         for (const { dayColumn, dayOffset } of dayRenderData) {
             if (shouldHighlightToday && dayOffset === todayOffset) {
@@ -2284,8 +2599,8 @@ export class CalendarWeekCard extends HTMLElement {
             return;
         }
 
-        const todayOffset = (now.getDay() + 6) % 7;
-        if (!this.dayColumns[todayOffset]) return;
+        const todayOffset = this.getDayOffsetFromStart(now, start);
+        if (todayOffset < 0 || todayOffset >= this.dayColumns.length) return;
 
         const line = document.createElement("div");
         line.className = "time-line";
@@ -2545,6 +2860,92 @@ export class CalendarWeekCard extends HTMLElement {
         trimSection.appendChild(trimDescription);
         content.appendChild(trimSection);
 
+        const dayCountSection = document.createElement("div");
+        Object.assign(dayCountSection.style, {
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+            padding: "12px",
+            borderRadius: "10px"
+        });
+
+        const dayCountHeader = document.createElement("div");
+        Object.assign(dayCountHeader.style, {
+            display: "flex",
+            alignItems: "center",
+            gap: "10px"
+        });
+
+        const dayCountLabel = document.createElement("span");
+        dayCountLabel.style.flex = "1";
+        dayCountLabel.style.fontWeight = "600";
+
+        const dayCountButtonRow = document.createElement("div");
+        Object.assign(dayCountButtonRow.style, {
+            display: "flex",
+            gap: "8px",
+            alignItems: "center"
+        });
+
+        const dayCountButtons = [];
+
+        const updateDayCountButtons = () => {
+            const active = this.getDayCount();
+            const palette = this.getDialogPalette();
+            const accent = this.getAccentColors();
+            dayCountButtons.forEach(({ button, value }) => {
+                const isActive = value === active;
+                button.dataset.active = String(isActive);
+                button.style.background = isActive
+                    ? `linear-gradient(120deg, ${accent.primary}, ${accent.secondary})`
+                    : palette.inputBackground;
+                button.style.color = isActive ? "#ffffff" : palette.text;
+                button.style.border = isActive
+                    ? `1px solid ${accent.primary}`
+                    : `1px solid ${palette.border}`;
+                button.style.boxShadow = isActive ? "0 6px 16px rgba(0,0,0,0.2)" : "none";
+            });
+        };
+
+        const setDayCount = (value) => {
+            this.config.days_to_show = value;
+            try {
+                localStorage.setItem(this.daysToShowPreferenceKey, String(value));
+            } catch (err) {
+                console.warn("calendar-week-card: Failed to persist days preference", err);
+            }
+            updateDayCountButtons();
+            this.refreshDisplay();
+            if (this._hass) {
+                this.loadEvents(this._hass);
+            }
+        };
+
+        [3, 5, 7].forEach(value => {
+            const button = document.createElement("button");
+            button.textContent = String(value);
+            Object.assign(button.style, {
+                borderRadius: "10px",
+                border: "1px solid transparent",
+                padding: "8px 14px",
+                fontWeight: "700",
+                cursor: "pointer",
+                transition: "all 160ms ease"
+            });
+            button.addEventListener("click", () => setDayCount(value));
+            dayCountButtons.push({ button, value });
+            dayCountButtonRow.appendChild(button);
+        });
+
+        const dayCountDescription = document.createElement("span");
+        dayCountDescription.style.fontSize = "0.85em";
+
+        dayCountHeader.appendChild(dayCountLabel);
+        dayCountHeader.appendChild(dayCountButtonRow);
+        dayCountSection.appendChild(dayCountHeader);
+        dayCountSection.appendChild(dayCountDescription);
+        content.appendChild(dayCountSection);
+
         const highlightSection = document.createElement("div");
         Object.assign(highlightSection.style, {
             display: "flex",
@@ -2668,6 +3069,7 @@ export class CalendarWeekCard extends HTMLElement {
                     picker.disabled = hidden;
                     picker.style.opacity = hidden ? "0.5" : "1";
                 });
+                updateDayCountButtons();
                 applyDialogTheme();
                 updateDialogText();
             });
@@ -2743,6 +3145,13 @@ export class CalendarWeekCard extends HTMLElement {
             trimSection.style.border = `1px solid ${palette.border}`;
             trimLabel.style.color = palette.text;
             trimDescription.style.color = palette.muted;
+            dayCountSection.style.background = this.theme === "dark"
+                ? "rgba(77, 150, 255, 0.12)"
+                : "rgba(77, 150, 255, 0.08)";
+            dayCountSection.style.border = `1px solid ${palette.border}`;
+            dayCountLabel.style.color = palette.text;
+            dayCountDescription.style.color = palette.muted;
+            updateDayCountButtons();
             highlightSection.style.background = this.theme === "dark"
                 ? "rgba(77, 150, 255, 0.18)"
                 : "rgba(77, 150, 255, 0.08)";
@@ -2791,6 +3200,16 @@ export class CalendarWeekCard extends HTMLElement {
             trimToggle.setAttribute("aria-label", trimLabelText);
             trimToggle.setAttribute("title", trimLabelText);
             trimDescription.textContent = this.t("trimUnusedHoursDescription");
+            const dayCountLabelText = this.t("daysToShow");
+            dayCountLabel.textContent = dayCountLabelText;
+            dayCountButtons.forEach(({ button, value }) => {
+                const label = `${dayCountLabelText}: ${value}`;
+                button.setAttribute("aria-label", label);
+                button.setAttribute("title", label);
+            });
+            const dayCountDescriptionText = this.t("daysToShowDescription");
+            dayCountDescription.textContent = dayCountDescriptionText;
+            dayCountDescription.style.display = dayCountDescriptionText ? "" : "none";
             highlightLabel.textContent = this.t("highlightToday");
             highlightDescription.textContent = this.t("highlightTodayDescription");
             if (resetDescription) {
