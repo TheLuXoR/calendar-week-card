@@ -1604,6 +1604,9 @@ function applyThemeVariables(target, theme, readCssColor) {
     target.style.setProperty("--cwc-time-line-color", resolveAccent(theme, readCssColor));
 }
 
+// Alias used by the card runtime to emphasize the target element argument.
+const applyThemeVariablesToElement = applyThemeVariables;
+
 // File: calendar-week-card-picker.js
 const CARD_PICKER_TYPE = "calendar-week-card";
 

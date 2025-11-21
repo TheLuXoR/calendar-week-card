@@ -74,3 +74,6 @@ export function applyThemeVariables(target, theme, readCssColor) {
     });
     target.style.setProperty("--cwc-time-line-color", resolveAccent(theme, readCssColor));
 }
+
+// Alias used by the card runtime to emphasize the target element argument.
+export const applyThemeVariablesToElement = applyThemeVariables;
