@@ -82,7 +82,7 @@ const TRANSLATIONS = {
         trimUnusedHours: "Unbenutzte Randstunden kürzen",
         trimUnusedHoursDescription: "Blendet frühe und späte Stunden ohne Termine aus.",
         daysToShow: "Anzuzeigende Tage",
-        daysToShowDescription: "Begrenzt die sichtbaren Tage (1–7).",
+        daysToShowDescription: "",
         noCalendarsTitle: "Keine Kalender gefunden",
         noCalendarsDescription: "Home Assistant hat noch keine Kalender-Entitäten registriert, daher kann die Karte nichts anzeigen.",
         noCalendarsStepsIntro: "So löst du das Problem:",
@@ -2102,6 +2102,10 @@ class CalendarWeekCard extends HTMLElement {
             return 0;
         }
 
+        const totalDays = this.getTotalDayCount();
+        const visibleSpan = this.getVisibleSpan();
+        const canScrollWithinWeek = visibleSpan < totalDays;
+
         const isCurrentWeek = this.weekOffset === 0;
         if (isCurrentWeek) {
             const todayIndex = (new Date().getDay() + 6) % 7;
@@ -2110,6 +2114,10 @@ class CalendarWeekCard extends HTMLElement {
             }
             const targetIndex = Math.max(todayIndex - 1, 0);
             return dayWidth * targetIndex;
+        }
+
+        if (!canScrollWithinWeek) {
+            return 0;
         }
 
         const { maxScroll } = this.getScrollMetrics();
@@ -3726,7 +3734,9 @@ class CalendarWeekCard extends HTMLElement {
                 button.setAttribute("aria-label", label);
                 button.setAttribute("title", label);
             });
-            dayCountDescription.textContent = this.t("daysToShowDescription");
+            const dayCountDescriptionText = this.t("daysToShowDescription");
+            dayCountDescription.textContent = dayCountDescriptionText;
+            dayCountDescription.style.display = dayCountDescriptionText ? "" : "none";
             highlightLabel.textContent = this.t("highlightToday");
             highlightDescription.textContent = this.t("highlightTodayDescription");
             if (resetDescription) {

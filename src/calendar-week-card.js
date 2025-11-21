@@ -1563,6 +1563,10 @@ export class CalendarWeekCard extends HTMLElement {
             return 0;
         }
 
+        const totalDays = this.getTotalDayCount();
+        const visibleSpan = this.getVisibleSpan();
+        const canScrollWithinWeek = visibleSpan < totalDays;
+
         const isCurrentWeek = this.weekOffset === 0;
         if (isCurrentWeek) {
             const todayIndex = (new Date().getDay() + 6) % 7;
@@ -1571,6 +1575,10 @@ export class CalendarWeekCard extends HTMLElement {
             }
             const targetIndex = Math.max(todayIndex - 1, 0);
             return dayWidth * targetIndex;
+        }
+
+        if (!canScrollWithinWeek) {
+            return 0;
         }
 
         const { maxScroll } = this.getScrollMetrics();
@@ -3187,7 +3195,9 @@ export class CalendarWeekCard extends HTMLElement {
                 button.setAttribute("aria-label", label);
                 button.setAttribute("title", label);
             });
-            dayCountDescription.textContent = this.t("daysToShowDescription");
+            const dayCountDescriptionText = this.t("daysToShowDescription");
+            dayCountDescription.textContent = dayCountDescriptionText;
+            dayCountDescription.style.display = dayCountDescriptionText ? "" : "none";
             highlightLabel.textContent = this.t("highlightToday");
             highlightDescription.textContent = this.t("highlightTodayDescription");
             if (resetDescription) {

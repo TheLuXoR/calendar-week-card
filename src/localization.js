@@ -79,7 +79,7 @@ export const TRANSLATIONS = {
         trimUnusedHours: "Unbenutzte Randstunden kürzen",
         trimUnusedHoursDescription: "Blendet frühe und späte Stunden ohne Termine aus.",
         daysToShow: "Anzuzeigende Tage",
-        daysToShowDescription: "Begrenzt die sichtbaren Tage (1–7).",
+        daysToShowDescription: "",
         noCalendarsTitle: "Keine Kalender gefunden",
         noCalendarsDescription: "Home Assistant hat noch keine Kalender-Entitäten registriert, daher kann die Karte nichts anzeigen.",
         noCalendarsStepsIntro: "So löst du das Problem:",
