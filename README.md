@@ -1,14 +1,45 @@
 # Calendar Week Card
-[![hacs][hacs-img]][hacs-url] 
-[![GitHub Release][github-release-img]][github-release-url] 
-[![Downloads][github-downloads-img]][github-release-url] 
-[![Downloads@latest][github-latest-downloads-img]][github-release-url]
+![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange)
+![stars](https://img.shields.io/github/stars/TheLuXoR/calendar-week-card)
+![license](https://img.shields.io/github/license/TheLuXoR/calendar-week-card)
+
+![downloads total](https://img.shields.io/github/downloads/TheLuXoR/calendar-week-card/total.svg)
+![downloads@latest](https://img.shields.io/github/downloads/TheLuXoR/calendar-week-card/latest/total.svg)
+![issues](https://img.shields.io/github/issues/TheLuXoR/calendar-week-card)
+
 
 
 <img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_2.png" alt="drawing" width="300"/>
 <img src="https://raw.githubusercontent.com/TheLuXoR/calendar-week-card/main/img/img_4.png" alt="drawing" width="300"/>
 
 A fully customizable Lovelace card that displays your week at a glance in a clean, structured grid. It automatically finds all calendars available in Home Assistant, but you can also choose specific ones if you prefer. Each calendar can have its own color, and you can tweak the entire theme to match your setup.
+
+## you like it?
+
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/theluxor?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/theluxor)
+
+<div>
+<a href="https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4"
+     target="_blank"
+     style="
+        background: linear-gradient(120deg, #F9D423, #FFCF00);
+        color: #ffffff;
+        padding: 10px 18px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1em;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        cursor: pointer;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+        transition: transform .15s ease, box-shadow .25s ease, filter .2s ease;
+     "
+     onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.35)';"
+     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.25)';"
+  >💛 Support 💛</a></div>
 
 ## Getting started
 
@@ -144,38 +175,6 @@ This repository uses a small build script to generate the necessary output files
 npm run build
 ```
 
-
-## you like it?
-
-<div style="
-  display:flex;
-  margin-top:12px;
-">
-  <a href="https://www.paypal.com/donate/?hosted_button_id=ABUTP5VLEUBS4"
-     target="_blank"
-     style="
-        background: linear-gradient(120deg, #F9D423, #FFCF00);
-        color: #ffffff;
-        padding: 10px 18px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 1em;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        cursor: pointer;
-        box-shadow: 0 6px 16px rgba(0,0,0,0.25);
-        transition: transform .15s ease, box-shadow .25s ease, filter .2s ease;
-     "
-     onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.35)';"
-     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.25)';"
-  >
-    💛 Support 💛
-  </a>
-</div>
-
 ## Translation
 
 Translation was done by ChatGPT. You see some flaws I should fix? just open an issue in my Repository.
@@ -184,10 +183,3 @@ Translation was done by ChatGPT. You see some flaws I should fix? just open an i
 ## License
 
 This project is released under the MIT License.
-
-[hacs-img]: https://img.shields.io/badge/HACS-Custom-orange.svg
-[hacs-url]: https://github.com/TheLuXoR/calendar-week-card/actions/workflows/release.yml
-[github-release-img]: https://img.shields.io/github/release/TheLuXoR/calendar-week-card.svg
-[github-downloads-img]: https://img.shields.io/github/downloads/TheLuXoR/calendar-week-card/total.svg
-[github-latest-downloads-img]: https://img.shields.io/github/downloads/TheLuXoR/calendar-week-card/latest/total.svg
-[github-release-url]: https://github.com/TheLuXoR/calendar-week-card/releases
