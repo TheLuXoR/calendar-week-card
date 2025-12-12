@@ -1226,11 +1226,10 @@ class CalendarWeekCard extends HTMLElement {
         this.config.colors = this.config.colors && typeof this.config.colors === "object" ? this.config.colors : {};
         this.config.hidden_entities = Array.isArray(this.config.hidden_entities) ? this.config.hidden_entities : [];
         if (typeof config.grid_options !== "object" || config.grid_options === null) {
-            config.grid_options = {};
-          }
-          if (typeof config.grid_options.rows !== "number") {
-            config.grid_options.rows = 6;
-          }
+            if (typeof config.grid_options.rows !== "number") {
+                config.grid_options.rows = 6;
+            }
+        }
 
 
         let storedLanguagePreference = null;
