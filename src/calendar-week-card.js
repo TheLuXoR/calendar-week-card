@@ -424,11 +424,10 @@ export class CalendarWeekCard extends HTMLElement {
 
     connectedCallback() {
         this.updateEditorPreviewState();
-        this.setupResizeObserver();
+        this.ensureHostSizing();
     }
 
     disconnectedCallback() {
-        this.teardownResizeObserver();
         if (this._systemThemeMedia && this._systemThemeListener) {
             if (typeof this._systemThemeMedia.removeEventListener === "function") {
                 this._systemThemeMedia.removeEventListener("change", this._systemThemeListener);
@@ -453,61 +452,12 @@ export class CalendarWeekCard extends HTMLElement {
         return !!this._isEditorPreview;
     }
 
-    setupResizeObserver() {
-        if (typeof ResizeObserver !== "function") {
-            return;
-        }
-
-        this.teardownResizeObserver();
-
-        this.resizeObserver = new ResizeObserver(() => {
-            this.applyContainerSizing();
-        });
-
-        this.resizeObserver.observe(this);
-        if (this.parentElement) {
-            this.resizeObserver.observe(this.parentElement);
-        }
-
-        this.applyContainerSizing();
-    }
-
-    teardownResizeObserver() {
-        if (this.resizeObserver && typeof this.resizeObserver.disconnect === "function") {
-            this.resizeObserver.disconnect();
-        }
-        this.resizeObserver = null;
-    }
-
-    applyContainerSizing() {
-        const parentRect = this.parentElement?.getBoundingClientRect?.();
-        const parentHeight = parentRect?.height || 0;
-
-        if (parentHeight > 0) {
-            this.style.height = "100%";
-            this.style.minHeight = `${parentHeight}px`;
-            this.style.alignSelf = "stretch";
-        }
-
-        const hostRect = this.getBoundingClientRect?.();
-        const hostHeight = hostRect?.height || parentHeight || 0;
-        const headerBar = this.shadowRoot?.querySelector(".header-bar");
-        const weekHeader = this.shadowRoot?.querySelector(".week-header");
-        const headerHeight = (headerBar?.getBoundingClientRect?.().height || headerBar?.offsetHeight || 0)
-            + (weekHeader?.getBoundingClientRect?.().height || weekHeader?.offsetHeight || 0);
-        const bodyTargetHeight = Math.max((parentHeight || hostHeight) - headerHeight, 0);
-
-        if (this.weekBody && bodyTargetHeight > 0) {
-            this.weekBody.style.minHeight = `${bodyTargetHeight}px`;
-            this.weekBody.style.height = `${bodyTargetHeight}px`;
-        }
-
-        if (Array.isArray(this.lastEvents) && this.lastEvents.length && this.dayColumns?.length) {
-            this.renderList(this.lastEvents);
-        } else {
-            this.buildTimeLabels();
-            this.updateTimeLine();
-        }
+    ensureHostSizing() {
+        this.style.height = "100%";
+        this.style.width = "100%";
+        this.style.minHeight = "0";
+        this.style.minWidth = "0";
+        this.style.alignSelf = "stretch";
     }
 
     refreshDisplay() {
@@ -900,7 +850,7 @@ export class CalendarWeekCard extends HTMLElement {
                 display: flex;
                 flex-direction: column;
                 height: 100%;
-                min-height: 100%;
+                min-height: 0;
                 width: 100%;
                 min-width: 0;
                 flex: 1 1 auto;
@@ -1029,7 +979,7 @@ export class CalendarWeekCard extends HTMLElement {
                 flex: 1;
                 display: flex;
                 width: 100%;
-                height: 100%;
+                height: auto;
                 overflow: hidden;
                 background: var(--cwc-week-bg);
                 min-height: 0;
@@ -1365,7 +1315,7 @@ export class CalendarWeekCard extends HTMLElement {
 
         this.refreshDisplay();
         setInterval(() => this.updateTimeLine(), 60000);
-        this.setupResizeObserver();
+        this.ensureHostSizing();
     }
 
     resetToCurrentWeek() {
