@@ -1367,8 +1367,11 @@ class CalendarWeekCard extends HTMLElement {
                 display: flex;
                 flex-direction: column;
                 height: 100%;
-                max-height: 100vh;
+                min-height: 100%;
                 width: 100%;
+                min-width: 0;
+                flex: 1 1 auto;
+                align-self: stretch;
                 box-sizing: border-box;
                 font-family: var(--primary-font-family, "Roboto", "Helvetica", sans-serif);
                 color: var(--cwc-primary-text, var(--primary-text-color, #1f1f1f));
