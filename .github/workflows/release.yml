@@ -80,5 +80,6 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.new }}
           release_name: ${{ steps.version.outputs.new }}
+          files: dist/calendar-week-card.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
