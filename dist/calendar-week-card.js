@@ -744,6 +744,7 @@ class CalendarWeekCard extends HTMLElement {
         this.inlineNoCalendarsContainer = null;
         this._isEditorPreview = false;
         this._refreshCalendarsPromise = undefined;
+        this.resizeObserver = null;
     }
     resolveLanguage(preference) {
         return resolveLanguage(preference, {
@@ -950,6 +951,7 @@ class CalendarWeekCard extends HTMLElement {
 
     connectedCallback() {
         this.updateEditorPreviewState();
+        this.ensureHostSizing();
     }
 
     disconnectedCallback() {
@@ -975,6 +977,14 @@ class CalendarWeekCard extends HTMLElement {
 
     isEditorPreview() {
         return !!this._isEditorPreview;
+    }
+
+    ensureHostSizing() {
+        this.style.height = "100%";
+        this.style.width = "100%";
+        this.style.minHeight = "0";
+        this.style.minWidth = "0";
+        this.style.alignSelf = "stretch";
     }
 
     refreshDisplay() {
@@ -1367,8 +1377,11 @@ class CalendarWeekCard extends HTMLElement {
                 display: flex;
                 flex-direction: column;
                 height: 100%;
-                max-height: 100vh;
+                min-height: 0;
                 width: 100%;
+                min-width: 0;
+                flex: 1 1 auto;
+                align-self: stretch;
                 box-sizing: border-box;
                 font-family: var(--primary-font-family, "Roboto", "Helvetica", sans-serif);
                 color: var(--cwc-primary-text, var(--primary-text-color, #1f1f1f));
@@ -1829,6 +1842,7 @@ class CalendarWeekCard extends HTMLElement {
 
         this.refreshDisplay();
         setInterval(() => this.updateTimeLine(), 60000);
+        this.ensureHostSizing();
     }
 
     resetToCurrentWeek() {
