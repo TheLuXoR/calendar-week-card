@@ -979,7 +979,7 @@ export class CalendarWeekCard extends HTMLElement {
                 flex: 1;
                 display: flex;
                 width: 100%;
-                height: auto;
+                height: 100%;
                 overflow: hidden;
                 background: var(--cwc-week-bg);
                 min-height: 0;
