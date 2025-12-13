@@ -2962,7 +2962,20 @@ export class CalendarWeekCard extends HTMLElement {
     }
 
     getCardSize() {
-        return 3;
+        const measuredHeight = typeof this.getBoundingClientRect === "function"
+            ? this.getBoundingClientRect().height
+            : 0;
+
+        if (measuredHeight > 0) {
+            return Math.ceil(measuredHeight / 50);
+        }
+
+        const configuredRows = this?.config?.grid_options?.rows;
+        if (typeof configuredRows === "number") {
+            return configuredRows;
+        }
+
+        return 6;
     }
 
     static getStubConfig(hass) {
