@@ -745,6 +745,11 @@ class CalendarWeekCard extends HTMLElement {
         this._isEditorPreview = false;
         this._refreshCalendarsPromise = undefined;
     }
+    getLayoutOptions() {
+        return {
+            grid_rows: 4,
+        };
+    }
     resolveLanguage(preference) {
         return resolveLanguage(preference, {
             fallback: FALLBACK_LANGUAGE,
@@ -3482,7 +3487,7 @@ class CalendarWeekCard extends HTMLElement {
     }
 
     getCardSize() {
-        return 3;
+        return 20;
     }
 
     static getStubConfig(hass) {
