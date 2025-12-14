@@ -218,6 +218,11 @@ export class CalendarWeekCard extends HTMLElement {
         this._isEditorPreview = false;
         this._refreshCalendarsPromise = undefined;
     }
+    getLayoutOptions() {
+        return {
+            grid_rows: 4,
+        };
+    }
     resolveLanguage(preference) {
         return resolveLanguage(preference, {
             fallback: FALLBACK_LANGUAGE,
@@ -698,13 +703,6 @@ export class CalendarWeekCard extends HTMLElement {
         this.config = structuredClone(rawConfig) || {};
         this.config.colors = this.config.colors && typeof this.config.colors === "object" ? this.config.colors : {};
         this.config.hidden_entities = Array.isArray(this.config.hidden_entities) ? this.config.hidden_entities : [];
-        if (typeof config.grid_options !== "object" || config.grid_options === null) {
-            config.grid_options = {};
-        }
-        if (typeof config.grid_options.rows !== "number") {
-            config.grid_options.rows = 6;
-        }
-
 
         let storedLanguagePreference = null;
         try {
@@ -2962,7 +2960,7 @@ export class CalendarWeekCard extends HTMLElement {
     }
 
     getCardSize() {
-        return 3;
+        return 20;
     }
 
     static getStubConfig(hass) {
