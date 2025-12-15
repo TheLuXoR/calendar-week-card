@@ -2520,7 +2520,7 @@ class CalendarWeekCard extends HTMLElement {
 
         viewportHeight = Math.max(viewportHeight, rawVisibleDuration);
         if (maxViewportHeight && maxViewportHeight > 0) {
-            const availableHeight = Math.max(maxViewportHeight - headerHeight, 0);
+            const availableHeight = Math.max(maxViewportHeight - headerHeight - this.columnPaddingTop - this.columnPaddingBottom, 0);
             if (availableHeight > 0) {
                 viewportHeight = Math.min(viewportHeight, availableHeight);
             }
