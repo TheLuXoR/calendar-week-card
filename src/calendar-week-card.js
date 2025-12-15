@@ -835,15 +835,11 @@ export class CalendarWeekCard extends HTMLElement {
         this.shadowRoot.innerHTML = `
         <style>
             :host {
-                display: flex;
-                flex-direction: column;
-                height: 100%;
-                max-height: 100vh;
+                display: block;
                 width: 100%;
                 box-sizing: border-box;
                 font-family: var(--primary-font-family, "Roboto", "Helvetica", sans-serif);
                 color: var(--cwc-primary-text, var(--primary-text-color, #1f1f1f));
-                overflow: hidden;
                 background: var(--cwc-background, var(--card-background-color, #ffffff));
                 --cwc-primary-text: var(--primary-text-color, #1f1f1f);
                 --cwc-secondary-text: var(--secondary-text-color, #5f6368);
@@ -868,6 +864,7 @@ export class CalendarWeekCard extends HTMLElement {
                 --cwc-dialog-muted: #555555;
                 --cwc-dialog-divider: rgba(0, 0, 0, 0.08);
                 --cwc-today-glow: rgba(77, 150, 255, 0.18);
+                --cwc-viewport-height: 480px;
             }
             :host(.theme-dark) {
                 --cwc-primary-text: #f5f7ff;
@@ -961,13 +958,11 @@ export class CalendarWeekCard extends HTMLElement {
                 color: inherit;
             }
             .week-body {
-                flex: 1;
                 display: flex;
                 width: 100%;
-                height: 100%;
-                overflow: hidden;
                 background: var(--cwc-week-bg);
-                min-height: 0;
+                min-height: var(--cwc-viewport-height);
+                gap: 0;
             }
             .time-bar {
                 position: relative;
@@ -976,8 +971,8 @@ export class CalendarWeekCard extends HTMLElement {
                 font-size: 11px;
                 background: var(--cwc-timebar-bg);
                 flex-shrink: 0;
-                overflow: hidden;
-                min-height: 0;
+                overflow: visible;
+                min-height: var(--cwc-viewport-height);
             }
             .hour-label {
                 position: absolute;
@@ -991,11 +986,10 @@ export class CalendarWeekCard extends HTMLElement {
                 flex: 1;
                 display: grid;
                 grid-template-columns: repeat(7, 1fr);
-                height: 100%;
                 width: 100%;
                 overflow: visible;
                 background: var(--cwc-week-bg);
-                min-height: 50px;
+                min-height: var(--cwc-viewport-height);
             }
             .day-column {
                 position: relative;
@@ -1040,14 +1034,13 @@ export class CalendarWeekCard extends HTMLElement {
                 position: relative;
                 flex: 1;
                 width: 100%;
-                min-height: 0;
+                min-height: var(--cwc-viewport-height);
                 overflow: visible;
             }
             .timed-events {
                 position: relative;
                 width: 100%;
-                height: 100%;
-                min-height: 0;
+                min-height: var(--cwc-viewport-height);
                 z-index: 1;
             }
             .event {
@@ -1353,8 +1346,9 @@ export class CalendarWeekCard extends HTMLElement {
     buildTimeLabels() {
         if (!this.timeBar) return;
         this.timeBar.innerHTML = "";
-        this.timeBar.style.minHeight = "";
-        this.timeBar.style.height = "100%";
+        const paddedHeight = this.timeViewportHeight + this.columnPaddingTop + this.columnPaddingBottom;
+        this.timeBar.style.minHeight = `${paddedHeight}px`;
+        this.timeBar.style.height = `${paddedHeight}px`;
         this.timeBar.style.paddingTop = `${this.columnPaddingTop}px`;
         this.timeBar.style.paddingBottom = `${this.columnPaddingBottom}px`;
         const visibleStart = this.visibleStartMinute || 0;
@@ -1749,6 +1743,26 @@ export class CalendarWeekCard extends HTMLElement {
 
         this.allDayBandHeight = 0;
         this.updateTimeMetrics();
+        const paddedViewportHeight = this.timeViewportHeight + this.columnPaddingTop + this.columnPaddingBottom;
+        if (this.weekBody) {
+            this.weekBody.style.minHeight = `${paddedViewportHeight}px`;
+        }
+        if (this.grid) {
+            this.grid.style.minHeight = `${paddedViewportHeight}px`;
+        }
+        this.dayColumns?.forEach(column => {
+            const timedViewport = column.querySelector(".timed-viewport");
+            const timedEvents = column.querySelector(".timed-events");
+            if (timedViewport) {
+                timedViewport.style.minHeight = `${paddedViewportHeight}px`;
+                timedViewport.style.height = `${paddedViewportHeight}px`;
+                timedViewport.style.paddingTop = `${this.columnPaddingTop}px`;
+                timedViewport.style.paddingBottom = `${this.columnPaddingBottom}px`;
+            }
+            if (timedEvents) {
+                timedEvents.style.minHeight = `${paddedViewportHeight}px`;
+            }
+        });
 
         const highlightEnabled = this.config.highlight_today !== false;
         const highlightEdgeColor = this.getHexColor(this.config.today_highlight_color || "#4D96FF");
@@ -1943,7 +1957,12 @@ export class CalendarWeekCard extends HTMLElement {
     }
 
     updateTimeMetrics() {
-        const fallbackViewport = Math.max(this.clientHeight || 0, this.grid?.clientHeight || 0, 480);
+        const totalMinutes = 24 * 60;
+        const rawVisibleDuration = Math.max(
+            (this.visibleEndMinute || totalMinutes) - (this.visibleStartMinute || 0),
+            1
+        );
+        const fallbackViewport = Math.max(this.clientHeight || 0, this.grid?.clientHeight || 0, rawVisibleDuration, 480);
         const firstViewport = this.dayColumns?.[0]?.querySelector(".timed-viewport");
         let viewportHeight = firstViewport?.clientHeight || firstViewport?.offsetHeight || 0;
 
@@ -1967,9 +1986,9 @@ export class CalendarWeekCard extends HTMLElement {
             viewportHeight = fallbackViewport;
         }
 
+        viewportHeight = Math.max(viewportHeight, rawVisibleDuration);
         this.timeViewportHeight = viewportHeight;
         const effectiveHeight = Math.max(viewportHeight, 24);
-        const totalMinutes = 24 * 60;
         const visibleStart = Math.max(0, Math.min(Number(this.visibleStartMinute) || 0, totalMinutes - 1));
         const visibleEnd = Math.max(visibleStart + 1, Math.min(Number(this.visibleEndMinute) || totalMinutes, totalMinutes));
         const visibleDuration = Math.max(visibleEnd - visibleStart, 1);
@@ -1977,6 +1996,8 @@ export class CalendarWeekCard extends HTMLElement {
         this.visibleEndMinute = visibleEnd;
         this.pixelsPerMinute = effectiveHeight / visibleDuration;
         this.timeAxisOffset = this.columnPaddingTop - visibleStart * this.pixelsPerMinute;
+        const paddedViewportHeight = viewportHeight + this.columnPaddingTop + this.columnPaddingBottom;
+        this.style.setProperty("--cwc-viewport-height", `${paddedViewportHeight}px`);
     }
 
     colorWithAlpha(color, alpha = 1) {
@@ -2960,7 +2981,21 @@ export class CalendarWeekCard extends HTMLElement {
     }
 
     getCardSize() {
-        return 20;
+        const header = this.shadowRoot?.querySelector(".header-bar");
+        const body = this.shadowRoot?.querySelector(".week-body");
+        const inlineEmpty = this.shadowRoot?.querySelector(".no-calendars-inline");
+        const headerHeight = header?.scrollHeight || header?.clientHeight || 0;
+        const bodyHeight = body?.scrollHeight || body?.clientHeight || 0;
+        const emptyHeight = inlineEmpty && !inlineEmpty.hidden ? (inlineEmpty.scrollHeight || inlineEmpty.clientHeight || 0) : 0;
+        const measured = headerHeight + Math.max(bodyHeight, emptyHeight);
+        if (measured > 0) {
+            return Math.ceil(measured / 50);
+        }
+
+        const totalMinutes = 24 * 60;
+        const visibleDuration = Math.max((this.visibleEndMinute || totalMinutes) - (this.visibleStartMinute || 0), 1);
+        const estimatedHeight = Math.max(this.timeViewportHeight || visibleDuration, 480);
+        return Math.ceil(estimatedHeight / 50);
     }
 
     static getStubConfig(hass) {
