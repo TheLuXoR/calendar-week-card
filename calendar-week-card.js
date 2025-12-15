@@ -2492,6 +2492,11 @@ class CalendarWeekCard extends HTMLElement {
         const fallbackViewport = Math.max(this.clientHeight || 0, this.grid?.clientHeight || 0, rawVisibleDuration, 480);
         const firstViewport = this.dayColumns?.[0]?.querySelector(".timed-viewport");
         let viewportHeight = firstViewport?.clientHeight || firstViewport?.offsetHeight || 0;
+        const headerHeight = this.shadowRoot?.querySelector(".header-bar")?.getBoundingClientRect?.()?.height ||
+            this.shadowRoot?.querySelector(".header-bar")?.offsetHeight || 0;
+        const root = typeof document !== "undefined" ? document.getElementById("root") : null;
+        const rootRect = root?.getBoundingClientRect?.();
+        const maxViewportHeight = rootRect?.height || root?.clientHeight || root?.offsetHeight || null;
 
         if (!viewportHeight && this.grid) {
             const rect = this.grid.getBoundingClientRect();
@@ -2514,6 +2519,12 @@ class CalendarWeekCard extends HTMLElement {
         }
 
         viewportHeight = Math.max(viewportHeight, rawVisibleDuration);
+        if (maxViewportHeight && maxViewportHeight > 0) {
+            const availableHeight = Math.max(maxViewportHeight - headerHeight, 0);
+            if (availableHeight > 0) {
+                viewportHeight = Math.min(viewportHeight, availableHeight);
+            }
+        }
         this.timeViewportHeight = viewportHeight;
         const effectiveHeight = Math.max(viewportHeight, 24);
         const visibleStart = Math.max(0, Math.min(Number(this.visibleStartMinute) || 0, totalMinutes - 1));
