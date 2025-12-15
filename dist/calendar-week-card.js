@@ -1418,6 +1418,15 @@ class CalendarWeekCard extends HTMLElement {
                 --cwc-dialog-divider: rgba(255, 255, 255, 0.12);
                 --cwc-today-glow: rgba(77, 150, 255, 0.35);
             }
+            .card-root {
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                width: 100%;
+                height: 100%;
+                max-height: 100%;
+                box-sizing: border-box;
+            }
             .header-bar {
                 display: flex;
                 align-items: center;
@@ -1487,6 +1496,7 @@ class CalendarWeekCard extends HTMLElement {
             .week-body {
                 display: flex;
                 width: 100%;
+                flex: 1 1 auto;
                 background: var(--cwc-week-bg);
                 min-height: var(--cwc-viewport-height);
                 gap: 0;
@@ -1777,27 +1787,30 @@ class CalendarWeekCard extends HTMLElement {
             }
         </style>
 
-        <div class="header-bar">
-          <div class="nav-buttons">
-            <button class="prev-week">◀</button>
-            <button class="today"></button>
-            <button class="next-week">▶</button>
-          </div>
-          <h3 class="title-line"></h3>
-          <span class="settings-icon">⚙️</span>
-        </div>
-
-        <div class="week-header"></div>
-
-        <div class="week-body">
-            <div class="time-bar"></div>
-            <div class="week-grid">
-                ${[...Array(7)].map(() => `<div class="day-column"></div>`).join("")}
+        <div class="card-root">
+            <div class="header-bar">
+              <div class="nav-buttons">
+                <button class="prev-week">◀</button>
+                <button class="today"></button>
+                <button class="next-week">▶</button>
+              </div>
+              <h3 class="title-line"></h3>
+              <span class="settings-icon">⚙️</span>
             </div>
+
+            <div class="week-header"></div>
+
+            <div class="week-body">
+                <div class="time-bar"></div>
+                <div class="week-grid">
+                    ${[...Array(7)].map(() => `<div class="day-column"></div>`).join("")}
+                </div>
+            </div>
+            <div class="no-calendars-inline" hidden></div>
         </div>
-        <div class="no-calendars-inline" hidden></div>
         `;
 
+        this.cardRoot = this.shadowRoot.querySelector(".card-root");
         this.grid = this.shadowRoot.querySelector(".week-grid");
         this.timeBar = this.shadowRoot.querySelector(".time-bar");
         this.header = this.shadowRoot.querySelector(".week-header");
@@ -2496,7 +2509,10 @@ class CalendarWeekCard extends HTMLElement {
             this.shadowRoot?.querySelector(".header-bar")?.offsetHeight || 0;
         const root = typeof document !== "undefined" ? document.getElementById("root") : null;
         const rootRect = root?.getBoundingClientRect?.();
-        const maxViewportHeight = rootRect?.height || root?.clientHeight || root?.offsetHeight || null;
+        const rootHeight = rootRect?.height || root?.clientHeight || root?.offsetHeight || null;
+        const containerHeight = this.cardRoot?.getBoundingClientRect?.()?.height || this.cardRoot?.clientHeight ||
+            this.cardRoot?.offsetHeight || null;
+        const maxViewportHeight = rootHeight || containerHeight || null;
 
         if (!viewportHeight && this.grid) {
             const rect = this.grid.getBoundingClientRect();
@@ -2523,6 +2539,15 @@ class CalendarWeekCard extends HTMLElement {
             const availableHeight = Math.max(maxViewportHeight - headerHeight - this.columnPaddingTop - this.columnPaddingBottom, 0);
             if (availableHeight > 0) {
                 viewportHeight = Math.min(viewportHeight, availableHeight);
+            }
+        }
+        if (this.cardRoot) {
+            if (maxViewportHeight && maxViewportHeight > 0) {
+                this.cardRoot.style.height = `${maxViewportHeight}px`;
+                this.cardRoot.style.maxHeight = `${maxViewportHeight}px`;
+            } else {
+                this.cardRoot.style.removeProperty("height");
+                this.cardRoot.style.removeProperty("max-height");
             }
         }
         this.timeViewportHeight = viewportHeight;
