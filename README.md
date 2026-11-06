@@ -1,11 +1,11 @@
 # Calendar Week Card
 ![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange)
-![stars](https://img.shields.io/github/stars/TheLuXoR/calendar-week-card)
 ![license](https://img.shields.io/github/license/TheLuXoR/calendar-week-card)
-
-![downloads total](https://img.shields.io/github/downloads/TheLuXoR/calendar-week-card/total.svg)
 ![downloads@latest](https://img.shields.io/github/downloads/TheLuXoR/calendar-week-card/latest/total.svg)
+![downloads total](https://img.shields.io/github/downloads/TheLuXoR/calendar-week-card/total.svg)
+![stars](https://img.shields.io/github/stars/TheLuXoR/calendar-week-card)
 ![issues](https://img.shields.io/github/issues/TheLuXoR/calendar-week-card)
+
 
 
 
