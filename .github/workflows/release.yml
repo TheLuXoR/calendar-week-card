@@ -76,10 +76,9 @@ jobs:
 
       - name: Create Release
         if: ${{ steps.version.outputs.new != 'none' }}
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.version.outputs.new }}
-          release_name: ${{ steps.version.outputs.new }}
+          name: ${{ steps.version.outputs.new }}
           files: dist/calendar-week-card.js
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_unmatched_files: true
