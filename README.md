@@ -145,6 +145,9 @@ Every option that is available in the in-card settings dialog can also be contro
 | `hidden_entities` | list | `[]` | Calendars that should start hidden. When provided, this list takes precedence over any per-browser visibility stored from the dialog. |
 | `language` | string | `system` | Locale used for all labels. Use `system` or one of the supported language codes (see `src/localization.js`). |
 | `theme` | string | `system` | Force the light or dark theme (`light`, `dark`, or `system`). YAML values override the per-browser theme preference. |
+| `view_mode` | string | `week` | Use `week` for the current Monday–Sunday week or `rolling` to start the range with today. |
+| `days_to_show` | integer | `7` | Number of days displayed in rolling mode. Values are limited to 3–10. |
+| `height` | CSS length | parent height | Optional card height for non-panel layouts, for example `500px`, `70vh`, or `calc(100vh - 64px)`. Numbers require a CSS unit. |
 | `trim_unused_hours` | boolean | `false` | When `true`, collapses empty time slots outside the hours that contain events. |
 | `highlight_today` | boolean | `true` | Toggle the highlight around the current day column. |
 | `today_highlight_color` | string | `#4D96FF` | Color used for the “today” highlight. Accepts hex or CSS color strings. YAML value wins over any color picked in the dialog. |
@@ -155,6 +158,8 @@ Every option that is available in the in-card settings dialog can also be contro
 type: custom:calendar-week-card
 language: de
 theme: dark
+view_mode: rolling
+days_to_show: 7
 trim_unused_hours: true
 highlight_today: true
 today_highlight_color: '#3366ff'
@@ -166,6 +171,22 @@ colors:
 hidden_entities:
   - calendar.holidays
 ```
+
+### Use inside a stack or other non-panel layout
+
+Panel mode supplies a height to the card automatically. In a vertical stack, masonry view, or other content-sized layout, set `height` directly on the calendar card so the timeline has a defined area:
+
+```yaml
+type: vertical-stack
+cards:
+  - type: custom:calendar-week-card
+    height: 500px
+    entities:
+      - calendar.calendar1
+      - calendar.calendar2
+```
+
+Leave `height` unset in panel mode to keep the existing parent-controlled sizing. Existing `card_mod` height rules remain supported.
 
 ## Development
 
