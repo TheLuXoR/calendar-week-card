@@ -2,9 +2,11 @@ name: Validate and Auto Release
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
+  workflow_dispatch:
   schedule:
-    - cron: "0 0 * * 0" # weekly check
+    - cron: "0 0 * * 0"
 
 permissions:
   contents: write
