@@ -32,6 +32,9 @@ All values that can be changed in the settings dialog can also be defined in YAM
 | `hidden_entities` | list | `[]` | Calendars that should start hidden. Overrides stored visibility. |
 | `language` | string | `system` | Language for labels (`system` or a supported language code). |
 | `theme` | string | `system` | Force `light`, `dark`, or `system` theme. |
+| `view_mode` | string | `week` | Use `week` for the current Monday–Sunday week or `rolling` to start with today. |
+| `days_to_show` | integer | `7` | Number of days displayed in rolling mode, from 3 to 10. |
+| `height` | CSS length | parent height | Optional height for non-panel layouts, such as `500px`, `70vh`, or `calc(100vh - 64px)`. |
 | `trim_unused_hours` | boolean | `false` | Collapse empty time ranges when `true`. |
 | `highlight_today` | boolean | `true` | Enable or disable the today highlight. |
 | `today_highlight_color` | string | `#4D96FF` | Override the color of the today highlight. |
@@ -42,6 +45,8 @@ Example:
 type: custom:calendar-week-card
 language: fr
 theme: light
+view_mode: rolling
+days_to_show: 7
 trim_unused_hours: true
 today_highlight_color: '#3a7bff'
 hidden_entities:
@@ -49,3 +54,14 @@ hidden_entities:
 colors:
   calendar.family: '#ff9f1c'
 ```
+
+When the card is inside a stack or another content-sized layout, give the timeline an explicit height without `card_mod`:
+
+```yaml
+type: vertical-stack
+cards:
+  - type: custom:calendar-week-card
+    height: 500px
+```
+
+Leave `height` unset in panel mode to keep parent-controlled sizing.
