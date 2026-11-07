@@ -29,10 +29,13 @@ const TRANSLATIONS = {
         themeLight: "Light",
         themeDark: "Dark",
         resetData: "Reset stored data",
-        resetDataDescription: "Remove saved colors, language, highlight, and theme preferences.",
+        resetDataDescription: "Remove saved colors, language, view, highlight, and theme preferences.",
         resetConfirmation: "Clear stored calendar settings? This cannot be undone.",
         trimUnusedHours: "Trim blank hours",
         trimUnusedHoursDescription: "Hide early and late hours without events.",
+        rollingView: "Show upcoming days",
+        rollingViewDescription: "Start with today instead of the current Monday–Sunday week.",
+        daysToShow: "Days to show",
         noCalendarsTitle: "No calendars found",
         noCalendarsDescription: "Home Assistant has not registered any calendar entities yet, so the card has nothing to display.",
         noCalendarsStepsIntro: "To fix this, please:",
@@ -45,6 +48,10 @@ const TRANSLATIONS = {
         noCalendarsRefresh: "Check again",
         noCalendarsSettingsHint: "You can set up this card from its own settings dialog. Use the gear icon in the header once Home Assistant finds calendars.",
         pickerLanguageHelper: "Use the same language as Home Assistant or pick one of the available translations.",
+        pickerLayoutTitle: "Layout",
+        pickerHeightLabel: "Card height",
+        pickerHeightHelper: "Optional CSS height such as 500px, 70vh, or calc(100vh - 64px). Leave empty to use the parent height.",
+        pickerHeightInvalid: "Enter a valid CSS height with units, for example 500px.",
         pickerCalendarsTitle: "Calendars to include",
         pickerCalendarsDescription: "Toggle which calendars should appear in this card.",
         pickerCalendarsEmpty: "Home Assistant has not provided any calendars yet. Open Settings → Devices & Services → Integrations to add one or read the setup guide in the documentation for detailed steps.",
@@ -75,10 +82,13 @@ const TRANSLATIONS = {
         themeLight: "Hell",
         themeDark: "Dunkel",
         resetData: "Gespeicherte Daten zurücksetzen",
-        resetDataDescription: "Entfernt gespeicherte Farben, Sprache, Hervorhebung und Theme-Einstellungen.",
+        resetDataDescription: "Entfernt gespeicherte Farben, Sprache, Ansicht, Hervorhebung und Theme-Einstellungen.",
         resetConfirmation: "Gespeicherte Kalender-Einstellungen wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
         trimUnusedHours: "Unbenutzte Randstunden kürzen",
         trimUnusedHoursDescription: "Blendet frühe und späte Stunden ohne Termine aus.",
+        rollingView: "Kommende Tage anzeigen",
+        rollingViewDescription: "Beginnt mit heute statt mit der aktuellen Woche von Montag bis Sonntag.",
+        daysToShow: "Anzahl der Tage",
         noCalendarsTitle: "Keine Kalender gefunden",
         noCalendarsDescription: "Home Assistant hat noch keine Kalender-Entitäten registriert, daher kann die Karte nichts anzeigen.",
         noCalendarsStepsIntro: "So löst du das Problem:",
@@ -91,6 +101,10 @@ const TRANSLATIONS = {
         noCalendarsRefresh: "Erneut prüfen",
         noCalendarsSettingsHint: "Du kannst die Karte über ihren eigenen Einstellungsdialog einrichten. Nutze das Zahnradsymbol in der Kopfzeile, sobald Home Assistant Kalender findet.",
         pickerLanguageHelper: "Nutze dieselbe Sprache wie Home Assistant oder wähle eine der verfügbaren Übersetzungen.",
+        pickerLayoutTitle: "Layout",
+        pickerHeightLabel: "Kartenhöhe",
+        pickerHeightHelper: "Optionale CSS-Höhe wie 500px, 70vh oder calc(100vh - 64px). Leer lassen, um die Höhe des Elternelements zu verwenden.",
+        pickerHeightInvalid: "Gib eine gültige CSS-Höhe mit Einheit ein, zum Beispiel 500px.",
         pickerCalendarsTitle: "Anzuzeigende Kalender",
         pickerCalendarsDescription: "Wähle, welche Kalender in dieser Karte erscheinen sollen.",
         pickerCalendarsEmpty: "Home Assistant hat noch keine Kalender bereitgestellt. Öffne Einstellungen → Geräte & Dienste → Integrationen, um einen hinzuzufügen, oder lies die Setup-Anleitung in der Dokumentation.",
@@ -121,10 +135,13 @@ const TRANSLATIONS = {
         themeLight: "Clair",
         themeDark: "Sombre",
         resetData: "Réinitialiser les données enregistrées",
-        resetDataDescription: "Supprime les couleurs, la langue, la mise en évidence et le thème sauvegardés.",
+        resetDataDescription: "Supprime les couleurs, la langue, l’affichage, la mise en évidence et le thème sauvegardés.",
         resetConfirmation: "Effacer les paramètres enregistrés du calendrier ? Cette action est irréversible.",
         trimUnusedHours: "Réduire les heures vides",
         trimUnusedHoursDescription: "Masque les heures matinales et tardives sans événements.",
+        rollingView: "Afficher les jours à venir",
+        rollingViewDescription: "Commence aujourd’hui au lieu d’afficher la semaine actuelle du lundi au dimanche.",
+        daysToShow: "Nombre de jours",
         noCalendarsTitle: "Aucun calendrier trouvé",
         noCalendarsDescription: "Home Assistant n'a pas encore enregistré d'entités de calendrier, la carte ne peut donc rien afficher.",
         noCalendarsStepsIntro: "Pour résoudre le problème :",
@@ -137,6 +154,10 @@ const TRANSLATIONS = {
         noCalendarsRefresh: "Vérifier à nouveau",
         noCalendarsSettingsHint: "Vous pouvez configurer cette carte via sa propre fenêtre de paramètres. Utilisez l'icône d'engrenage dans l'en-tête dès que Home Assistant détecte des calendriers.",
         pickerLanguageHelper: "Utilisez la même langue que Home Assistant ou choisissez l'une des traductions disponibles.",
+        pickerLayoutTitle: "Mise en page",
+        pickerHeightLabel: "Hauteur de la carte",
+        pickerHeightHelper: "Hauteur CSS facultative, par exemple 500px, 70vh ou calc(100vh - 64px). Laissez vide pour utiliser la hauteur du conteneur parent.",
+        pickerHeightInvalid: "Saisissez une hauteur CSS valide avec une unité, par exemple 500px.",
         pickerCalendarsTitle: "Calendriers à inclure",
         pickerCalendarsDescription: "Activez les calendriers qui doivent apparaître dans cette carte.",
         pickerCalendarsEmpty: "Home Assistant n'a pas encore fourni de calendriers. Ouvrez Paramètres → Appareils et services → Intégrations pour en ajouter un ou consultez le guide d'installation dans la documentation.",
@@ -167,10 +188,13 @@ const TRANSLATIONS = {
         themeLight: "Claro",
         themeDark: "Oscuro",
         resetData: "Restablecer datos guardados",
-        resetDataDescription: "Elimina los colores, el idioma, el resaltado y el tema guardados.",
+        resetDataDescription: "Elimina los colores, el idioma, la vista, el resaltado y el tema guardados.",
         resetConfirmation: "¿Borrar la configuración guardada del calendario? Esta acción no se puede deshacer.",
         trimUnusedHours: "Recortar horas vacías",
         trimUnusedHoursDescription: "Oculta las horas tempranas y tardías sin eventos.",
+        rollingView: "Mostrar los próximos días",
+        rollingViewDescription: "Empieza hoy en lugar de mostrar la semana actual de lunes a domingo.",
+        daysToShow: "Días para mostrar",
         noCalendarsTitle: "No se encontraron calendarios",
         noCalendarsDescription: "Home Assistant todavía no ha registrado entidades de calendario, por lo que la tarjeta no puede mostrar nada.",
         noCalendarsStepsIntro: "Para solucionarlo:",
@@ -183,6 +207,10 @@ const TRANSLATIONS = {
         noCalendarsRefresh: "Volver a comprobar",
         noCalendarsSettingsHint: "Puedes configurar esta tarjeta desde su propio cuadro de configuración. Usa el icono de engranaje en el encabezado cuando Home Assistant encuentre calendarios.",
         pickerLanguageHelper: "Usa el mismo idioma que Home Assistant o elige una de las traducciones disponibles.",
+        pickerLayoutTitle: "Diseño",
+        pickerHeightLabel: "Altura de la tarjeta",
+        pickerHeightHelper: "Altura CSS opcional, como 500px, 70vh o calc(100vh - 64px). Déjalo vacío para usar la altura del contenedor padre.",
+        pickerHeightInvalid: "Introduce una altura CSS válida con unidad, por ejemplo 500px.",
         pickerCalendarsTitle: "Calendarios a incluir",
         pickerCalendarsDescription: "Activa los calendarios que deben mostrarse en esta tarjeta.",
         pickerCalendarsEmpty: "Home Assistant todavía no ha proporcionado calendarios. Abre Ajustes → Dispositivos y servicios → Integraciones para añadir uno o consulta la guía de configuración en la documentación.",
@@ -213,10 +241,13 @@ const TRANSLATIONS = {
         themeLight: "Chiaro",
         themeDark: "Scuro",
         resetData: "Reimposta i dati salvati",
-        resetDataDescription: "Rimuove colori, lingua, evidenziazione e tema salvati.",
+        resetDataDescription: "Rimuove colori, lingua, vista, evidenziazione e tema salvati.",
         resetConfirmation: "Eliminare le impostazioni salvate del calendario? L'operazione è irreversibile.",
         trimUnusedHours: "Riduci ore vuote",
         trimUnusedHoursDescription: "Nasconde le ore mattutine e serali senza eventi.",
+        rollingView: "Mostra i prossimi giorni",
+        rollingViewDescription: "Inizia da oggi invece di mostrare la settimana corrente da lunedì a domenica.",
+        daysToShow: "Giorni da mostrare",
         noCalendarsTitle: "Nessun calendario trovato",
         noCalendarsDescription: "Home Assistant non ha ancora registrato entità calendario, quindi la scheda non può mostrare nulla.",
         noCalendarsStepsIntro: "Per risolvere:",
@@ -229,6 +260,10 @@ const TRANSLATIONS = {
         noCalendarsRefresh: "Controlla di nuovo",
         noCalendarsSettingsHint: "Puoi configurare questa card dalla sua finestra di impostazioni. Usa l'icona a forma di ingranaggio nell'intestazione quando Home Assistant trova i calendari.",
         pickerLanguageHelper: "Usa la stessa lingua di Home Assistant oppure scegli una delle traduzioni disponibili.",
+        pickerLayoutTitle: "Layout",
+        pickerHeightLabel: "Altezza della card",
+        pickerHeightHelper: "Altezza CSS facoltativa, ad esempio 500px, 70vh o calc(100vh - 64px). Lascia vuoto per usare l'altezza del contenitore padre.",
+        pickerHeightInvalid: "Inserisci un'altezza CSS valida con un'unità, ad esempio 500px.",
         pickerCalendarsTitle: "Calendari da includere",
         pickerCalendarsDescription: "Attiva i calendari che devono comparire in questa card.",
         pickerCalendarsEmpty: "Home Assistant non ha ancora fornito calendari. Apri Impostazioni → Dispositivi e servizi → Integrazioni per aggiungerne uno oppure leggi la guida di configurazione nella documentazione.",
@@ -259,10 +294,13 @@ const TRANSLATIONS = {
         themeLight: "Licht",
         themeDark: "Donker",
         resetData: "Opgeslagen gegevens resetten",
-        resetDataDescription: "Verwijdert opgeslagen kleuren, taal, markering en thema-instellingen.",
+        resetDataDescription: "Verwijdert opgeslagen kleuren, taal, weergave, markering en thema-instellingen.",
         resetConfirmation: "Opgeslagen kalenderinstellingen wissen? Dit kan niet ongedaan worden gemaakt.",
         trimUnusedHours: "Lege uren inkorten",
         trimUnusedHoursDescription: "Verbergt vroege en late uren zonder afspraken.",
+        rollingView: "Komende dagen tonen",
+        rollingViewDescription: "Begint met vandaag in plaats van de huidige week van maandag tot en met zondag.",
+        daysToShow: "Aantal dagen",
         noCalendarsTitle: "Geen agenda's gevonden",
         noCalendarsDescription: "Home Assistant heeft nog geen agenda-entiteiten geregistreerd, waardoor de kaart niets kan tonen.",
         noCalendarsStepsIntro: "Los dit op door het volgende te doen:",
@@ -275,6 +313,10 @@ const TRANSLATIONS = {
         noCalendarsRefresh: "Opnieuw controleren",
         noCalendarsSettingsHint: "Je kunt de kaart instellen via het eigen instellingenvenster. Gebruik het tandwiel in de kop zodra Home Assistant agenda's vindt.",
         pickerLanguageHelper: "Gebruik dezelfde taal als Home Assistant of kies een van de beschikbare vertalingen.",
+        pickerLayoutTitle: "Indeling",
+        pickerHeightLabel: "Kaarthoogte",
+        pickerHeightHelper: "Optionele CSS-hoogte, zoals 500px, 70vh of calc(100vh - 64px). Laat leeg om de hoogte van het bovenliggende element te gebruiken.",
+        pickerHeightInvalid: "Voer een geldige CSS-hoogte met eenheid in, bijvoorbeeld 500px.",
         pickerCalendarsTitle: "Kalenders om te tonen",
         pickerCalendarsDescription: "Schakel in welke kalenders in deze kaart moeten verschijnen.",
         pickerCalendarsEmpty: "Home Assistant heeft nog geen kalenders geleverd. Open Instellingen → Apparaten en services → Integraties om er een toe te voegen of lees de setup-handleiding in de documentatie.",
@@ -545,6 +587,99 @@ function getHexColor(color, fallback = "#4287f5", resolverElement) {
     return "#4287f5";
 }
 
+// File: card-height.js
+function normalizeCardHeight(value) {
+    if (value === undefined || value === null) {
+        return null;
+    }
+
+    if (typeof value !== "string") {
+        throw new Error("Card height must be a CSS value with units, for example 500px.");
+    }
+
+    const normalized = value.trim();
+    if (!normalized) {
+        return null;
+    }
+
+    const isBareNumber = /^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(normalized);
+    const supportsHeight = typeof globalThis.CSS !== "undefined"
+        && typeof globalThis.CSS.supports === "function"
+        && globalThis.CSS.supports("height", normalized);
+    if (isBareNumber || !supportsHeight) {
+        throw new Error(`Invalid card height "${normalized}". Use a valid CSS value with units, for example 500px.`);
+    }
+
+    return normalized;
+}
+
+// File: date-range.js
+const VIEW_MODE_WEEK = "week";
+const VIEW_MODE_ROLLING = "rolling";
+const DEFAULT_DAYS_TO_SHOW = 7;
+const MIN_DAYS_TO_SHOW = 3;
+const MAX_DAYS_TO_SHOW = 10;
+
+function normalizeViewMode(value) {
+    return value === VIEW_MODE_ROLLING ? VIEW_MODE_ROLLING : VIEW_MODE_WEEK;
+}
+
+function normalizeDaysToShow(value) {
+    if (value === null || value === undefined || value === "") {
+        return DEFAULT_DAYS_TO_SHOW;
+    }
+
+    const numericValue = Number(value);
+    if (!Number.isInteger(numericValue)) {
+        return DEFAULT_DAYS_TO_SHOW;
+    }
+
+    return Math.min(Math.max(numericValue, MIN_DAYS_TO_SHOW), MAX_DAYS_TO_SHOW);
+}
+
+function getDisplayDayCount(viewMode, daysToShow) {
+    return normalizeViewMode(viewMode) === VIEW_MODE_ROLLING
+        ? normalizeDaysToShow(daysToShow)
+        : DEFAULT_DAYS_TO_SHOW;
+}
+
+function getDisplayRange({
+    now = new Date(),
+    viewMode = VIEW_MODE_WEEK,
+    daysToShow = DEFAULT_DAYS_TO_SHOW,
+    pageOffset = 0
+} = {}) {
+    const normalizedMode = normalizeViewMode(viewMode);
+    const dayCount = getDisplayDayCount(normalizedMode, daysToShow);
+    const normalizedOffset = Number.isInteger(Number(pageOffset)) ? Number(pageOffset) : 0;
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+
+    if (normalizedMode === VIEW_MODE_WEEK) {
+        const daysSinceMonday = (start.getDay() + 6) % 7;
+        start.setDate(start.getDate() - daysSinceMonday + normalizedOffset * 7);
+    } else {
+        start.setDate(start.getDate() + normalizedOffset * dayCount);
+    }
+
+    const end = new Date(start);
+    end.setDate(start.getDate() + dayCount);
+    end.setMilliseconds(end.getMilliseconds() - 1);
+
+    return { start, end, dayCount };
+}
+
+function getCalendarDayIndex(date, rangeStart, dayCount) {
+    if (!(date instanceof Date) || !(rangeStart instanceof Date)) {
+        return -1;
+    }
+
+    const dateDay = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+    const startDay = Date.UTC(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate());
+    const index = Math.round((dateDay - startDay) / (24 * 60 * 60 * 1000));
+    return index >= 0 && index < dayCount ? index : -1;
+}
+
 // File: calendar-week-card.js
 const THEME_VARIABLES = {
     light: {
@@ -604,6 +739,8 @@ const THEME_ACCENT_FALLBACK = {
 
 const HOME_ASSISTANT_INTEGRATIONS_URL = "https://my.home-assistant.io/redirect/integrations/";
 const CARD_DOCUMENTATION_URL = "https://github.com/TheLuXoR/calendar-week-card?tab=readme-ov-file#register-calendars-in-home-assistant";
+const CONFIGURED_HEIGHT_PROPERTY = "--cwc-configured-height";
+const CONFIGURED_HEIGHT_ATTRIBUTE = "data-configured-height";
 
 function buildNoCalendarsCopy(translateFn) {
     const t = typeof translateFn === "function" ? translateFn : (key => key);
@@ -715,7 +852,7 @@ function createNoCalendarsLayout(copy, options = {}) {
 class CalendarWeekCard extends HTMLElement {
     constructor() {
         super();
-        this.weekOffset = 0;
+        this.rangeOffset = 0;
         this.lastEvents = [];
         this.dynamicEntities = [];
         this.availableCalendars = [];
@@ -732,6 +869,8 @@ class CalendarWeekCard extends HTMLElement {
         this.visibleStartMinute = 0;
         this.visibleEndMinute = 24 * 60;
         this.trimUnusedHoursKey = "calendar-week-card-trim-hours";
+        this.viewModeKey = "calendar-week-card-view-mode";
+        this.daysToShowKey = "calendar-week-card-days-to-show";
         this.languagePreference = "system";
         this.language = "en";
         this.themePreference = "system";
@@ -1184,7 +1323,9 @@ class CalendarWeekCard extends HTMLElement {
             "calendar-week-card-today-highlight-color",
             "calendar-week-card-highlight-enabled",
             this.trimUnusedHoursKey,
-            "calendar-week-card-theme"
+            "calendar-week-card-theme",
+            this.viewModeKey,
+            this.daysToShowKey
         ];
 
         storageKeys.forEach(key => {
@@ -1206,6 +1347,9 @@ class CalendarWeekCard extends HTMLElement {
         this.config.today_highlight_color = "#4D96FF";
         this.config.highlight_today = true;
         this.config.trim_unused_hours = false;
+        this.config.view_mode = VIEW_MODE_WEEK;
+        this.config.days_to_show = DEFAULT_DAYS_TO_SHOW;
+        this.rangeOffset = 0;
 
         this.assignDefaultColors(this.getActiveEntities());
 
@@ -1216,6 +1360,7 @@ class CalendarWeekCard extends HTMLElement {
 
     setConfig(config) {
         const rawConfig = config || {};
+        const configuredHeight = normalizeCardHeight(rawConfig.height);
         const hasOwn = (key) => Object.prototype.hasOwnProperty.call(rawConfig, key);
         this._configOverrides = {
             colors: hasOwn("colors"),
@@ -1224,10 +1369,17 @@ class CalendarWeekCard extends HTMLElement {
             theme: hasOwn("theme"),
             highlight_today: hasOwn("highlight_today"),
             today_highlight_color: hasOwn("today_highlight_color"),
-            trim_unused_hours: hasOwn("trim_unused_hours")
+            trim_unused_hours: hasOwn("trim_unused_hours"),
+            view_mode: hasOwn("view_mode"),
+            days_to_show: hasOwn("days_to_show")
         };
 
         this.config = structuredClone(rawConfig) || {};
+        if (configuredHeight) {
+            this.config.height = configuredHeight;
+        } else {
+            delete this.config.height;
+        }
         this.config.colors = this.config.colors && typeof this.config.colors === "object" ? this.config.colors : {};
         this.config.hidden_entities = Array.isArray(this.config.hidden_entities) ? this.config.hidden_entities : [];
 
@@ -1357,7 +1509,36 @@ class CalendarWeekCard extends HTMLElement {
             this.config.trim_unused_hours = false;
         }
 
+        let storedViewMode = null;
+        let storedDaysToShow = null;
+        try {
+            storedViewMode = localStorage.getItem(this.viewModeKey);
+            storedDaysToShow = localStorage.getItem(this.daysToShowKey);
+        } catch (err) {
+            storedViewMode = null;
+            storedDaysToShow = null;
+        }
+
+        const viewModeCandidate = this._configOverrides.view_mode
+            ? this.config.view_mode
+            : (storedViewMode ?? this.config.view_mode);
+        const daysToShowCandidate = this._configOverrides.days_to_show
+            ? this.config.days_to_show
+            : (storedDaysToShow ?? this.config.days_to_show);
+        this.config.view_mode = normalizeViewMode(viewModeCandidate);
+        this.config.days_to_show = normalizeDaysToShow(daysToShowCandidate);
+        this.rangeOffset = 0;
+        this.style.setProperty("--cwc-day-count", String(this.getDisplayDayCount()));
+
         this.attachShadow({mode: "open"});
+
+        if (configuredHeight) {
+            this.style.setProperty(CONFIGURED_HEIGHT_PROPERTY, configuredHeight);
+            this.setAttribute(CONFIGURED_HEIGHT_ATTRIBUTE, "");
+        } else {
+            this.style.removeProperty(CONFIGURED_HEIGHT_PROPERTY);
+            this.removeAttribute(CONFIGURED_HEIGHT_ATTRIBUTE);
+        }
 
         this.shadowRoot.innerHTML = `
         <style>
@@ -1395,6 +1576,10 @@ class CalendarWeekCard extends HTMLElement {
                 --cwc-dialog-muted: #555555;
                 --cwc-dialog-divider: rgba(0, 0, 0, 0.08);
                 --cwc-today-glow: rgba(77, 150, 255, 0.18);
+            }
+            :host([${CONFIGURED_HEIGHT_ATTRIBUTE}]) {
+                height: var(${CONFIGURED_HEIGHT_PROPERTY});
+                max-height: none;
             }
             :host(.theme-dark) {
                 --cwc-primary-text: #f5f7ff;
@@ -1469,7 +1654,7 @@ class CalendarWeekCard extends HTMLElement {
             }
             .week-header {
                 display: grid;
-                grid-template-columns: 60px repeat(7, 1fr);
+                grid-template-columns: 60px repeat(var(--cwc-day-count, 7), minmax(0, 1fr));
                 text-align: center;
                 font-weight: 600;
                 padding: 0 6px 8px;
@@ -1517,7 +1702,7 @@ class CalendarWeekCard extends HTMLElement {
                 position: relative;
                 flex: 1;
                 display: grid;
-                grid-template-columns: repeat(7, 1fr);
+                grid-template-columns: repeat(var(--cwc-day-count, 7), minmax(0, 1fr));
                 height: 100%;
                 width: 100%;
                 overflow: visible;
@@ -1799,7 +1984,7 @@ class CalendarWeekCard extends HTMLElement {
         <div class="week-body">
             <div class="time-bar"></div>
             <div class="week-grid">
-                ${[...Array(7)].map(() => `<div class="day-column"></div>`).join("")}
+                ${[...Array(this.getDisplayDayCount())].map(() => `<div class="day-column"></div>`).join("")}
             </div>
         </div>
         <div class="no-calendars-inline" hidden></div>
@@ -1820,53 +2005,90 @@ class CalendarWeekCard extends HTMLElement {
         this.applyTheme({ refresh: false });
         this.updateSystemThemeListener();
 
-        this.shadowRoot.querySelector(".prev-week").addEventListener("click", () => this.changeWeek(-1));
-        this.shadowRoot.querySelector(".next-week").addEventListener("click", () => this.changeWeek(1));
-        this.shadowRoot.querySelector(".today").addEventListener("click", () => this.resetToCurrentWeek());
+        this.shadowRoot.querySelector(".prev-week").addEventListener("click", () => this.changeRange(-1));
+        this.shadowRoot.querySelector(".next-week").addEventListener("click", () => this.changeRange(1));
+        this.shadowRoot.querySelector(".today").addEventListener("click", () => this.resetToCurrentRange());
         this.shadowRoot.querySelector(".settings-icon").addEventListener("click", () => this.showSettingsDialog());
 
         this.refreshDisplay();
         setInterval(() => this.updateTimeLine(), 60000);
     }
 
-    resetToCurrentWeek() {
-        this.weekOffset = 0;
+    resetToCurrentRange() {
+        this.rangeOffset = 0;
         this.updateHeader();
         if (this._hass) this.loadEvents(this._hass);
     }
 
-    changeWeek(delta) {
-        this.weekOffset += delta;
+    changeRange(delta) {
+        this.rangeOffset += delta;
         this.updateHeader();
         if (this._hass) this.loadEvents(this._hass);
     }
 
-    getWeekRange() {
-        const now = new Date();
-        const monday = new Date(now);
-        monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) + this.weekOffset * 7);
-        monday.setHours(0, 0, 0, 0);
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        sunday.setHours(23, 59, 59, 999);
-        return [monday, sunday];
+    getDisplayDayCount() {
+        return getDisplayDayCount(this.config?.view_mode, this.config?.days_to_show);
+    }
+
+    getDisplayRange() {
+        const { start, end } = getDisplayRange({
+            viewMode: this.config?.view_mode,
+            daysToShow: this.config?.days_to_show,
+            pageOffset: this.rangeOffset
+        });
+        return [start, end];
+    }
+
+    syncDayColumns() {
+        const dayCount = this.getDisplayDayCount();
+        this.style.setProperty("--cwc-day-count", String(dayCount));
+        if (!this.grid) return;
+
+        if (this.grid.children.length !== dayCount) {
+            this.grid.innerHTML = [...Array(dayCount)]
+                .map(() => `<div class="day-column"></div>`)
+                .join("");
+        }
+        this.dayColumns = this.shadowRoot.querySelectorAll(".day-column");
+    }
+
+    updateRangePreferences(viewMode, daysToShow, { persist = true } = {}) {
+        this.config.view_mode = normalizeViewMode(viewMode);
+        this.config.days_to_show = normalizeDaysToShow(daysToShow);
+        this.rangeOffset = 0;
+
+        if (persist) {
+            try {
+                localStorage.setItem(this.viewModeKey, this.config.view_mode);
+                localStorage.setItem(this.daysToShowKey, String(this.config.days_to_show));
+            } catch (err) {
+                console.warn("calendar-week-card: Failed to persist range preferences", err);
+            }
+        }
+
+        this.refreshDisplay();
+        if (this._hass) {
+            this.loadEvents(this._hass);
+        }
     }
 
     updateHeader() {
-        const [start, end] = this.getWeekRange();
+        this.syncDayColumns();
+        const [start, end] = this.getDisplayRange();
+        const dayCount = this.getDisplayDayCount();
         const locale = this.getLocale();
         const monthStart = start.toLocaleDateString(locale, {month: "long", year: "numeric"});
         const monthEnd = end.toLocaleDateString(locale, {month: "long", year: "numeric"});
         this.titleLine.textContent = monthStart === monthEnd ? monthStart : `${monthStart} – ${monthEnd}`;
 
-        const todayOffset = ((new Date().getDay() + 6) % 7);
-        const days = [...Array(7)].map((_, i) => {
+        const todayOffset = getCalendarDayIndex(new Date(), start, dayCount);
+        const days = [...Array(dayCount)].map((_, i) => {
             const d = new Date(start);
             d.setDate(start.getDate() + i);
             return {
                 name: d.toLocaleDateString(locale, {weekday: "short"}),
                 num: d.getDate(),
-                isToday: i === todayOffset && this.weekOffset === 0
+                isToday: i === todayOffset
             };
         });
 
@@ -1928,7 +2150,7 @@ class CalendarWeekCard extends HTMLElement {
             return;
         }
 
-        const [start, end] = this.getWeekRange();
+        const [start, end] = this.getDisplayRange();
         let allEvents = [];
         const unavailableCalendars = new Set();
         let refreshedAfterUnavailable = false;
@@ -2071,7 +2293,7 @@ class CalendarWeekCard extends HTMLElement {
     }
 
     buildPreviewExampleEvents() {
-        const [startOfWeek] = this.getWeekRange();
+        const [startOfWeek] = this.getDisplayRange();
         if (!startOfWeek) {
             return [];
         }
@@ -2170,7 +2392,7 @@ class CalendarWeekCard extends HTMLElement {
             `;
         });
 
-        const [startOfWeek] = this.getWeekRange();
+        const [startOfWeek] = this.getDisplayRange();
 
         const visibleEvents = Array.isArray(events)
             ? events.filter(ev => !this.isEntityHidden(ev.calendar))
@@ -2178,11 +2400,12 @@ class CalendarWeekCard extends HTMLElement {
 
         const dayMillis = 24 * 60 * 60 * 1000;
         const normalizeDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const getCalendarDayNumber = date => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
         const getEventSpanDays = (ev) => {
             const startDay = normalizeDay(ev.start);
             const endForSpan = new Date(ev.end.getTime() - 1);
             const endDay = normalizeDay(endForSpan);
-            const diffDays = Math.floor((endDay - startDay) / dayMillis);
+            const diffDays = Math.round((getCalendarDayNumber(endDay) - getCalendarDayNumber(startDay)) / dayMillis);
             return Math.max(1, diffDays + 1);
         };
         const buildEventTitle = (ev) => {
@@ -2207,16 +2430,22 @@ class CalendarWeekCard extends HTMLElement {
 
         const dayRenderData = [];
 
-        for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-            const dayStart = new Date(startOfWeek.getTime() + dayOffset * 24 * 60 * 60 * 1000);
-            const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+        const dayCount = this.getDisplayDayCount();
+        for (let dayOffset = 0; dayOffset < dayCount; dayOffset++) {
+            const dayStart = new Date(startOfWeek);
+            dayStart.setDate(startOfWeek.getDate() + dayOffset);
+            const dayEnd = new Date(dayStart);
+            dayEnd.setDate(dayStart.getDate() + 1);
             const overlapsDay = ev => ev.start < dayEnd && ev.end > dayStart;
             const mapToDisplayEvent = ev => {
                 const spanDays = getEventSpanDays(ev);
                 return {
                     ...ev,
                     daySpan: spanDays,
-                    dayIndex: Math.min(Math.max(Math.floor((dayStart - normalizeDay(ev.start)) / dayMillis) + 1, 1), spanDays),
+                    dayIndex: Math.min(Math.max(
+                        Math.round((getCalendarDayNumber(dayStart) - getCalendarDayNumber(ev.start)) / dayMillis) + 1,
+                        1
+                    ), spanDays),
                     displayStart: ev.start > dayStart ? ev.start : new Date(dayStart.getTime()),
                     displayEnd: ev.end < dayEnd ? ev.end : new Date(dayEnd.getTime())
                 };
@@ -2283,8 +2512,8 @@ class CalendarWeekCard extends HTMLElement {
         const highlightMix = this.mixColor(highlightEdgeColor, "#ffffff", isDarkTheme ? 0.12 : 0.4) || highlightEdgeColor;
         const highlightOverlay = this.colorWithAlpha(highlightMix, isDarkTheme ? 0.28 : 0.2);
         const now = new Date();
-        const todayOffset = (now.getDay() + 6) % 7;
-        const shouldHighlightToday = highlightEnabled && this.weekOffset === 0;
+        const todayOffset = getCalendarDayIndex(now, startOfWeek, dayCount);
+        const shouldHighlightToday = highlightEnabled && todayOffset >= 0;
 
         for (const { dayColumn, dayOffset } of dayRenderData) {
             if (shouldHighlightToday && dayOffset === todayOffset) {
@@ -2793,7 +3022,7 @@ class CalendarWeekCard extends HTMLElement {
         }
 
         const now = new Date();
-        const [start, end] = this.getWeekRange();
+        const [start, end] = this.getDisplayRange();
         if (now < start || now > end) return;
 
         const minutes = now.getHours() * 60 + now.getMinutes();
@@ -2805,18 +3034,18 @@ class CalendarWeekCard extends HTMLElement {
 
         const topPosition = this.timeAxisOffset + minutes * this.pixelsPerMinute;
 
-        if (this.timeBar && this.weekOffset === 0) {
+        const todayOffset = getCalendarDayIndex(now, start, this.getDisplayDayCount());
+        if (todayOffset < 0) {
+            return;
+        }
+
+        if (this.timeBar) {
             const barLine = document.createElement("div");
             barLine.className = "time-line";
             barLine.style.top = `${topPosition}px`;
             this.timeBar.appendChild(barLine);
         }
 
-        if (this.weekOffset !== 0) {
-            return;
-        }
-
-        const todayOffset = (now.getDay() + 6) % 7;
         if (!this.dayColumns[todayOffset]) return;
 
         const line = document.createElement("div");
@@ -2952,6 +3181,91 @@ class CalendarWeekCard extends HTMLElement {
         themeRow.appendChild(themeLabel);
         themeRow.appendChild(themeSelect);
         content.appendChild(themeRow);
+
+        const rangeSection = document.createElement("div");
+        Object.assign(rangeSection.style, {
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            padding: "12px",
+            borderRadius: "10px"
+        });
+
+        const rollingHeader = document.createElement("label");
+        Object.assign(rollingHeader.style, {
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            cursor: "pointer"
+        });
+
+        const rollingToggle = document.createElement("input");
+        rollingToggle.type = "checkbox";
+        rollingToggle.checked = this.config.view_mode === VIEW_MODE_ROLLING;
+        rollingToggle.style.width = "18px";
+        rollingToggle.style.height = "18px";
+        rollingToggle.style.cursor = "pointer";
+
+        const rollingLabel = document.createElement("span");
+        rollingLabel.style.flex = "1";
+        rollingLabel.style.fontWeight = "600";
+        rollingHeader.append(rollingToggle, rollingLabel);
+
+        const rollingDescription = document.createElement("span");
+        rollingDescription.style.fontSize = "0.85em";
+
+        const daysRow = document.createElement("label");
+        Object.assign(daysRow.style, {
+            display: "flex",
+            alignItems: "center",
+            gap: "12px"
+        });
+
+        const daysLabel = document.createElement("span");
+        daysLabel.style.flex = "1";
+        daysLabel.style.fontWeight = "600";
+
+        const daysSelect = document.createElement("select");
+        Object.assign(daysSelect.style, {
+            padding: "6px 10px",
+            borderRadius: "6px",
+            border: "1px solid transparent",
+            fontSize: "0.95em",
+            cursor: "pointer",
+            background: "transparent"
+        });
+        for (let dayCount = MIN_DAYS_TO_SHOW; dayCount <= MAX_DAYS_TO_SHOW; dayCount++) {
+            const option = document.createElement("option");
+            option.value = String(dayCount);
+            option.textContent = String(dayCount);
+            daysSelect.appendChild(option);
+        }
+        daysSelect.value = String(this.config.days_to_show);
+        daysRow.append(daysLabel, daysSelect);
+
+        const applyRollingState = enabled => {
+            daysSelect.disabled = !enabled;
+            daysSelect.style.opacity = enabled ? "1" : "0.5";
+            daysSelect.style.cursor = enabled ? "pointer" : "not-allowed";
+        };
+        applyRollingState(rollingToggle.checked);
+
+        rollingToggle.addEventListener("change", event => {
+            const enabled = event.target.checked;
+            applyRollingState(enabled);
+            this.updateRangePreferences(
+                enabled ? VIEW_MODE_ROLLING : VIEW_MODE_WEEK,
+                daysSelect.value
+            );
+        });
+
+        daysSelect.addEventListener("change", event => {
+            this.updateRangePreferences(this.config.view_mode, event.target.value);
+            daysSelect.value = String(this.config.days_to_show);
+        });
+
+        rangeSection.append(rollingHeader, rollingDescription, daysRow);
+        content.appendChild(rangeSection);
 
         const title = document.createElement("h3");
         Object.assign(title.style, { margin: 0, fontSize: "1.3em" });
@@ -3190,6 +3504,9 @@ class CalendarWeekCard extends HTMLElement {
                 highlightColorPicker.value = this.getHexColor(this.config.today_highlight_color || "#4D96FF");
                 applyHighlightState(highlightToggle.checked);
                 trimToggle.checked = this.config.trim_unused_hours === true;
+                rollingToggle.checked = this.config.view_mode === VIEW_MODE_ROLLING;
+                daysSelect.value = String(this.config.days_to_show);
+                applyRollingState(rollingToggle.checked);
                 calendarToggles.forEach(({ toggle, entity }) => {
                     const hidden = this.isEntityHidden(entity);
                     toggle.checked = !hidden;
@@ -3262,6 +3579,16 @@ class CalendarWeekCard extends HTMLElement {
             themeSelect.style.background = palette.inputBackground;
             themeSelect.style.border = `1px solid ${palette.border}`;
             themeSelect.style.color = palette.text;
+            rangeSection.style.background = this.theme === "dark"
+                ? "rgba(66, 135, 245, 0.18)"
+                : "rgba(66, 135, 245, 0.1)";
+            rangeSection.style.border = `1px solid ${palette.border}`;
+            rollingLabel.style.color = palette.text;
+            rollingDescription.style.color = palette.muted;
+            daysLabel.style.color = palette.text;
+            daysSelect.style.background = palette.inputBackground;
+            daysSelect.style.border = `1px solid ${palette.border}`;
+            daysSelect.style.color = palette.text;
             calendarNameLabels.forEach(label => {
                 label.style.color = palette.text;
             });
@@ -3312,6 +3639,15 @@ class CalendarWeekCard extends HTMLElement {
             themeSystemOption.textContent = this.t("themeSystem");
             themeLightOption.textContent = this.t("themeLight");
             themeDarkOption.textContent = this.t("themeDark");
+            const rollingLabelText = this.t("rollingView");
+            rollingLabel.textContent = rollingLabelText;
+            rollingToggle.setAttribute("aria-label", rollingLabelText);
+            rollingToggle.setAttribute("title", rollingLabelText);
+            rollingDescription.textContent = this.t("rollingViewDescription");
+            const daysLabelText = this.t("daysToShow");
+            daysLabel.textContent = daysLabelText;
+            daysSelect.setAttribute("aria-label", daysLabelText);
+            daysSelect.setAttribute("title", daysLabelText);
             supportText.textContent = this.t("supportViaPaypal");
             const Text = this.t("supportWithPaypal");
             Button.textContent = Text;
@@ -3553,6 +3889,8 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
         this._loadingCalendars = false;
         this._calendarsLoaded = false;
         this._languageOptions = getLanguageOptions();
+        this._heightDraft = "";
+        this._heightError = null;
     }
 
     connectedCallback() {
@@ -3578,6 +3916,20 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
             : normalizedLanguage;
         const hiddenEntities = Array.isArray(config.hidden_entities) ? [...config.hidden_entities] : undefined;
         this._config = { ...config, entities, hidden_entities: hiddenEntities, language };
+        this._heightDraft = config.height === undefined || config.height === null ? "" : String(config.height);
+        try {
+            const normalizedHeight = normalizeCardHeight(config.height);
+            if (normalizedHeight) {
+                this._config.height = normalizedHeight;
+                this._heightDraft = normalizedHeight;
+            } else {
+                delete this._config.height;
+            }
+            this._heightError = null;
+        } catch (err) {
+            delete this._config.height;
+            this._heightError = this.t("pickerHeightInvalid");
+        }
         this.render();
     }
 
@@ -3679,13 +4031,21 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
                 gap: 6px;
                 font-size: 0.95rem;
             }
-            select {
+            select,
+            input[type="text"] {
                 font: inherit;
                 padding: 8px 10px;
                 border-radius: 8px;
                 border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.2));
                 background: var(--input-fill-color, #fff);
                 color: inherit;
+            }
+            input[aria-invalid="true"] {
+                border-color: var(--error-color, #c62828);
+            }
+            .field-error {
+                color: var(--error-color, #c62828);
+                font-size: 0.82rem;
             }
             .calendar-list {
                 display: flex;
@@ -3726,6 +4086,7 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
         const grid = document.createElement("div");
         grid.className = "picker-grid";
         grid.appendChild(this.renderLanguageSection());
+        grid.appendChild(this.renderLayoutSection());
         grid.appendChild(this.renderCalendarsSection());
         this.shadowRoot.appendChild(grid);
     }
@@ -3763,6 +4124,42 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
         });
 
         field.append(label, select);
+        section.append(header, field);
+        return section;
+    }
+
+    renderLayoutSection() {
+        const section = document.createElement("div");
+        section.className = "section";
+
+        const header = document.createElement("div");
+        header.className = "section-header";
+        const title = document.createElement("h3");
+        title.textContent = this.t("pickerLayoutTitle");
+        const description = document.createElement("p");
+        description.textContent = this.t("pickerHeightHelper");
+        header.append(title, description);
+
+        const field = document.createElement("label");
+        field.className = "field";
+        const label = document.createElement("span");
+        label.textContent = this.t("pickerHeightLabel");
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = this._heightDraft;
+        input.placeholder = "500px";
+        input.setAttribute("aria-invalid", String(!!this._heightError));
+        input.addEventListener("change", event => {
+            this.updateHeight(event.target.value);
+        });
+
+        field.append(label, input);
+        if (this._heightError) {
+            const error = document.createElement("span");
+            error.className = "field-error";
+            error.textContent = this._heightError;
+            field.appendChild(error);
+        }
         section.append(header, field);
         return section;
     }
@@ -3865,6 +4262,25 @@ class CalendarWeekCardPickerEditor extends HTMLElement {
             this._config.language = SUPPORTED_LANGUAGES.includes(normalized) ? normalized : "system";
         }
         this.dispatchConfigChanged();
+        this.render();
+    }
+
+    updateHeight(value) {
+        this._heightDraft = typeof value === "string" ? value : "";
+        try {
+            const normalizedHeight = normalizeCardHeight(this._heightDraft);
+            if (normalizedHeight) {
+                this._config.height = normalizedHeight;
+                this._heightDraft = normalizedHeight;
+            } else {
+                delete this._config.height;
+                this._heightDraft = "";
+            }
+            this._heightError = null;
+            this.dispatchConfigChanged();
+        } catch (err) {
+            this._heightError = this.t("pickerHeightInvalid");
+        }
         this.render();
     }
 
